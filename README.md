@@ -1,8 +1,8 @@
 # Jira Week Tracker
 
-Jira Week Tracker is a small local desktop app for tracking weekly Jira worklog progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
+Jira Week Tracker is a small local desktop app for tracking weekly Jira work log item progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
 
-The app helps answer one practical question: for the selected week, how many Jira hours have I logged, and how much is still missing from my weekly target?
+The app helps answer one practical question: for the selected week, how many Jira work log item hours have I logged, and how much is still missing from my weekly target?
 
 ## Features
 
@@ -10,7 +10,7 @@ The app helps answer one practical question: for the selected week, how many Jir
 - Configurable weekly target hours, defaulting to `40h`.
 - Monday-Friday day cards with target, tracked, missing, skipped/vacation state, and Jira issue lists.
 - Vacation/skipped days are removed from the active working day count, and the weekly target is redistributed across the remaining active days.
-- Jira Cloud REST API v3 connection test and worklog sync.
+- Jira Cloud REST API v3 connection test, work log item sync, and Add Time work log item creation.
 - Jira issue rows show the issue key, logged hours, and a one-line ellipsized ticket title.
 - Settings for Jira site, email, API token, weekly target, working days, reminder time, and reminder enablement.
 - Local IndexedDB stores for settings, week overrides, and sync results.
@@ -102,7 +102,7 @@ npm run assets:icons
 
 For a personal local desktop app, use your Atlassian account email plus a regular Atlassian API token. You do not need to be a Jira administrator.
 
-The token acts as you, so Jira still enforces your normal permissions. Sync works when your user can browse the relevant projects and see the issues/worklogs. If a project, issue security level, or worklog visibility rule hides something from you in Jira, the app cannot read it either.
+The token acts as you, so Jira still enforces your normal permissions. Sync works when your user can browse the relevant projects and see the issues and work log items. If a project, issue security level, or work log visibility rule hides something from you in Jira, the app cannot read it either.
 
 OAuth 2.0 3LO is better for a distributed product with a registered Atlassian integration, consent screen, client ID, client secret, redirect URL, and scopes. For this local MVP it is more setup, not less. Scoped API tokens also require the Atlassian API gateway URL with a Cloud ID, while this app uses the simpler direct Jira site URL. The app keeps the code open for OAuth or scoped-token gateway support later, but regular token auth is the simplest path right now.
 
@@ -118,8 +118,8 @@ The MVP uses Basic auth with Jira email plus API token. Do not paste your Atlass
 
 If your organization requires scoped API tokens, the read-only scopes this app needs are:
 
-- `read:jira-work` for JQL issue search and issue worklogs.
-- `read:jira-user` for `/rest/api/3/myself`, which identifies your Jira account ID so the app can keep only your worklogs.
+- `read:jira-work` for JQL issue search and issue work log items.
+- `read:jira-user` for `/rest/api/3/myself`, which identifies your Jira account ID so the app can keep only your work log items.
 
 Scoped tokens use Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway instead of the direct `https://company.atlassian.net` site URL, so gateway support would need to be added before scoped tokens are used in this MVP. No write, project-management, or Jira-admin scopes are needed for the current read-only sync.
 
@@ -131,9 +131,17 @@ Scoped tokens use Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway inst
 - Sync results and skipped days remain local.
 - Jira API calls are made by the Electron main process via IPC.
 
-## Jira Sync Logic
+## Jira Work Log Item API
 
-The app searches candidate issues with JQL:
+The app syncs Jira work log items, not issue discussion comments. Jira stores work log notes on the work log item itself under `worklogs[*].comment` as Atlassian Document Format (ADF). The app flattens that ADF comment with `shared/adf.ts` and keeps it on both the individual `JiraWorklog.comment` and summarized issue `comments` lists.
+
+The app identifies the authenticated Jira account with:
+
+```text
+GET /rest/api/3/myself
+```
+
+It searches candidate issues with JQL:
 
 ```jql
 worklogAuthor = currentUser()
@@ -145,16 +153,25 @@ ORDER BY updated DESC
 It then fetches:
 
 ```text
-GET /rest/api/3/issue/{issueIdOrKey}/worklog
+GET /rest/api/3/issue/{issueIdOrKey}/worklog?startedAfter=<ms>&startedBefore=<ms>
 ```
 
-For each worklog, the app:
+For each returned work log item, the app:
 
 - uses `worklog.started` as the tracking timestamp
 - uses `timeSpentSeconds` for calculations
 - filters by the authenticated user's Jira account ID
-- includes only worklogs where `started >= weekStart` and `started < weekEndExclusive`
+- includes only work log items where `started >= weekStart` and `started < weekEndExclusive`
+- reads optional work log notes from `worklog.comment`
 - sums tracked seconds by day and week
+
+The Add Time flow intentionally writes a new Jira work log item with:
+
+```text
+POST /rest/api/3/issue/{issueIdOrKey}/worklog
+```
+
+That write sends Jira `started`, `timeSpentSeconds`, and an optional ADF `comment`. The app does not use `GET /rest/api/3/issue/{issueIdOrKey}/comment` for work log notes; that endpoint is for issue discussion comments, a different Jira object.
 
 ## Local Data Stores
 

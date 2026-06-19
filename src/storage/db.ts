@@ -2,10 +2,11 @@ import type { AppSettings, SyncResult, WeekOverride } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const SETTINGS_KEY = "default";
+const FAVORITES_KEY = "default";
 
-type StoreName = "settings" | "weekOverrides" | "syncResults";
+type StoreName = "settings" | "weekOverrides" | "syncResults" | "favorites";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -30,6 +31,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("syncResults")) {
         db.createObjectStore("syncResults", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("favorites")) {
+        db.createObjectStore("favorites", { keyPath: "id" });
       }
     };
 
@@ -94,4 +99,13 @@ export const getSyncResult = (weekKey: string) => {
 
 export const saveSyncResult = (result: SyncResult) => {
   return writeStore("syncResults", result);
+};
+
+export const getFavoriteKeys = async (): Promise<string[]> => {
+  const stored = await readStore<{ id: string; keys: string[] }>("favorites", FAVORITES_KEY);
+  return stored?.keys ?? [];
+};
+
+export const saveFavoriteKeys = (keys: string[]) => {
+  return writeStore("favorites", { id: FAVORITES_KEY, keys });
 };

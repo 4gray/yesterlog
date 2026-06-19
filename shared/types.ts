@@ -15,11 +15,18 @@ export interface WeekOverride {
   skippedDates: string[];
 }
 
+export interface JiraIssueTypeInfo {
+  name?: string;
+  subtask?: boolean;
+  hierarchyLevel?: number;
+}
+
 export interface JiraIssueSummary {
   id: string;
   key: string;
   summary: string;
   url?: string;
+  issueType?: JiraIssueTypeInfo;
   loggedSeconds: number;
   comments?: string[];
 }
@@ -29,6 +36,7 @@ export interface JiraWorklog {
   issueId: string;
   issueKey: string;
   issueSummary: string;
+  issueType?: JiraIssueTypeInfo;
   authorAccountId: string;
   started: string;
   timeSpentSeconds: number;
@@ -86,6 +94,47 @@ export interface JiraConnectionResult {
   message: string;
   accountId?: string;
   displayName?: string;
+}
+
+export type TicketStatusCategory = "new" | "indeterminate" | "done" | "unknown";
+
+export interface JiraTicket {
+  id: string;
+  key: string;
+  summary: string;
+  projectKey: string;
+  projectName: string;
+  statusName: string;
+  statusCategory: TicketStatusCategory;
+  loggedSecondsTotal: number;
+  issueType?: JiraIssueTypeInfo;
+  url: string;
+}
+
+export interface TicketsRequest {
+  settings: AppSettings;
+}
+
+export interface TicketsResult {
+  fetchedAt: string;
+  accountId: string;
+  inProgress: JiraTicket[];
+  recentlyClosed: JiraTicket[];
+}
+
+export interface AddWorklogRequest {
+  settings: AppSettings;
+  issueKey: string;
+  timeSpentSeconds: number;
+  startedISO: string;
+  comment?: string;
+}
+
+export interface AddWorklogResult {
+  ok: boolean;
+  worklogId: string;
+  issueKey: string;
+  timeSpentSeconds: number;
 }
 
 export interface SyncRequest {

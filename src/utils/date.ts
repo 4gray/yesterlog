@@ -57,6 +57,31 @@ export const formatShortDate = (date: Date) => {
   }).format(date);
 };
 
+export const getIsoWeekNumber = (date: Date) => {
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  // Shift to the Thursday of the current ISO week.
+  const dayOffset = (target.getDay() + 6) % 7;
+  target.setDate(target.getDate() - dayOffset + 3);
+  const firstThursday = new Date(target.getFullYear(), 0, 4);
+  const firstDayOffset = (firstThursday.getDay() + 6) % 7;
+  firstThursday.setDate(firstThursday.getDate() - firstDayOffset + 3);
+  const diff = target.getTime() - firstThursday.getTime();
+  return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
+};
+
+export const formatWeekRangeCompact = (weekStart: Date) => {
+  const weekEnd = addDays(weekStart, 6);
+  const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "short" });
+  const startMonth = monthFormatter.format(weekStart).toUpperCase();
+
+  if (weekStart.getMonth() === weekEnd.getMonth()) {
+    return `${startMonth} ${weekStart.getDate()}–${weekEnd.getDate()}`;
+  }
+
+  const endMonth = monthFormatter.format(weekEnd).toUpperCase();
+  return `${startMonth} ${weekStart.getDate()} – ${endMonth} ${weekEnd.getDate()}`;
+};
+
 export const formatHours = (hours: number, maxFractions = 1) => {
   const safeHours = Number.isFinite(hours) ? hours : 0;
   return `${safeHours.toLocaleString(undefined, {
@@ -71,3 +96,34 @@ export const formatDuration = (hours: number) => {
   const minutes = totalMinutes % 60;
   return minutes === 0 ? `${wholeHours}h` : `${wholeHours}h ${String(minutes).padStart(2, "0")}m`;
 };
+
+// Always shows minutes (e.g. "2h 00m", "45m") — used by the time composer.
+export const formatClock = (seconds: number) => {
+  const totalMinutes = Math.max(Math.round(seconds / 60), 0);
+  const wholeHours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return wholeHours === 0 ? `${minutes}m` : `${wholeHours}h ${String(minutes).padStart(2, "0")}m`;
+};
+
+// Parses Jira-style durations ("2w 4d 6h 45m", "1h 30m", "45m") or a bare
+// number of hours. Jira defaults: 1w = 5d, 1d = 8h. Returns null if unparseable.
+export const parseDurationToSeconds = (text: string): number | null => {
+  const trimmed = text.trim().toLowerCase();
+  if (!trimmed) {
+    return null;
+  }
+
+  const unitSeconds: Record<string, number> = { w: 5 * 8 * 3600, d: 8 * 3600, h: 3600, m: 60 };
+  const matches = [...trimmed.matchAll(/(\d+(?:\.\d+)?)\s*(w|d|h|m)/g)];
+
+  if (matches.length > 0) {
+    const seconds = matches.reduce((sum, match) => sum + parseFloat(match[1]) * unitSeconds[match[2]], 0);
+    return Math.round(seconds);
+  }
+
+  const plainHours = Number(trimmed);
+  return Number.isFinite(plainHours) ? Math.round(plainHours * 3600) : null;
+};
+
+// 24h "H:MM" (no leading zero on hour) to match the design's worklog ranges.
+export const formatHm24 = (date: Date) => `${date.getHours()}:${String(date.getMinutes()).padStart(2, "0")}`;

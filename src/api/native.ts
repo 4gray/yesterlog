@@ -1,9 +1,13 @@
 import type {
+  AddWorklogRequest,
+  AddWorklogResult,
   AppSettings,
   JiraConnectionResult,
   ReminderSchedulePayload,
   SyncRequest,
-  SyncResult
+  SyncResult,
+  TicketsRequest,
+  TicketsResult
 } from "../../shared/types";
 
 export const nativeApi = {
@@ -26,6 +30,27 @@ export const nativeApi = {
     }
 
     return window.jiraWeekTracker.syncJiraWorklogs(request);
+  },
+
+  fetchAssignedTickets(request: TicketsRequest): Promise<TicketsResult> {
+    if (!window.jiraWeekTracker) {
+      return Promise.resolve({
+        fetchedAt: new Date().toISOString(),
+        accountId: "",
+        inProgress: [],
+        recentlyClosed: []
+      });
+    }
+
+    return window.jiraWeekTracker.fetchAssignedTickets(request);
+  },
+
+  addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult> {
+    if (!window.jiraWeekTracker) {
+      return Promise.reject(new Error("Open the Electron app to log time to Jira."));
+    }
+
+    return window.jiraWeekTracker.addWorklog(request);
   },
 
   scheduleReminder(payload: ReminderSchedulePayload) {

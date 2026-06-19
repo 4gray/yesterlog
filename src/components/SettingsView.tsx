@@ -6,11 +6,14 @@ import {
   KeyRound,
   LockKeyhole,
   Loader2,
+  Moon,
   Save,
   ShieldCheck,
+  SunMedium,
   TestTube2
 } from "lucide-react";
 import type { AppSettings, JiraConnectionResult, WeekdayNumber } from "../../shared/types";
+import type { ThemeMode } from "./Sidebar";
 
 interface SettingsViewProps {
   draft: AppSettings;
@@ -20,14 +23,16 @@ interface SettingsViewProps {
   isTesting: boolean;
   testResult?: JiraConnectionResult;
   savedMessage?: string;
+  effectiveTheme: ThemeMode;
+  onSelectTheme: (theme: ThemeMode) => void;
 }
 
 const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
-  { value: 1, label: "Mon" },
-  { value: 2, label: "Tue" },
-  { value: 3, label: "Wed" },
-  { value: 4, label: "Thu" },
-  { value: 5, label: "Fri" }
+  { value: 1, label: "MON" },
+  { value: 2, label: "TUE" },
+  { value: 3, label: "WED" },
+  { value: 4, label: "THU" },
+  { value: 5, label: "FRI" }
 ];
 
 const API_TOKEN_URL = "https://id.atlassian.com/manage-profile/security/api-tokens";
@@ -39,7 +44,9 @@ export const SettingsView = ({
   onTestConnection,
   isTesting,
   testResult,
-  savedMessage
+  savedMessage,
+  effectiveTheme,
+  onSelectTheme
 }: SettingsViewProps) => {
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
@@ -57,25 +64,26 @@ export const SettingsView = ({
   };
 
   return (
-    <main className="content-shell settings-shell">
-      <header className="command-bar">
+    <div className="view settings-view">
+      <div className="settings-header">
         <div>
-          <h1>Settings</h1>
-          <p>Connect Jira, set weekly expectations, and schedule local reminders.</p>
+          <div className="eyebrow">SETTINGS</div>
+          <h1 className="settings-title">Connect &amp; configure</h1>
+          <div className="settings-subtitle">Connect Jira, set weekly expectations, and schedule local reminders.</div>
         </div>
 
         <button className="primary-button" type="button" onClick={onSave}>
-          <Save size={17} />
+          <Save size={16} />
           Save settings
         </button>
-      </header>
+      </div>
 
-      {savedMessage && <div className="status-callout success">{savedMessage}</div>}
+      {savedMessage && <div className="callout success">{savedMessage}</div>}
 
       <section className="settings-grid">
         <form className="settings-panel" onSubmit={(event) => event.preventDefault()}>
           <div className="section-title">
-            <ShieldCheck size={18} />
+            <ShieldCheck size={16} />
             <span>Jira Cloud sign-in</span>
           </div>
 
@@ -100,7 +108,7 @@ export const SettingsView = ({
               value={draft.jiraBaseUrl}
               onChange={(event) => updateField("jiraBaseUrl", event.target.value)}
             />
-            <small className="field-hint">Pasting the full URL also works.</small>
+            <small className="field-hint-text">Pasting the full URL also works.</small>
           </label>
 
           <label>
@@ -121,7 +129,7 @@ export const SettingsView = ({
               value={draft.jiraApiToken}
               onChange={(event) => updateField("jiraApiToken", event.target.value)}
             />
-            <small className="field-hint">
+            <small className="field-hint-text">
               Use a regular token for this MVP. Scoped-token support would need read:jira-work and read:jira-user via
               Atlassian's gateway.
             </small>
@@ -144,7 +152,7 @@ export const SettingsView = ({
           </div>
 
           {testResult && (
-            <div className={`status-callout compact ${testResult.ok ? "success" : "error"}`}>
+            <div className={`callout ${testResult.ok ? "success" : "error"}`}>
               {testResult.ok && <CheckCircle2 size={16} />}
               <span>{testResult.message}</span>
             </div>
@@ -153,7 +161,7 @@ export const SettingsView = ({
 
         <div className="settings-panel">
           <div className="section-title">
-            <CalendarDays size={18} />
+            <CalendarDays size={16} />
             <span>Weekly target</span>
           </div>
 
@@ -188,7 +196,7 @@ export const SettingsView = ({
 
         <div className="settings-panel">
           <div className="section-title">
-            <Bell size={18} />
+            <Bell size={16} />
             <span>Reminder</span>
           </div>
 
@@ -216,7 +224,42 @@ export const SettingsView = ({
             />
           </label>
         </div>
+
+        <div className="settings-panel">
+          <div className="section-title">
+            <SunMedium size={16} />
+            <span>Appearance</span>
+          </div>
+
+          <div className="appearance-row">
+            <div>
+              <strong>Theme</strong>
+              <small>Follows your system setting until you pick one.</small>
+            </div>
+          </div>
+
+          <div className="theme-chips">
+            <button
+              type="button"
+              className={`theme-chip ${effectiveTheme === "light" ? "active" : ""}`}
+              aria-pressed={effectiveTheme === "light"}
+              onClick={() => onSelectTheme("light")}
+            >
+              <SunMedium size={14} />
+              LIGHT
+            </button>
+            <button
+              type="button"
+              className={`theme-chip ${effectiveTheme === "dark" ? "active" : ""}`}
+              aria-pressed={effectiveTheme === "dark"}
+              onClick={() => onSelectTheme("dark")}
+            >
+              <Moon size={14} />
+              DARK
+            </button>
+          </div>
+        </div>
       </section>
-    </main>
+    </div>
   );
 };

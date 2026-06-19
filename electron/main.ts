@@ -1,8 +1,14 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
-import { testJiraConnection, syncJiraWorklogs } from "./jira";
+import { addWorklog, fetchAssignedTickets, testJiraConnection, syncJiraWorklogs } from "./jira";
 import { scheduleReminder } from "./reminders";
-import type { AppSettings, ReminderSchedulePayload, SyncRequest } from "../shared/types";
+import type {
+  AddWorklogRequest,
+  AppSettings,
+  ReminderSchedulePayload,
+  SyncRequest,
+  TicketsRequest
+} from "../shared/types";
 
 let mainWindow: BrowserWindow | undefined;
 
@@ -69,6 +75,14 @@ ipcMain.handle("jira:test-connection", (_event, settings: AppSettings) => {
 
 ipcMain.handle("jira:sync-worklogs", (_event, request: SyncRequest) => {
   return syncJiraWorklogs(request);
+});
+
+ipcMain.handle("jira:fetch-tickets", (_event, request: TicketsRequest) => {
+  return fetchAssignedTickets(request);
+});
+
+ipcMain.handle("jira:add-worklog", (_event, request: AddWorklogRequest) => {
+  return addWorklog(request);
 });
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {

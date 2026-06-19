@@ -1,46 +1,75 @@
-import { LayoutDashboard, Settings } from "lucide-react";
-import appIcon from "../assets/app-icon.png";
+import { Calendar, ChevronsLeft, LineChart, Settings, Sun, Tag } from "lucide-react";
+
+export type AppView = "today" | "week" | "tickets" | "reports" | "settings";
+export type ThemeMode = "light" | "dark";
+
+const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
+  { id: "today", label: "TODAY", Icon: Sun },
+  { id: "week", label: "WEEK", Icon: Calendar },
+  { id: "tickets", label: "TICKETS", Icon: Tag },
+  { id: "reports", label: "REPORTS", Icon: LineChart }
+];
 
 interface SidebarProps {
-  view: "dashboard" | "settings";
-  onViewChange: (view: "dashboard" | "settings") => void;
+  view: AppView;
+  collapsed: boolean;
+  onViewChange: (view: AppView) => void;
+  onToggleCollapse: () => void;
+  syncLabel: string;
+  syncState: "synced" | "stale" | "syncing";
 }
 
-export const Sidebar = ({ view, onViewChange }: SidebarProps) => {
+export const Sidebar = ({
+  view,
+  collapsed,
+  onViewChange,
+  onToggleCollapse,
+  syncLabel,
+  syncState
+}: SidebarProps) => {
   return (
-    <aside className="sidebar">
-      <div className="brand-lockup">
-        <div className="brand-mark">
-          <img src={appIcon} alt="" aria-hidden="true" />
-        </div>
-        <div>
-          <strong>Jira Week Tracker</strong>
-          <span>Local time ledger</span>
-        </div>
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
+      <div className="sb-brand">
+        <div className="sb-logo">%d</div>
+        <span className="nav-label sb-word">Sprintf</span>
       </div>
 
-      <nav className="side-nav" aria-label="Primary">
-        <button
-          className={view === "dashboard" ? "active" : ""}
-          type="button"
-          onClick={() => onViewChange("dashboard")}
-        >
-          <LayoutDashboard size={18} />
-          <span>Dashboard</span>
-        </button>
-        <button
-          className={view === "settings" ? "active" : ""}
-          type="button"
-          onClick={() => onViewChange("settings")}
-        >
-          <Settings size={18} />
-          <span>Settings</span>
-        </button>
+      <nav className="sb-nav">
+        {NAV.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`nav-item ${view === id ? "active" : ""}`}
+            aria-current={view === id ? "page" : undefined}
+            onClick={() => onViewChange(id)}
+            title={label}
+          >
+            <Icon size={18} />
+            <span className="nav-label">{label}</span>
+          </button>
+        ))}
       </nav>
 
-      <div className="side-note">
-        <span>Storage</span>
-        <strong>IndexedDB only</strong>
+      <div className="sb-spacer" />
+
+      <button
+        type="button"
+        className={`nav-item ${view === "settings" ? "active" : ""}`}
+        onClick={() => onViewChange("settings")}
+        title="Settings"
+      >
+        <Settings size={18} />
+        <span className="nav-label">SETTINGS</span>
+      </button>
+
+      <button type="button" className="nav-item sb-collapse" onClick={onToggleCollapse} title="Collapse sidebar">
+        <ChevronsLeft className="collapse-ic" size={18} />
+        <span className="nav-label">COLLAPSE</span>
+      </button>
+
+      <div className="sb-synced" title="Sync status">
+        <span className={`sb-dot ${syncState === "syncing" ? "is-syncing" : syncState === "stale" ? "is-stale" : ""}`} />
+        <span className="nav-label sb-synced-label">{syncLabel}</span>
       </div>
     </aside>
   );

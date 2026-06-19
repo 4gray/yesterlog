@@ -1,11 +1,18 @@
 import type {
+  AddWorklogRequest,
+  AddWorklogResult,
   AppSettings,
   JiraConnectionResult,
   JiraIssueSummary,
+  JiraIssueTypeInfo,
+  JiraTicket,
   JiraWorklog,
   SyncDayBucket,
   SyncRequest,
-  SyncResult
+  SyncResult,
+  TicketsRequest,
+  TicketsResult,
+  TicketStatusCategory
 } from "../shared/types";
 import { adfToPlainText } from "../shared/adf";
 
@@ -19,11 +26,31 @@ interface JiraSearchIssue {
   key: string;
   fields?: {
     summary?: string;
+    issuetype?: JiraIssueTypeResponse;
   };
 }
 
 interface JiraSearchResponse {
   issues?: JiraSearchIssue[];
+  nextPageToken?: string;
+  isLast?: boolean;
+}
+
+interface JiraTicketIssue {
+  id: string;
+  key: string;
+  fields?: {
+    summary?: string;
+    aggregatetimespent?: number | null;
+    timetracking?: { timeSpentSeconds?: number };
+    project?: { key?: string; name?: string };
+    status?: { name?: string; statusCategory?: { key?: string } };
+    issuetype?: JiraIssueTypeResponse;
+  };
+}
+
+interface JiraTicketSearchResponse {
+  issues?: JiraTicketIssue[];
   nextPageToken?: string;
   isLast?: boolean;
 }
@@ -42,6 +69,12 @@ interface JiraWorklogResponse {
     timeSpentSeconds: number;
     comment?: unknown;
   }>;
+}
+
+interface JiraIssueTypeResponse {
+  name?: string;
+  subtask?: boolean;
+  hierarchyLevel?: number;
 }
 
 class JiraApiError extends Error {
@@ -148,6 +181,10 @@ const mergeIssue = (bucket: SyncDayBucket, issue: JiraIssueSummary) => {
   if (existing) {
     existing.loggedSeconds += issue.loggedSeconds;
 
+    if (!existing.issueType && issue.issueType) {
+      existing.issueType = issue.issueType;
+    }
+
     if (issue.comments?.length) {
       existing.comments = Array.from(new Set([...(existing.comments ?? []), ...issue.comments]));
     }
@@ -160,6 +197,18 @@ const mergeIssue = (bucket: SyncDayBucket, issue: JiraIssueSummary) => {
 
 const fetchCurrentUser = (settings: AppSettings) => {
   return jiraRequest<JiraUserResponse>(settings, "/rest/api/3/myself");
+};
+
+const normalizeIssueType = (issueType?: JiraIssueTypeResponse): JiraIssueTypeInfo | undefined => {
+  if (!issueType) {
+    return undefined;
+  }
+
+  return {
+    name: issueType.name,
+    subtask: issueType.subtask,
+    hierarchyLevel: issueType.hierarchyLevel
+  };
 };
 
 export const testJiraConnection = async (settings: AppSettings): Promise<JiraConnectionResult> => {
@@ -198,7 +247,7 @@ const searchCandidateIssues = async (settings: AppSettings, weekStart: Date, wee
     const params = new URLSearchParams({
       jql,
       maxResults: "100",
-      fields: "summary"
+      fields: "summary,issuetype"
     });
 
     if (nextPageToken) {
@@ -264,6 +313,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
 
   for (const issue of candidateIssues) {
     const summary = issue.fields?.summary ?? "Untitled Jira issue";
+    const issueType = normalizeIssueType(issue.fields?.issuetype);
     const worklogs = await fetchIssueWorklogs(settings, issue.key, weekStart, weekEndExclusive);
 
     for (const worklog of worklogs) {
@@ -286,6 +336,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         issueId: issue.id,
         issueKey: issue.key,
         issueSummary: summary,
+        issueType,
         authorAccountId,
         started: worklog.started,
         timeSpentSeconds: worklog.timeSpentSeconds,
@@ -308,6 +359,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         key: issue.key,
         summary,
         url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`,
+        issueType,
         loggedSeconds: worklog.timeSpentSeconds,
         comments: comment ? [comment] : []
       });
@@ -328,5 +380,128 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
     issueCount: candidateIssues.length,
     worklogCount: collectedWorklogs.length,
     daySummaries
+  };
+};
+
+const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype";
+
+const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
+  if (key === "new" || key === "indeterminate" || key === "done") {
+    return key;
+  }
+  return "unknown";
+};
+
+const searchTickets = async (settings: AppSettings, jql: string, limit: number) => {
+  const params = new URLSearchParams({
+    jql,
+    maxResults: String(limit),
+    fields: TICKET_FIELDS
+  });
+
+  const page = await jiraRequest<JiraTicketSearchResponse>(settings, `/rest/api/3/search/jql?${params.toString()}`);
+  return page.issues ?? [];
+};
+
+const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => {
+  const fields = issue.fields ?? {};
+  const loggedSecondsTotal = fields.aggregatetimespent ?? fields.timetracking?.timeSpentSeconds ?? 0;
+
+  return {
+    id: issue.id,
+    key: issue.key,
+    summary: fields.summary ?? "Untitled Jira issue",
+    projectKey: fields.project?.key ?? issue.key.split("-")[0],
+    projectName: fields.project?.name ?? fields.project?.key ?? "—",
+    statusName: fields.status?.name ?? "Unknown",
+    statusCategory: normalizeStatusCategory(fields.status?.statusCategory?.key),
+    loggedSecondsTotal,
+    issueType: normalizeIssueType(fields.issuetype),
+    url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`
+  };
+};
+
+export const fetchAssignedTickets = async (request: TicketsRequest): Promise<TicketsResult> => {
+  const { settings } = request;
+  const currentUser = await fetchCurrentUser(settings);
+
+  const [openIssues, closedIssues] = await Promise.all([
+    searchTickets(
+      settings,
+      "assignee = currentUser() AND statusCategory != Done ORDER BY statusCategory DESC, updated DESC",
+      50
+    ),
+    searchTickets(
+      settings,
+      "assignee = currentUser() AND statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC",
+      10
+    )
+  ]);
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    accountId: currentUser.accountId,
+    inProgress: openIssues.map((issue) => toTicket(settings, issue)),
+    recentlyClosed: closedIssues.map((issue) => toTicket(settings, issue))
+  };
+};
+
+const toJiraStarted = (startedISO: string) => {
+  const date = new Date(startedISO);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const offsetMinutes = -date.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const absOffset = Math.abs(offsetMinutes);
+  const offset = `${sign}${pad(Math.floor(absOffset / 60))}${pad(absOffset % 60)}`;
+
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.000${offset}`
+  );
+};
+
+const plainTextToAdf = (text: string) => ({
+  type: "doc",
+  version: 1,
+  content: text
+    .split("\n")
+    .map((line) => ({
+      type: "paragraph",
+      content: line ? [{ type: "text", text: line }] : []
+    }))
+});
+
+export const addWorklog = async (request: AddWorklogRequest): Promise<AddWorklogResult> => {
+  const { settings, issueKey, timeSpentSeconds, startedISO, comment } = request;
+
+  if (!Number.isFinite(timeSpentSeconds) || timeSpentSeconds <= 0) {
+    throw new JiraApiError("Worklog duration must be greater than zero.");
+  }
+
+  const body: Record<string, unknown> = {
+    timeSpentSeconds: Math.round(timeSpentSeconds),
+    started: toJiraStarted(startedISO)
+  };
+
+  const trimmedComment = comment?.trim();
+  if (trimmedComment) {
+    body.comment = plainTextToAdf(trimmedComment);
+  }
+
+  const created = await jiraRequest<{ id: string }>(
+    settings,
+    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  return {
+    ok: true,
+    worklogId: created.id,
+    issueKey,
+    timeSpentSeconds: Math.round(timeSpentSeconds)
   };
 };
