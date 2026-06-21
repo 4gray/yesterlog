@@ -288,4 +288,26 @@ npm run dist:linux
 
 ### Code Signing
 
-The current release workflow produces unsigned packages. That keeps release management low-friction for personal/internal distribution. For public distribution later, add Apple Developer ID signing/notarization and Windows code signing secrets to the workflow.
+The release workflow signs and notarizes macOS packages with Apple Developer ID. Add these GitHub repository secrets before pushing a release tag:
+
+| Secret | Value |
+| --- | --- |
+| `MAC_CSC_LINK` | Base64-encoded `.p12` export of the **Developer ID Application** certificate and private key |
+| `MAC_CSC_KEY_PASSWORD` | Password used when exporting the `.p12` file |
+| `APPLE_API_KEY_BASE64` | Base64-encoded App Store Connect API key `.p8` file |
+| `APPLE_API_KEY_ID` | App Store Connect API key ID |
+| `APPLE_API_ISSUER` | App Store Connect issuer ID |
+| `APPLE_TEAM_ID` | Apple Developer Team ID, for example `ABCDE12345` |
+
+Create the Developer ID certificate in Apple Developer: **Certificates, Identifiers & Profiles** -> **Certificates** -> **+** -> **Software** -> **Developer ID Application**. After installing the downloaded `.cer` into Keychain Access, export it from **My Certificates** as a password-protected `.p12`.
+
+Create the notarization API key in App Store Connect: **Users and Access** -> **Integrations** -> **App Store Connect API** -> **Team Keys** -> **Generate API Key**. Use the Developer role, download the `.p8` file once, then copy the Key ID and Issuer ID from the same page.
+
+Encode the local files before adding them as GitHub secrets:
+
+```bash
+base64 -i DeveloperIDApplication.p12 | tr -d '\n' | pbcopy
+base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' | pbcopy
+```
+
+Add the secrets in GitHub under **Settings** -> **Secrets and variables** -> **Actions** -> **New repository secret**. Windows packages are still unsigned.
