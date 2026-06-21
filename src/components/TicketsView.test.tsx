@@ -13,6 +13,12 @@ const ticket: JiraTicket = {
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   issueType: { name: "Sub-task", subtask: true, hierarchyLevel: -1 },
+  epic: {
+    id: "10000",
+    key: "FTDM-300",
+    summary: "Explorer",
+    url: "https://elevait.atlassian.net/browse/FTDM-300"
+  },
   url: "https://elevait.atlassian.net/browse/FTDM-397"
 };
 
@@ -36,5 +42,7 @@ describe("TicketsView", () => {
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
     expect(markup).toContain("Open FTDM-397 in Jira");
     expect(markup).toContain("SUB");
+    expect(markup).toContain("Epic: Explorer");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-300");
   });
 });

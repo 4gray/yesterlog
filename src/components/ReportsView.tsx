@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { JiraIssueTypeInfo, WeekState } from "../../shared/types";
+import type { JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -13,12 +13,16 @@ const clampPct = (value: number) => `${Math.min(Math.max(value, 0), 100)}%`;
 const buildCsv = (weekState: WeekState) => {
   const rows: string[] = ["Date,Weekday,Issue,Summary,Hours"];
   for (const day of weekState.days) {
-    if (day.issues.length === 0) {
+    if (day.issues.length === 0 && day.personalNotes.length === 0) {
       continue;
     }
     for (const issue of day.issues) {
       const summary = `"${issue.summary.replace(/"/g, '""')}"`;
       rows.push([day.dateKey, day.weekdayName, issue.key, summary, (issue.loggedSeconds / 3600).toFixed(2)].join(","));
+    }
+    for (const note of day.personalNotes) {
+      const summary = `"${note.text.replace(/"/g, '""')}"`;
+      rows.push([day.dateKey, day.weekdayName, "LOCAL-NOTE", summary, (note.timeSpentSeconds / 3600).toFixed(2)].join(","));
     }
   }
   return rows.join("\n");
@@ -34,7 +38,19 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
     const completeDays = weekState.days.filter((day) => day.targetHours > 0 && day.trackedHours >= day.targetHours);
     const firstComplete = completeDays[0];
 
-    const byTicket = new Map<string, { key: string; summary: string; url?: string; issueType?: JiraIssueTypeInfo; hours: number }>();
+    const byTicket = new Map<
+      string,
+      {
+        key: string;
+        summary: string;
+        url?: string;
+        issueType?: JiraIssueTypeInfo;
+        epic?: JiraEpicInfo;
+        hours: number;
+        isLocal?: boolean;
+      }
+    >();
+    let localNoteHours = 0;
     for (const day of weekState.days) {
       for (const issue of day.issues) {
         const existing = byTicket.get(issue.key);
@@ -43,20 +59,34 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
           if (!existing.issueType && issue.issueType) {
             existing.issueType = issue.issueType;
           }
+          if (!existing.epic && issue.epic) {
+            existing.epic = issue.epic;
+          }
         } else {
           byTicket.set(issue.key, {
             key: issue.key,
             summary: issue.summary,
             url: issue.url,
             issueType: issue.issueType,
+            epic: issue.epic,
             hours: issue.loggedSeconds / 3600
           });
         }
       }
+      localNoteHours += day.personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
+    }
+
+    if (localNoteHours > 0) {
+      byTicket.set("LOCAL-NOTE", {
+        key: "LOCAL",
+        summary: "Personal notes",
+        hours: localNoteHours,
+        isLocal: true
+      });
     }
     const tickets = [...byTicket.values()].sort((a, b) => b.hours - a.hours);
 
-    const projects = new Set(tickets.map((ticket) => ticket.key.split("-")[0]));
+    const projects = new Set(tickets.filter((ticket) => !ticket.isLocal).map((ticket) => ticket.key.split("-")[0]));
 
     return {
       dailyAverage: activeDays.length > 0 ? weekState.trackedWeekHours / activeDays.length : 0,
@@ -71,6 +101,7 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
 
   const total = weekState.trackedWeekHours;
   const remaining = weekState.weeklyTargetHours - total;
+  const billablePct = total > 0 ? Math.round((weekState.jiraTrackedWeekHours / total) * 100) : 0;
 
   const handleExport = () => {
     const blob = new Blob([buildCsv(weekState)], { type: "text/csv" });
@@ -136,10 +167,11 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
         <div className="kpi">
           <div className="kpi-label">BILLABLE</div>
           <div className="kpi-value">
-            100<span className="unit">%</span>
+            {billablePct}
+            <span className="unit">%</span>
           </div>
           <div className="kpi-note">
-            {formatHours(total)} of {formatHours(total)}
+            {formatHours(weekState.jiraTrackedWeekHours)} Jira of {formatHours(total)}
           </div>
         </div>
       </div>
@@ -184,12 +216,17 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
                 return (
                   <div key={ticket.key}>
                     <div className="breakdown-top">
-                      <TicketKeyLink
-                        issueKey={ticket.key}
-                        url={ticket.url}
-                        issueType={ticket.issueType}
-                        keyClassName="breakdown-key"
-                      />
+                      {ticket.isLocal ? (
+                        <span className="breakdown-key is-local">LOCAL</span>
+                      ) : (
+                        <TicketKeyLink
+                          issueKey={ticket.key}
+                          url={ticket.url}
+                          issueType={ticket.issueType}
+                          epic={ticket.epic}
+                          keyClassName="breakdown-key"
+                        />
+                      )}
                       <span className="breakdown-spacer" />
                       <span className="breakdown-hours">{formatHours(ticket.hours)}</span>
                       <span className="breakdown-pct">{Math.round(pct)}%</span>

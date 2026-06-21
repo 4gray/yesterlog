@@ -21,12 +21,20 @@ export interface JiraIssueTypeInfo {
   hierarchyLevel?: number;
 }
 
+export interface JiraEpicInfo {
+  id?: string;
+  key: string;
+  summary: string;
+  url?: string;
+}
+
 export interface JiraIssueSummary {
   id: string;
   key: string;
   summary: string;
   url?: string;
   issueType?: JiraIssueTypeInfo;
+  epic?: JiraEpicInfo;
   loggedSeconds: number;
   comments?: string[];
 }
@@ -37,6 +45,7 @@ export interface JiraWorklog {
   issueKey: string;
   issueSummary: string;
   issueType?: JiraIssueTypeInfo;
+  epic?: JiraEpicInfo;
   authorAccountId: string;
   started: string;
   timeSpentSeconds: number;
@@ -73,6 +82,7 @@ export interface DayTrackingSummary {
   trackedHours: number;
   missingHours: number;
   issues: JiraIssueSummary[];
+  personalNotes: PersonalNote[];
 }
 
 export interface WeekState {
@@ -82,6 +92,8 @@ export interface WeekState {
   weekRangeLabel: string;
   weeklyTargetHours: number;
   trackedWeekHours: number;
+  jiraTrackedWeekHours: number;
+  personalNoteHours: number;
   remainingWeekHours: number;
   dailyTargetHours: number;
   activeWorkingDates: string[];
@@ -108,7 +120,19 @@ export interface JiraTicket {
   statusCategory: TicketStatusCategory;
   loggedSecondsTotal: number;
   issueType?: JiraIssueTypeInfo;
+  epic?: JiraEpicInfo;
   url: string;
+}
+
+export interface PersonalNote {
+  id: string;
+  weekKey: string;
+  dateKey: string;
+  text: string;
+  timeSpentSeconds: number;
+  startedISO: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TicketsRequest {

@@ -1,18 +1,30 @@
 import type { CSSProperties } from "react";
 import { ExternalLink } from "lucide-react";
-import type { JiraIssueTypeInfo } from "../../shared/types";
+import type { JiraEpicInfo, JiraIssueTypeInfo } from "../../shared/types";
+import { EpicPill } from "./EpicPill";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 
 interface TicketKeyLinkProps {
   issueKey: string;
   url?: string;
   issueType?: JiraIssueTypeInfo;
+  epic?: JiraEpicInfo;
+  showEpic?: boolean;
   keyClassName?: string;
   className?: string;
   style?: CSSProperties;
 }
 
-export const TicketKeyLink = ({ issueKey, url, issueType, keyClassName, className, style }: TicketKeyLinkProps) => (
+export const TicketKeyLink = ({
+  issueKey,
+  url,
+  issueType,
+  epic,
+  showEpic = false,
+  keyClassName,
+  className,
+  style
+}: TicketKeyLinkProps) => (
   <span className={`ticket-key-inline${className ? ` ${className}` : ""}`}>
     <span className={keyClassName} style={style}>
       {issueKey}
@@ -31,5 +43,6 @@ export const TicketKeyLink = ({ issueKey, url, issueType, keyClassName, classNam
       </a>
     ) : null}
     <IssueTypeBadge issueType={issueType} />
+    {showEpic && <EpicPill epic={epic} />}
   </span>
 );

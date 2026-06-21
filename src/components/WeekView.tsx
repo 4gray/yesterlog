@@ -1,6 +1,7 @@
-import { Loader2, MessageSquare, Plus, RotateCw } from "lucide-react";
+import { Loader2, MessageSquare, PenLine, Plus, RotateCw } from "lucide-react";
 import type { DayTrackingSummary, JiraWorklog, SyncResult, WeekState } from "../../shared/types";
 import {
+  formatClock,
   formatHours,
   formatWeekRangeCompact,
   fromLocalDateKey,
@@ -69,9 +70,11 @@ const DayColumn = ({
 }) => {
   const date = fromLocalDateKey(day.dateKey);
   const isFuture = day.dateKey > todayKey;
-  const totalLogged = day.issues.reduce((sum, issue) => sum + issue.loggedSeconds / 3600, 0);
+  const noteHours = day.personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
+  const totalLogged = day.trackedHours;
   const remaining = Math.max(day.targetHours - totalLogged, 0);
   const emptyColor = isFuture ? "var(--line-soft)" : "var(--line)";
+  const hasRows = day.issues.length > 0 || day.personalNotes.length > 0;
 
   const trackedClass =
     day.targetHours > 0 && day.trackedHours >= day.targetHours
@@ -122,11 +125,12 @@ const DayColumn = ({
                 style={{ flexGrow: Math.max(issue.loggedSeconds / 3600, 0.001), background: colorOf(issue.key).seg }}
               />
             ))}
+            {noteHours > 0.01 && <span className="seg is-local-note" style={{ flexGrow: noteHours }} />}
             {remaining > 0.01 && <span className="seg" style={{ flexGrow: remaining, background: emptyColor }} />}
             {totalLogged < 0.01 && <span className="seg" style={{ flexGrow: day.targetHours || 8, background: emptyColor }} />}
           </div>
 
-          {day.issues.length > 0 ? (
+          {hasRows ? (
             <div className="day-logs">
               {day.issues.map((issue) => {
                 const color = colorOf(issue.key);
@@ -150,6 +154,7 @@ const DayColumn = ({
                         issueKey={issue.key}
                         url={issue.url}
                         issueType={issue.issueType}
+                        epic={issue.epic}
                         keyClassName="day-log-key"
                         style={{ color: color.text }}
                       />
@@ -167,6 +172,7 @@ const DayColumn = ({
                             issueKey={issue.key}
                             url={issue.url}
                             issueType={issue.issueType}
+                            epic={issue.epic}
                             keyClassName="day-log-key"
                             style={{ color: color.text }}
                           />
@@ -186,6 +192,17 @@ const DayColumn = ({
                   </div>
                 );
               })}
+              {day.personalNotes.map((note) => (
+                <div className="day-note-row" key={note.id}>
+                  <div className="day-log-head">
+                    <PenLine size={12} stroke="var(--dim)" strokeWidth={1.9} />
+                    <span className="local-note-label">NOTE</span>
+                    <span className="day-log-spacer" />
+                    <span className="day-log-dur">{formatClock(note.timeSpentSeconds)}</span>
+                  </div>
+                  <div className="day-note-text">{note.text}</div>
+                </div>
+              ))}
               <div className="day-spacer" />
             </div>
           ) : day.isToday ? (

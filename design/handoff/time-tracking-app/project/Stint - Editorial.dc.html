@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root{
+    --font-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',system-ui,'Helvetica Neue',sans-serif;
+    --font-ui:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,'Helvetica Neue',sans-serif;
+    --font-mono:ui-monospace,'SF Mono','SFMono-Regular',Menlo,monospace;
+    --fg-bright:#f5f3f0; --fg-primary:#e9e7e3; --fg-secondary:#cfccc6; --fg-muted:#9d9b95;
+    --fg-dim:#75726c; --fg-label:#67645e; --fg-faint:#54514b; --fg-disabled:#3e3b36;
+    --bg-page:#191816; --bg-sidebar:#131210; --bg-sunken:#131210; --bg-raised:#201e1b; --bg-card:#262320;
+    --bg-active:#2a2723; --bg-hover:#211f1c;
+    --border:#2c2a26; --border-faint:#201e1b; --border-strong:#3a3731;
+    --tk-blue:#8fb0ff; --tk-purple:#bda6f5; --tk-teal:#6bd0c2; --tk-amber:#edc488;
+  }
+  /* light values — applied by system preference (when no explicit choice) … */
+  @media (prefers-color-scheme: light){
+    :root:not(.theme-dark){
+      --fg-bright:#0c0d11; --fg-primary:#1b1e25; --fg-secondary:#3c414b; --fg-muted:#5a606b;
+      --fg-dim:#757b87; --fg-label:#7c828f; --fg-faint:#a3a9b3; --fg-disabled:#c2c6ce;
+      --bg-page:#eef0f3; --bg-sidebar:#e7e9ee; --bg-sunken:#e4e7ec; --bg-raised:#ffffff; --bg-card:#ffffff;
+      --bg-active:#e3e7ef; --bg-hover:#e9ecf1;
+      --border:#e1e4e9; --border-faint:#eaecf0; --border-strong:#d4d8df;
+      --tk-blue:#3b63d6; --tk-purple:#7a52d6; --tk-teal:#1f8a7c; --tk-amber:#9a6a16;
+    }
+  }
+  /* … or by explicit toggle (overrides system) */
+  :root.theme-light{
+    --fg-bright:#0c0d11; --fg-primary:#1b1e25; --fg-secondary:#3c414b; --fg-muted:#5a606b;
+    --fg-dim:#757b87; --fg-label:#7c828f; --fg-faint:#a3a9b3; --fg-disabled:#c2c6ce;
+    --bg-page:#eef0f3; --bg-sidebar:#e7e9ee; --bg-sunken:#e4e7ec; --bg-raised:#ffffff; --bg-card:#ffffff;
+    --bg-active:#e3e7ef; --bg-hover:#e9ecf1;
+    --border:#e1e4e9; --border-faint:#eaecf0; --border-strong:#d4d8df;
+    --tk-blue:#3b63d6; --tk-purple:#7a52d6; --tk-teal:#1f8a7c; --tk-amber:#9a6a16;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--bg-page); }
+  ::-webkit-scrollbar{ height:11px; width:11px; }
+  ::-webkit-scrollbar-thumb{ background:var(--border-strong); border-radius:8px; border:3px solid var(--bg-page); }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  .wl{ position:relative; }
+  .wl-pop{ position:absolute; left:0; bottom:calc(100% + 9px); width:248px; opacity:0; visibility:hidden; transform:translateY(5px); transition:opacity .15s cubic-bezier(.4,0,.2,1), transform .15s cubic-bezier(.4,0,.2,1), visibility .15s; pointer-events:none; z-index:40; }
+  .wl:hover .wl-pop{ opacity:1; visibility:visible; transform:translateY(0); }
+  .wl-pop::after{ content:''; position:absolute; left:24px; top:100%; width:10px; height:10px; background:var(--bg-card); border-right:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong); transform:translateY(-6px) rotate(45deg); }
+  .sidebar{ min-width:0; transition:width .2s cubic-bezier(.4,0,.2,1); }
+  .sidebar.collapsed{ width:64px; }
+  .nav-label{ transition:opacity .12s ease; }
+  .sidebar.collapsed .nav-label{ opacity:0; }
+  .nav-item:hover{ background:var(--bg-hover) !important; }
+  .collapse-ic{ transition:transform .2s cubic-bezier(.4,0,.2,1); }
+  .sidebar.collapsed .collapse-ic{ transform:rotate(180deg); }
+</style>
+</helmet>
+
+<div style="height:100vh; width:100%; display:flex; flex-direction:column; overflow:hidden; background:var(--bg-page); color:var(--fg-primary); font-family:var(--font-ui); -webkit-font-smoothing:antialiased;">
+
+  <!-- shell: sidebar + main -->
+  <div style="flex:1; min-height:0; display:flex;">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar {{ collapsedCls }}" style="width:{{ sbWidth }}; flex:none; background:var(--bg-sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:14px 12px; overflow:hidden;">
+
+      <div style="display:flex; flex-direction:column; gap:3px;">
+        <div class="nav-item" onClick="{{ goToday }}" style="{{ navToday }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"></path></svg>
+          <span class="nav-label" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em;">TODAY</span>
+        </div>
+        <div class="nav-item" onClick="{{ goWeek }}" style="{{ navWeek }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path></svg>
+          <span class="nav-label" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em;">WEEK</span>
+        </div>
+        <div class="nav-item" onClick="{{ goTickets }}" style="{{ navTickets }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 2.8 12V4.8A2 2 0 0 1 4.8 2.8H12a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.8Z"></path><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"></circle></svg>
+          <span class="nav-label" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em;">TICKETS</span>
+        </div>
+        <div class="nav-item" onClick="{{ goReports }}" style="{{ navReports }}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M3 3v18h18"></path><path d="M7 14l3.5-4 3 2.5L20 6"></path></svg>
+          <span class="nav-label" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em;">REPORTS</span>
+        </div>
+      </div>
+
+      <div style="flex:1;"></div>
+
+      <div class="nav-item" onClick="{{ goSettings }}" style="{{ navSettings }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H1a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 2.6 6.6a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H7a1.6 1.6 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V7a1.6 1.6 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z"></path></svg>
+        <span class="nav-label" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em;">SETTINGS</span>
+      </div>
+
+      <div class="nav-item" onClick="{{ toggleCollapse }}" style="display:flex; align-items:center; gap:12px; padding:9px 11px; border-radius:8px; cursor:pointer; color:var(--fg-label); white-space:nowrap;">
+        <svg class="collapse-ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"></path></svg>
+        <span class="nav-label" style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em;">COLLAPSE</span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; padding:10px 11px; white-space:nowrap;">
+        <div style="width:7px; height:7px; border-radius:50%; background:#3ecf8e; box-shadow:0 0 8px rgba(62,207,142,.6); flex:none; margin:0 5px;"></div>
+        <span class="nav-label" style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-dim);">SYNCED 6:47 PM</span>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+  <!-- ===================== WEEK ===================== -->
+  <sc-if value="{{ isWeek }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+    <div style="flex:none; padding:24px 40px 22px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:24px;">
+        <!-- expressive ring -->
+        <div style="position:relative; width:78px; height:78px; flex:none;">
+          <svg width="78" height="78" viewBox="0 0 78 78" style="transform:rotate(-90deg);">
+            <circle cx="39" cy="39" r="33" fill="none" stroke="var(--border)" stroke-width="7"></circle>
+            <circle cx="39" cy="39" r="33" fill="none" stroke="#4f7cff" stroke-width="7" stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="114"></circle>
+          </svg>
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-family:var(--font-display); font-weight:800; font-size:21px; letter-spacing:-.03em; color:var(--fg-bright); line-height:1;">45<span style="font-size:11px; color:var(--fg-label);">%</span></span></div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.07em; color:var(--fg-label);">WEEK 25 — JUN 15–21</div>
+          <div style="font-family:var(--font-display); font-weight:800; font-size:46px; line-height:.9; letter-spacing:-.02em; color:var(--fg-bright); margin-top:4px; white-space:nowrap;">22<span style="font-size:25px; font-weight:700; color:var(--fg-label);">h</span><span style="font-size:19px; font-weight:500; letter-spacing:0; color:var(--fg-label); margin-left:9px;">left</span><span style="font-family:var(--font-ui); font-size:13px; font-weight:400; letter-spacing:.01em; color:var(--fg-muted); margin-left:12px;">· 18h / 40h</span></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button title="Sync with Jira" style="display:flex; align-items:center; gap:7px; white-space:nowrap; flex:none; font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; font-weight:600; color:var(--fg-secondary); background:var(--bg-raised); border:1px solid var(--border-strong); border-radius:8px; padding:10px 14px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>SYNC</button>
+        <button onClick="{{ openAddNew }}" style="display:flex; align-items:center; gap:8px; white-space:nowrap; flex:none; font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; color:#fff; background:#4f7cff; border:none; border-radius:8px; padding:10px 15px; cursor:pointer; font-weight:700; box-shadow:0 2px 14px rgba(79,124,255,.45);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>ADD TIME</button>
+        <div style="width:1px; height:26px; background:var(--border-strong);"></div>
+        <span style="font-family:var(--font-mono); font-size:14px; color:var(--fg-label); cursor:pointer;">‹</span>
+        <span style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; white-space:nowrap; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:6px; padding:7px 13px; cursor:pointer;">THIS WEEK</span>
+        <span style="font-family:var(--font-mono); font-size:14px; color:var(--fg-label); cursor:pointer;">›</span>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; display:flex;">
+      <!-- MON -->
+      <div style="flex:1; min-width:0; padding:22px 22px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label);">MON</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; letter-spacing:-.04em; color:var(--fg-primary); margin-top:2px;">15</div>
+          </div>
+          <button onClick="{{ openAddMon }}" title="Log time" style="width:26px; height:26px; border:1px solid var(--border-strong); border-radius:7px; background:transparent; color:var(--fg-label); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:14px;"><span style="font-family:var(--font-display); font-size:25px; font-weight:800; letter-spacing:-.03em; color:#e0a44a;">6h</span><span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--fg-faint);">/ 8h</span></div>
+        <div style="display:flex; gap:3px; height:11px; margin-top:11px;"><div style="flex:3; background:#5b8cff; border-radius:3px;"></div><div style="flex:3; background:#3bb7a8; border-radius:3px;"></div><div style="flex:2; background:var(--border); border-radius:3px;"></div></div>
+        <div style="margin-top:16px; display:flex; flex-direction:column;">
+          <div class="wl" style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #5b8cff;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-328</span><span style="flex:1;"></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">3h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Explorer: Introduce active interrupt handling</div><div class="wl-pop" style="background:var(--bg-card); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 18px 44px rgba(0,0,0,.55); padding:13px 14px;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:8px; height:8px; border-radius:2px; background:#5b8cff; flex:none;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--tk-blue);">FTDM-328</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-secondary);">3h</span></div><div style="font-size:12.5px; line-height:1.35; color:var(--fg-secondary); margin-top:6px;">Explorer: Introduce active interrupt handling</div><div style="font-family:var(--font-ui); font-size:10px; letter-spacing:.04em; color:var(--fg-label); margin-top:7px;">09:00 — 12:00</div><div style="display:flex; align-items:flex-start; gap:7px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border-strong);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px; flex:none;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-size:12px; line-height:1.45; color:var(--fg-muted);">Wired the interrupt handler and added poller regression tests.</span></div></div></div>
+          <div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #3bb7a8;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-teal);">FTDM-363</span><span style="font-family:var(--font-ui); font-size:8px; letter-spacing:.1em; color:var(--fg-label); background:var(--bg-active); border:1px solid var(--border-strong); border-radius:4px; padding:1px 5px; flex:none;">SUB</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">3h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Implement "Add documents" dialog</div></div>
+          <sc-for list="{{ notesMon }}" as="n" hint-placeholder-count="0"><div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px dashed var(--border-strong);"><div style="display:flex; align-items:center; gap:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="font-family:var(--font-ui); font-size:9px; letter-spacing:.11em; color:var(--fg-dim); text-transform:uppercase;">Note</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">{{ n.dur }}</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ n.text }}</div></div></sc-for>
+        </div>
+      </div>
+      <!-- TUE -->
+      <div style="flex:1; min-width:0; padding:22px 22px; display:flex; flex-direction:column; border-left:1px solid var(--border-faint);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label);">TUE</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; letter-spacing:-.04em; color:var(--fg-primary); margin-top:2px;">16</div>
+          </div>
+          <button onClick="{{ openAddTue }}" title="Log time" style="width:26px; height:26px; border:1px solid var(--border-strong); border-radius:7px; background:transparent; color:var(--fg-label); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:14px;"><span style="font-family:var(--font-display); font-size:25px; font-weight:800; letter-spacing:-.03em; color:#3ecf8e;">8h</span><span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--fg-faint);">/ 8h</span></div>
+        <div style="display:flex; gap:3px; height:11px; margin-top:11px;"><div style="flex:6; background:#5b8cff; border-radius:3px;"></div><div style="flex:2; background:#e0a44a; border-radius:3px;"></div></div>
+        <div style="margin-top:16px; display:flex; flex-direction:column;">
+          <div class="wl" style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #5b8cff;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-300</span><span style="font-family:var(--font-ui); font-size:8px; letter-spacing:.12em; color:var(--tk-blue); background:rgba(143,176,255,.08); border:1px solid rgba(143,176,255,.45); border-radius:4px; padding:1px 5px; flex:none;">EPIC</span><span style="flex:1;"></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">6h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Explorer — domain scaffolding & sprint coordination</div><div class="wl-pop" style="background:var(--bg-card); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 18px 44px rgba(0,0,0,.55); padding:13px 14px;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:8px; height:8px; border-radius:2px; background:#5b8cff; flex:none;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--tk-blue);">FTDM-300</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-secondary);">6h</span></div><div style="font-size:12.5px; line-height:1.35; color:var(--fg-secondary); margin-top:6px;">Explorer — domain scaffolding & sprint coordination</div><div style="font-family:var(--font-ui); font-size:10px; letter-spacing:.04em; color:var(--fg-label); margin-top:7px;">09:30 — 16:00</div><div style="display:flex; align-items:flex-start; gap:7px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border-strong);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px; flex:none;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-size:12px; line-height:1.45; color:var(--fg-muted);">Scaffolded the domain modules and set up barrel exports across the monorepo.</span></div></div></div>
+          <div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #e0a44a;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-amber);">FTDM-391</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">2h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Introduce keycloak-admin-client library</div></div>
+          <sc-for list="{{ notesTue }}" as="n" hint-placeholder-count="0"><div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px dashed var(--border-strong);"><div style="display:flex; align-items:center; gap:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="font-family:var(--font-ui); font-size:9px; letter-spacing:.11em; color:var(--fg-dim); text-transform:uppercase;">Note</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">{{ n.dur }}</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ n.text }}</div></div></sc-for>
+        </div>
+      </div>
+      <!-- WED -->
+      <div style="flex:1; min-width:0; padding:22px 22px; display:flex; flex-direction:column; border-left:1px solid var(--border-faint);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label);">WED</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; letter-spacing:-.04em; color:var(--fg-primary); margin-top:2px;">17</div>
+          </div>
+          <button onClick="{{ openAddWed }}" title="Log time" style="width:26px; height:26px; border:1px solid var(--border-strong); border-radius:7px; background:transparent; color:var(--fg-label); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:14px;"><span style="font-family:var(--font-display); font-size:25px; font-weight:800; letter-spacing:-.03em; color:#e0a44a;">4h</span><span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--fg-faint);">/ 8h</span></div>
+        <div style="display:flex; gap:3px; height:11px; margin-top:11px;"><div style="flex:2; background:#5b8cff; border-radius:3px;"></div><div style="flex:2; background:#3bb7a8; border-radius:3px;"></div><div style="flex:4; background:var(--border); border-radius:3px;"></div></div>
+        <div style="margin-top:16px; display:flex; flex-direction:column;">
+          <div class="wl" style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #5b8cff;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-393</span><span style="font-family:var(--font-ui); font-size:8px; letter-spacing:.1em; color:var(--fg-label); background:var(--bg-active); border:1px solid var(--border-strong); border-radius:4px; padding:1px 5px; flex:none;">SUB</span><span style="flex:1;"></span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">2h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Scaffold domains in monorepo for explorer</div><div class="wl-pop" style="background:var(--bg-card); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 18px 44px rgba(0,0,0,.55); padding:13px 14px;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:8px; height:8px; border-radius:2px; background:#5b8cff; flex:none;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--tk-blue);">FTDM-393</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-secondary);">2h</span></div><div style="font-size:12.5px; line-height:1.35; color:var(--fg-secondary); margin-top:6px;">Scaffold domains in monorepo for explorer</div><div style="font-family:var(--font-ui); font-size:10px; letter-spacing:.04em; color:var(--fg-label); margin-top:7px;">13:00 — 15:00</div><div style="display:flex; align-items:flex-start; gap:7px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border-strong);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px; flex:none;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-size:12px; line-height:1.45; color:var(--fg-muted);">Paired with Alex on the explorer DI wiring; follow-ups queued.</span></div></div></div>
+          <div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px solid #3bb7a8;"><div style="display:flex; align-items:center; gap:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-teal);">FTDM-363</span><span style="font-family:var(--font-ui); font-size:8px; letter-spacing:.1em; color:var(--fg-label); background:var(--bg-active); border:1px solid var(--border-strong); border-radius:4px; padding:1px 5px; flex:none;">SUB</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">2h</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; padding-left:16px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Implement "Add documents" dialog</div></div>
+          <sc-for list="{{ notesWed }}" as="n" hint-placeholder-count="0"><div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px dashed var(--border-strong);"><div style="display:flex; align-items:center; gap:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="font-family:var(--font-ui); font-size:9px; letter-spacing:.11em; color:var(--fg-dim); text-transform:uppercase;">Note</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">{{ n.dur }}</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ n.text }}</div></div></sc-for>
+        </div>
+      </div>
+      <!-- THU today -->
+      <div style="flex:1; min-width:0; padding:22px 22px; display:flex; flex-direction:column; border-left:1px solid var(--border-faint); background:linear-gradient(180deg,rgba(79,124,255,.07),transparent 55%);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:#4f7cff;">TODAY</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; letter-spacing:-.04em; color:#4f7cff; margin-top:2px;">18</div>
+          </div>
+          <button onClick="{{ openAddThu }}" title="Log time" style="width:26px; height:26px; border:1px solid #2a3550; border-radius:7px; background:#4f7cff; color:var(--bg-page); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:14px;"><span style="font-family:var(--font-display); font-size:25px; font-weight:800; letter-spacing:-.03em; color:var(--fg-label);">0h</span><span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--fg-faint);">/ 8h</span></div>
+        <div style="display:flex; gap:3px; height:11px; margin-top:11px;"><div style="flex:8; background:var(--border); border-radius:3px;"></div></div>
+        <sc-if value="{{ hasNotesThu }}" hint-placeholder-val="{{ false }}"><div style="margin-top:16px; display:flex; flex-direction:column;"><sc-for list="{{ notesThu }}" as="n" hint-placeholder-count="0"><div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px dashed var(--border-strong);"><div style="display:flex; align-items:center; gap:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="font-family:var(--font-ui); font-size:9px; letter-spacing:.11em; color:var(--fg-dim); text-transform:uppercase;">Note</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">{{ n.dur }}</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ n.text }}</div></div></sc-for></div></sc-if>
+        <button onClick="{{ openAddThu }}" style="flex:1; margin-top:14px; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end; gap:10px; background-color:rgba(125,140,175,.04); background-image:radial-gradient(rgba(150,160,185,.13) 1px, transparent 1.3px); background-size:13px 13px; border:1px dashed var(--border-strong); border-radius:9px; cursor:pointer; padding:14px; text-align:left;">
+          <span style="font-family:var(--font-display); font-weight:700; font-size:17px; line-height:1.15; letter-spacing:-.02em; color:var(--fg-bright); white-space:nowrap;">Log time</span>
+          <span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label); border:1px solid var(--border-strong); border-radius:5px; padding:4px 8px; background:var(--bg-page);">⌘K</span>
+        </button>
+        <div style="height:4px;"></div>
+      </div>
+      <!-- FRI -->
+      <div style="flex:1; min-width:0; padding:22px 22px; display:flex; flex-direction:column; border-left:1px solid var(--border-faint);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-disabled);">FRI</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:48px; line-height:1; letter-spacing:-.04em; color:var(--fg-disabled); margin-top:2px;">19</div>
+          </div>
+          <button onClick="{{ openAddFri }}" title="Log time" style="width:26px; height:26px; border:1px solid var(--border-faint); border-radius:7px; background:transparent; color:var(--fg-disabled); display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button>
+        </div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:14px;"><span style="font-family:var(--font-display); font-size:25px; font-weight:800; letter-spacing:-.03em; color:var(--fg-disabled);">0h</span><span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--fg-disabled);">/ 8h</span></div>
+        <div style="display:flex; gap:3px; height:11px; margin-top:11px;"><div style="flex:8; background:var(--border-faint); border-radius:3px;"></div></div>
+        <sc-if value="{{ hasNotesFri }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px; display:flex; flex-direction:column;"><sc-for list="{{ notesFri }}" as="n" hint-placeholder-count="0"><div style="padding:9px 0 9px 12px; border-top:1px solid var(--border); border-left:2px dashed var(--border-strong);"><div style="display:flex; align-items:center; gap:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg><span style="font-family:var(--font-ui); font-size:9px; letter-spacing:.11em; color:var(--fg-dim); text-transform:uppercase;">Note</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">{{ n.dur }}</span></div><div style="font-size:13px; line-height:1.35; color:var(--fg-muted); margin-top:5px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ n.text }}</div></div></sc-for></div></sc-if>
+        <div style="margin-top:18px; font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-faint);">UPCOMING</div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===== ADD-TIME DIALOG ===== -->
+  <sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; background:rgba(6,7,10,.72);">
+    <div onClick="{{ closeAdd }}" style="position:absolute; inset:0; cursor:default;"></div>
+    <div style="position:relative; width:540px; background:var(--bg-raised); border:1px solid var(--border-strong); border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); overflow:hidden;">
+      <!-- header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border);">
+        <div style="display:flex; align-items:baseline; gap:12px;"><span style="font-family:var(--font-display); font-weight:800; font-size:22px; letter-spacing:-.03em; color:var(--fg-bright);">{{ addTitle }}</span><span style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:#4f7cff;">{{ addDay }}</span></div>
+        <button onClick="{{ closeAdd }}" style="width:28px; height:28px; border:1px solid var(--border-strong); border-radius:7px; background:transparent; color:var(--fg-muted); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+      </div>
+      <!-- mode toggle -->
+      <div style="display:flex; gap:8px; padding:18px 24px 2px;">
+        <button onClick="{{ setTicketMode }}" style="{{ modeTabTicket }}">Log to ticket</button>
+        <button onClick="{{ setNoteMode }}" style="{{ modeTabNote }}">Personal note</button>
+      </div>
+      <sc-if value="{{ isTicketMode }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:16px 24px 20px;">
+        <!-- ticket -->
+        <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">TICKET</div>
+        <div style="display:flex; align-items:center; gap:11px; margin-top:9px; padding:11px 13px; border:1px solid var(--border-strong); border-radius:9px; cursor:pointer;"><span style="width:8px; height:8px; border-radius:2px; background:#5b8cff; flex:none;"></span><span style="font-family:var(--font-mono); font-size:12.5px; color:var(--tk-blue);">FTDM-328</span><span style="font-size:14px; color:var(--fg-secondary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Explorer: Introduce active interrupt handling</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+
+        <!-- duration + started -->
+        <div style="display:flex; gap:24px; margin-top:20px;">
+          <div style="flex:1;">
+            <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">DURATION</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:34px; line-height:1; letter-spacing:-.03em; color:var(--fg-bright); margin-top:10px;">2h 00m</div>
+            <div style="display:flex; gap:6px; margin-top:11px; flex-wrap:wrap;">
+              <span style="font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:6px 9px; cursor:pointer;">30m</span>
+              <span style="font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:6px 9px; cursor:pointer;">1h</span>
+              <span style="font-family:var(--font-mono); font-size:11.5px; color:var(--bg-page); background:#4f7cff; border:1px solid #4f7cff; border-radius:7px; padding:6px 9px; cursor:pointer; font-weight:700;">2h</span>
+              <span style="font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:6px 9px; cursor:pointer;">4h</span>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">STARTED</div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+              <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; border:1px solid var(--border-strong); border-radius:8px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path></svg><span style="font-family:var(--font-mono); font-size:12.5px; color:var(--fg-secondary);">18 Jun 2026</span></div>
+              <div style="display:flex; align-items:center; gap:9px; padding:9px 12px; border:1px solid var(--border-strong); border-radius:8px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3 1.8"></path></svg><span style="font-family:var(--font-mono); font-size:12.5px; color:var(--fg-secondary);">9:00 AM</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- comment -->
+        <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label); margin-top:22px;">WORK DESCRIPTION</div>
+        <div style="margin-top:9px; border:1px solid var(--border-strong); border-radius:9px; padding:12px 14px; min-height:56px;"><span style="font-size:13.5px; color:var(--fg-label);">Add a note… syncs to the Jira worklog comment</span></div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isNoteMode }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px 24px 20px;">
+        <div style="display:flex; align-items:center; gap:9px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          <span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">PERSONAL NOTE</span>
+          <span style="display:inline-flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:9px; font-weight:600; letter-spacing:.05em; color:var(--fg-dim); background:var(--bg-active); border:1px solid var(--border-strong); border-radius:4px; padding:2px 6px;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>LOCAL</span>
+          <span style="flex:1;"></span>
+          <span style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:#4f7cff;">{{ addDay }}</span>
+        </div>
+        <textarea value="{{ noteText }}" onInput="{{ setNoteText }}" placeholder="What did you spend time on? — e.g. interviews, planning, mentoring, ops…" style="width:100%; margin-top:12px; min-height:84px; resize:none; border:1px solid var(--border-strong); border-radius:9px; padding:12px 14px; background:var(--bg-page); color:var(--fg-bright); font-family:var(--font-ui); font-size:14px; line-height:1.5; outline:none;" style-focus="border-color:#4f7cff; box-shadow:0 0 0 3px rgba(79,124,255,.16);"></textarea>
+        <div style="display:flex; align-items:flex-end; gap:18px; margin-top:18px;">
+          <div>
+            <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">TIME SPENT</div>
+            <div style="font-family:var(--font-display); font-weight:800; font-size:30px; line-height:1; letter-spacing:-.03em; color:var(--fg-bright); margin-top:9px;">{{ noteDurLabel }}</div>
+          </div>
+          <div style="display:flex; gap:6px; flex:1; flex-wrap:wrap;">
+            <span onClick="{{ setNote15 }}" style="{{ noteChip15 }}">15m</span>
+            <span onClick="{{ setNote30 }}" style="{{ noteChip30 }}">30m</span>
+            <span onClick="{{ setNote60 }}" style="{{ noteChip60 }}">1h</span>
+            <span onClick="{{ setNote120 }}" style="{{ noteChip120 }}">2h</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:18px; padding:10px 12px; border:1px dashed var(--border-strong); border-radius:9px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"></path><path d="M6.3 6.3A5 5 0 0 0 7 17h9.5"></path><path d="M11 5.3A6 6 0 0 1 19.4 10 4.5 4.5 0 0 1 21 13.6"></path></svg>
+          <span style="font-size:11.5px; color:var(--fg-dim);">Stays on this device — not synced to Jira.</span>
+        </div>
+      </div>
+      </sc-if>
+      <!-- footer -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-top:1px solid var(--border); background:var(--bg-sunken);">
+        <span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">⌘⏎ TO SAVE · ESC TO CANCEL</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button onClick="{{ closeAdd }}" style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; color:var(--fg-muted); background:transparent; border:1px solid var(--border-strong); border-radius:8px; padding:10px 16px; cursor:pointer;">CANCEL</button>
+          <sc-if value="{{ isTicketMode }}" hint-placeholder-val="{{ true }}"><button onClick="{{ closeAdd }}" style="font-family:var(--font-display); font-weight:700; font-size:14px; letter-spacing:-.01em; color:var(--bg-page); background:#4f7cff; border:none; border-radius:8px; padding:11px 18px; cursor:pointer;">Log 2h to FTDM-328</button></sc-if>
+          <sc-if value="{{ isNoteMode }}" hint-placeholder-val="{{ false }}"><button onClick="{{ addNote }}" style="font-family:var(--font-display); font-weight:700; font-size:14px; letter-spacing:-.01em; color:var(--bg-page); background:#4f7cff; border:none; border-radius:8px; padding:11px 18px; cursor:pointer;">Save note</button></sc-if>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== TODAY ===================== -->
+  <sc-if value="{{ isToday }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:auto;">
+    <div style="flex:none; padding:30px 48px 24px; display:flex; align-items:flex-end; justify-content:space-between; border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-label);">THURSDAY — 18 JUNE</div>
+        <div style="display:flex; align-items:flex-end; gap:18px; margin-top:12px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:62px; line-height:.82; letter-spacing:-.05em; color:var(--fg-bright);">2<span style="font-size:30px; font-weight:700; color:var(--fg-label);">h</span>45<span style="font-size:30px; font-weight:700; color:var(--fg-label);">m</span></div>
+          <div style="padding-bottom:9px;">
+            <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-dim);">LOGGED OF 8H</div>
+            <div style="display:flex; align-items:center; gap:9px; margin-top:7px;"><div style="width:130px; height:4px; background:var(--border); border-radius:2px; overflow:hidden;"><div style="width:34%; height:100%; background:#4f7cff;"></div></div><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--fg-muted);">5h 15m left</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; display:flex;">
+      <!-- composer -->
+      <div style="flex:1; min-width:0; padding:30px 48px; border-right:1px solid var(--border);">
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label);">LOGGING TO</div>
+        <div style="display:flex; align-items:baseline; gap:13px; margin-top:11px; cursor:pointer;">
+          <span style="font-family:var(--font-mono); font-size:14px; color:var(--tk-blue);">FTDM-328</span>
+          <span style="font-family:var(--font-display); font-weight:600; font-size:22px; letter-spacing:-.01em; color:var(--fg-bright);">Explorer: Introduce active interrupt handling</span>
+          <span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label); border:1px solid var(--border-strong); border-radius:5px; padding:4px 8px;">⌘K</span>
+        </div>
+
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label); margin-top:30px;">DURATION</div>
+        <div style="display:flex; align-items:center; gap:18px; margin-top:12px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:46px; line-height:1; letter-spacing:-.03em; color:var(--fg-bright);">2h 00m</div>
+          <div style="display:flex; gap:7px;">
+            <span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:8px 11px; cursor:pointer;">15m</span>
+            <span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:8px 11px; cursor:pointer;">30m</span>
+            <span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:8px 11px; cursor:pointer;">1h</span>
+            <span style="font-family:var(--font-mono); font-size:12px; color:var(--bg-page); background:#4f7cff; border:1px solid #4f7cff; border-radius:7px; padding:8px 11px; cursor:pointer; font-weight:700;">2h</span>
+            <span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:8px 11px; cursor:pointer;">4h</span>
+          </div>
+        </div>
+
+        <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--fg-faint); margin-top:11px;">FORMAT · 2w 4d 6h 45m</div>
+
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label); margin-top:26px;">STARTED</div>
+        <div style="display:flex; gap:10px; margin-top:11px;">
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 13px; border:1px solid var(--border-strong); border-radius:8px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path></svg><span style="font-family:var(--font-mono); font-size:13px; color:var(--fg-secondary);">18 Jun 2026</span></div>
+          <div style="display:flex; align-items:center; gap:9px; padding:10px 13px; border:1px solid var(--border-strong); border-radius:8px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3 1.8"></path></svg><span style="font-family:var(--font-mono); font-size:13px; color:var(--fg-secondary);">7:18 PM</span></div>
+        </div>
+
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label); margin-top:26px;">WORK DESCRIPTION</div>
+        <div style="margin-top:11px; border:1px solid var(--border-strong); border-radius:8px; padding:13px 15px; min-height:60px;"><span style="font-size:14px; color:var(--fg-label);">Add a note… @ to mention a teammate</span></div>
+        <div style="font-family:var(--font-ui); font-size:10px; letter-spacing:.04em; color:var(--fg-faint); margin-top:8px;">OPTIONAL · SYNCS TO THE JIRA WORKLOG COMMENT</div>
+
+        <div style="display:flex; align-items:center; gap:16px; margin-top:22px;">
+          <button style="font-family:var(--font-display); font-weight:700; font-size:15px; letter-spacing:-.01em; color:var(--bg-page); background:#4f7cff; border:none; border-radius:9px; padding:12px 20px; cursor:pointer;">Log 2h to FTDM-328</button>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">⌘⏎ · LOGS TO TODAY</span>
+        </div>
+
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.07em; color:var(--fg-label); margin-top:38px;">TODAY'S ENTRIES — 3 LOGS</div>
+        <div style="margin-top:6px;">
+          <div style="padding:14px 0; border-top:1px solid var(--border);">
+            <div style="display:flex; align-items:baseline; gap:14px;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue); flex:none;">FTDM-328</span><span style="font-size:15px; color:var(--fg-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px;">Explorer: Introduce active interrupt handling</span><span style="flex:1; border-bottom:1px dotted var(--border-strong); margin:0 2px 5px; min-width:18px;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">9:12–10:42</span><span style="font-family:var(--font-mono); font-size:13px; color:var(--fg-primary); flex:none;">1h 30m</span></div>
+            <div style="display:flex; align-items:flex-start; gap:8px; margin-top:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-faint)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex:none;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-size:12.5px; color:var(--fg-dim); line-height:1.45;">Wired the interrupt handler and added poller regression tests.</span></div>
+          </div>
+          <div style="padding:14px 0; border-top:1px solid var(--border);">
+            <div style="display:flex; align-items:baseline; gap:14px;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue); flex:none;">FTDM-393</span><span style="font-size:15px; color:var(--fg-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px;">Scaffold domains in monorepo for explorer</span><span style="flex:1; border-bottom:1px dotted var(--border-strong); margin:0 2px 5px; min-width:18px;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">10:42–11:27</span><span style="font-family:var(--font-mono); font-size:13px; color:var(--fg-primary); flex:none;">45m</span></div>
+          </div>
+          <div style="padding:14px 0; border-top:1px solid var(--border);">
+            <div style="display:flex; align-items:baseline; gap:14px;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue); flex:none;">FTDM-363</span><span style="font-size:15px; color:var(--fg-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px;">Implement "Add documents" dialog</span><span style="flex:1; border-bottom:1px dotted var(--border-strong); margin:0 2px 5px; min-width:18px;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">14:05–14:35</span><span style="font-family:var(--font-mono); font-size:13px; color:var(--fg-primary); flex:none;">30m</span></div>
+            <div style="display:flex; align-items:flex-start; gap:8px; margin-top:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-faint)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; flex:none;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="font-size:12.5px; color:var(--fg-dim); line-height:1.45;">Reviewed accessibility feedback from design, queued follow-ups.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- right rail -->
+      <div style="width:330px; flex:none; padding:30px 32px;">
+        <div style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">TOUCHED TODAY · NOT LOGGED</div>
+        <div style="margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid var(--border);"><div style="flex:1; min-width:0;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue);">FTDM-410</span><div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); margin-top:4px;">3 commits · feature/FTDM-410</div></div><span style="font-family:var(--font-mono); font-size:18px; color:var(--fg-label); cursor:pointer;">+</span></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid var(--border);"><div style="flex:1; min-width:0;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-amber);">FTDM-391</span><div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); margin-top:4px;">1 PR review · keycloak-admin</div></div><span style="font-family:var(--font-mono); font-size:18px; color:var(--fg-label); cursor:pointer;">+</span></div>
+        </div>
+        <div style="margin-top:30px; padding:16px; border:1px solid rgba(224,164,74,.22); border-radius:10px;"><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:#c7a663;">REMINDER · 16:30</div><div style="font-size:12.5px; color:var(--fg-muted); line-height:1.5; margin-top:7px;">Fires only if today is still under target on a working day.</div></div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== TICKETS ===================== -->
+  <sc-if value="{{ isTickets }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:auto;">
+    <div style="flex:none; padding:30px 48px 22px; border-bottom:1px solid var(--border);">
+      <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-label);">TICKETS</div>
+      <div style="display:flex; align-items:flex-end; gap:16px; margin-top:10px;">
+        <div style="font-family:var(--font-display); font-weight:800; font-size:46px; line-height:1; letter-spacing:-.04em; color:var(--fg-bright); white-space:nowrap;">12 <span style="font-size:22px; font-weight:700; color:var(--fg-label);">assigned</span></div>
+        <span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-dim); padding-bottom:6px;">· 18h logged this week</span>
+      </div>
+      <div style="display:flex; gap:9px; margin-top:24px;">
+        <span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-secondary); border:1px solid var(--border-strong); border-radius:7px; padding:7px 12px;">ASSIGNEE: ME</span>
+        <span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:7px 12px;">STATUS: OPEN</span>
+        <span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:7px; padding:7px 12px;">PROJECT: EXPLORER</span>
+        <div style="flex:1;"></div>
+        <span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label); border:1px solid var(--border-strong); border-radius:7px; padding:7px 12px;">⌘K SEARCH</span>
+      </div>
+    </div>
+
+    <div style="padding:8px 48px 30px;">
+      <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-dim); padding:18px 0 4px;">★ FAVORITES</div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border);"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue);">FTDM-328</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Explorer: Introduce active interrupt handling</span><span style="display:inline-flex; align-items:center; gap:5px; width:134px; flex:none;"><span style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--tk-purple) 13%, transparent); color:var(--tk-purple); font-family:var(--font-mono); font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6 22.4 12 12 22.4 1.6 12Z"></path></svg>Explorer</span></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); width:40px; text-align:right;">3h</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--bg-page); background:var(--fg-secondary); border:none; border-radius:6px; padding:6px 12px; cursor:pointer; width:64px;">LOG</button></div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border);"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue);">FTDM-393</span><span style="font-family:var(--font-ui); font-size:8.5px; font-weight:700; letter-spacing:.07em; color:var(--tk-purple); background:color-mix(in srgb, var(--tk-purple) 16%, transparent); border-radius:3px; padding:2px 5px; line-height:1;">EPIC</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Scaffold domains in monorepo for explorer</span><span style="display:inline-flex; align-items:center; gap:6px; width:134px; flex:none; font-family:var(--font-mono); font-size:10.5px; color:var(--fg-dim);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>rolls up 6</span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); width:40px; text-align:right;">8h</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--bg-page); background:var(--fg-secondary); border:none; border-radius:6px; padding:6px 12px; cursor:pointer; width:64px;">LOG</button></div>
+
+      <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-dim); padding:24px 0 4px;">IN PROGRESS · ASSIGNED TO ME</div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border);"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue);">FTDM-363</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Implement "Add documents" dialog</span><span style="display:inline-flex; align-items:center; gap:5px; width:134px; flex:none;"><span style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--tk-purple) 13%, transparent); color:var(--tk-purple); font-family:var(--font-mono); font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6 22.4 12 12 22.4 1.6 12Z"></path></svg>Explorer</span></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); width:40px; text-align:right;">5h</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--bg-page); background:var(--fg-secondary); border:none; border-radius:6px; padding:6px 12px; cursor:pointer; width:64px;">LOG</button></div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border);"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-amber);">FTDM-391</span><span style="font-family:var(--font-ui); font-size:8.5px; font-weight:700; letter-spacing:.07em; color:var(--tk-teal); background:color-mix(in srgb, var(--tk-teal) 16%, transparent); border-radius:3px; padding:2px 5px; line-height:1;">SUB</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Introduce keycloak-admin-client library</span><span style="display:inline-flex; align-items:center; gap:5px; width:134px; flex:none;"><span style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--tk-purple) 13%, transparent); color:var(--tk-purple); font-family:var(--font-mono); font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6 22.4 12 12 22.4 1.6 12Z"></path></svg>Auth</span></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted); width:40px; text-align:right;">2h</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--bg-page); background:var(--fg-secondary); border:none; border-radius:6px; padding:6px 12px; cursor:pointer; width:64px;">LOG</button></div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border);"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--tk-blue);">FTDM-410</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-primary); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Interrupt-safe queue draining for explorer</span><span style="display:inline-flex; align-items:center; gap:5px; width:134px; flex:none;"><span style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--tk-purple) 13%, transparent); color:var(--tk-purple); font-family:var(--font-mono); font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6 22.4 12 12 22.4 1.6 12Z"></path></svg>Explorer</span></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-label); width:40px; text-align:right;">—</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--bg-page); background:var(--fg-secondary); border:none; border-radius:6px; padding:6px 12px; cursor:pointer; width:64px;">LOG</button></div>
+
+      <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-dim); padding:24px 0 4px;">RECENTLY CLOSED</div>
+      <div style="display:flex; align-items:center; gap:18px; padding:16px 0; border-top:1px solid var(--border); opacity:.55;"><span style="display:inline-flex; align-items:center; gap:7px; width:112px; flex:none;"><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-muted);">FTDM-377</span></span><span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--fg-muted); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:line-through; text-decoration-color:var(--fg-disabled);">Handle interrupt edge cases in poller</span><span style="display:inline-flex; align-items:center; gap:5px; width:134px; flex:none;"><span style="display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:6px; background:color-mix(in srgb, var(--tk-purple) 13%, transparent); color:var(--tk-purple); font-family:var(--font-mono); font-size:10.5px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6 22.4 12 12 22.4 1.6 12Z"></path></svg>Explorer</span></span><span style="font-family:var(--font-mono); font-size:12px; color:var(--fg-label); width:40px; text-align:right;">—</span><button style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-muted); background:transparent; border:1px solid var(--border-strong); border-radius:6px; padding:5px 11px; cursor:pointer; width:64px;">LOG</button></div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== REPORTS ===================== -->
+  <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:auto;">
+    <div style="flex:none; padding:30px 48px 24px; display:flex; align-items:flex-end; justify-content:space-between; border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-label);">REPORTS — WEEK 25</div>
+        <div style="display:flex; align-items:flex-end; gap:16px; margin-top:10px;">
+          <div style="font-family:var(--font-display); font-weight:800; font-size:56px; line-height:1; letter-spacing:-.05em; color:var(--fg-bright); white-space:nowrap;">18<span style="font-size:26px; font-weight:700; color:var(--fg-label);">h / 40h</span></div>
+          <span style="font-family:var(--font-mono); font-size:12px; color:#e0a44a; padding-bottom:8px;">22h under target</span>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; padding-bottom:6px;">
+        <span style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:6px; padding:7px 13px; cursor:pointer;">THIS WEEK</span>
+        <span style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; color:var(--fg-muted); border:1px solid var(--border-strong); border-radius:6px; padding:7px 13px; cursor:pointer;">EXPORT CSV</span>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div style="flex:none; display:flex; border-bottom:1px solid var(--border);">
+      <div style="flex:1; padding:24px 32px; border-right:1px solid var(--border);"><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">DAILY AVERAGE</div><div style="font-family:var(--font-display); font-weight:800; font-size:34px; letter-spacing:-.03em; color:var(--fg-bright); margin-top:8px;">4h 30m</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); margin-top:4px;">across 4 active days</div></div>
+      <div style="flex:1; padding:24px 32px; border-right:1px solid var(--border);"><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">DAYS ON TARGET</div><div style="font-family:var(--font-display); font-weight:800; font-size:34px; letter-spacing:-.03em; color:var(--fg-bright); margin-top:8px;">1 <span style="font-size:18px; color:var(--fg-label);">/ 5</span></div><div style="font-family:var(--font-mono); font-size:11px; color:#3ecf8e; margin-top:4px;">Tuesday hit 8h</div></div>
+      <div style="flex:1; padding:24px 32px; border-right:1px solid var(--border);"><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">TICKETS TOUCHED</div><div style="font-family:var(--font-display); font-weight:800; font-size:34px; letter-spacing:-.03em; color:var(--fg-bright); margin-top:8px;">4</div><div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); margin-top:4px;">across 2 projects</div></div>
+      <div style="flex:1; padding:24px 32px;"><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">BILLABLE</div><div style="font-family:var(--font-display); font-weight:800; font-size:34px; letter-spacing:-.03em; color:var(--fg-bright); margin-top:8px;">100<span style="font-size:18px; color:var(--fg-label);">%</span></div><div style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); margin-top:4px;">18h of 18h</div></div>
+    </div>
+
+    <div style="flex:1; display:flex; min-height:320px;">
+      <!-- chart -->
+      <div style="flex:1.5; padding:26px 36px; border-right:1px solid var(--border); display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">HOURS PER DAY</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim);">TARGET 8H</span></div>
+        <div style="flex:1; display:flex; align-items:flex-end; gap:26px; padding:26px 4px 0; position:relative; min-height:200px;">
+          <div style="position:absolute; left:0; right:0; top:26px; border-top:1px dashed var(--border-strong);"></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:11px; height:100%; justify-content:flex-end;"><div style="width:100%; max-width:52px; height:75%; background:#4f7cff; border-radius:5px 5px 0 0;"></div><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-muted);">6h</span><span style="font-family:var(--font-ui); font-size:10px; letter-spacing:.05em; color:var(--fg-label);">MON</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:11px; height:100%; justify-content:flex-end;"><div style="width:100%; max-width:52px; height:100%; background:#3ecf8e; border-radius:5px 5px 0 0;"></div><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-muted);">8h</span><span style="font-family:var(--font-ui); font-size:10px; letter-spacing:.05em; color:var(--fg-label);">TUE</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:11px; height:100%; justify-content:flex-end;"><div style="width:100%; max-width:52px; height:50%; background:#4f7cff; border-radius:5px 5px 0 0;"></div><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-muted);">4h</span><span style="font-family:var(--font-ui); font-size:10px; letter-spacing:.05em; color:var(--fg-label);">WED</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:11px; height:100%; justify-content:flex-end;"><div style="width:100%; max-width:52px; height:4px; background:var(--border-strong); border-radius:5px 5px 0 0;"></div><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">0h</span><span style="font-family:var(--font-ui); font-size:10px; letter-spacing:.05em; color:#4f7cff;">THU</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:11px; height:100%; justify-content:flex-end;"><div style="width:100%; max-width:52px; height:4px; background:var(--border-strong); border-radius:5px 5px 0 0;"></div><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-label);">0h</span><span style="font-family:var(--font-ui); font-size:10px; letter-spacing:.05em; color:var(--fg-label);">FRI</span></div>
+        </div>
+      </div>
+      <!-- by ticket -->
+      <div style="flex:1; padding:26px 36px; display:flex; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;"><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">BY TICKET</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim);">18H TOTAL</span></div>
+        <div style="display:flex; flex-direction:column; gap:18px;">
+          <div><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-393</span><span style="flex:1;"></span><span style="font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--fg-primary);">8h</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); width:36px; text-align:right;">44%</span></div><div style="height:5px; border-radius:3px; background:var(--border); overflow:hidden;"><div style="width:44%; height:100%; background:#4f7cff;"></div></div></div>
+          <div><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-363</span><span style="flex:1;"></span><span style="font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--fg-primary);">5h</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); width:36px; text-align:right;">28%</span></div><div style="height:5px; border-radius:3px; background:var(--border); overflow:hidden;"><div style="width:28%; height:100%; background:#4f7cff;"></div></div></div>
+          <div><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-blue);">FTDM-328</span><span style="flex:1;"></span><span style="font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--fg-primary);">3h</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); width:36px; text-align:right;">17%</span></div><div style="height:5px; border-radius:3px; background:var(--border); overflow:hidden;"><div style="width:17%; height:100%; background:#4f7cff;"></div></div></div>
+          <div><div style="display:flex; align-items:baseline; gap:10px; margin-bottom:8px;"><span style="font-family:var(--font-mono); font-size:11.5px; color:var(--tk-amber);">FTDM-391</span><span style="flex:1;"></span><span style="font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--fg-primary);">2h</span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim); width:36px; text-align:right;">11%</span></div><div style="height:5px; border-radius:3px; background:var(--border); overflow:hidden;"><div style="width:11%; height:100%; background:#e0a44a;"></div></div></div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="display:flex; gap:24px; padding-top:20px; border-top:1px solid var(--border); margin-top:20px;">
+          <div><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">EXPLORER</div><div style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-primary); margin-top:4px;">16h</div></div>
+          <div><div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.05em; color:var(--fg-label);">AUTH</div><div style="font-family:var(--font-display); font-weight:800; font-size:20px; color:var(--fg-primary); margin-top:4px;">2h</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1; min-height:0; display:flex; flex-direction:column; overflow:auto;">
+    <div style="flex:none; padding:30px 48px 24px; display:flex; align-items:flex-end; justify-content:space-between; border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.04em; color:var(--fg-label);">SETTINGS</div>
+        <div style="font-family:var(--font-display); font-weight:800; font-size:46px; line-height:.9; letter-spacing:-.04em; color:var(--fg-bright); margin-top:10px;">Connect &amp; configure</div>
+        <div style="font-size:14px; color:var(--fg-muted); margin-top:10px;">Connect Jira, set weekly expectations, and schedule local reminders.</div>
+      </div>
+      <button style="display:flex; align-items:center; gap:8px; white-space:nowrap; flex:none; font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; font-weight:700; color:var(--bg-page); background:#4f7cff; border:none; border-radius:8px; padding:11px 17px; cursor:pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8M7 3v5h8"></path></svg>SAVE SETTINGS</button>
+    </div>
+
+    <div style="flex:1; display:flex; gap:28px; padding:28px 48px 40px; align-items:flex-start;">
+
+      <!-- LEFT: Jira sign-in -->
+      <div style="flex:1.4; min-width:0; border:1px solid var(--border); border-radius:12px; background:var(--bg-raised); padding:24px 26px;">
+        <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5Z"></path></svg><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">JIRA CLOUD SIGN-IN</span><span style="flex:1;"></span><span style="display:flex; align-items:center; gap:6px; font-family:var(--font-ui); font-size:10px; letter-spacing:.04em; color:#3ecf8e; border:1px solid rgba(62,207,142,.3); border-radius:20px; padding:4px 9px;"><span style="width:6px; height:6px; border-radius:50%; background:#3ecf8e;"></span>CONNECTED</span></div>
+
+        <div style="display:flex; gap:14px; align-items:flex-start; padding:15px 16px; border:1px solid rgba(79,124,255,.22); background:rgba(79,124,255,.06); border-radius:10px; margin-bottom:22px;">
+          <div style="width:34px; height:34px; flex:none; border-radius:8px; background:rgba(79,124,255,.14); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"></circle><path d="m10.8 12.2 8.2-8.2M17 5l2 2M14 8l2 2"></path></svg></div>
+          <div><div style="font-size:14.5px; font-weight:650; color:var(--fg-bright); font-family:var(--font-display);">No Jira admin needed</div><div style="font-size:13px; line-height:1.55; color:var(--fg-muted); margin-top:4px;">Use your normal developer account plus a regular Atlassian API token. The app can only read worklogs your user is already allowed to see.</div></div>
+        </div>
+
+        <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">JIRA SITE</div>
+        <div style="margin-top:9px; padding:12px 14px; border:1px solid var(--border-strong); border-radius:9px; font-size:14px; color:var(--fg-secondary);">https://elevait.atlassian.net</div>
+        <div style="font-size:12px; color:var(--fg-dim); margin-top:7px;">Pasting the full URL also works.</div>
+
+        <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label); margin-top:20px;">JIRA EMAIL</div>
+        <div style="margin-top:9px; padding:12px 14px; border:1px solid var(--border-strong); border-radius:9px; font-size:14px; color:var(--fg-secondary);">sergej.tschigraj@elevait.de</div>
+
+        <div style="display:flex; align-items:baseline; justify-content:space-between; margin-top:20px;"><span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">JIRA API TOKEN</span><span style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-dim); cursor:pointer;">SHOW</span></div>
+        <div style="margin-top:9px; padding:12px 14px; border:1px solid var(--border-strong); border-radius:9px; font-family:ui-monospace,Menlo,monospace; font-size:14px; color:var(--fg-muted); letter-spacing:.05em; overflow:hidden; white-space:nowrap;">••••••••••••••••••••••••••••••••••••••••</div>
+        <div style="font-size:12px; line-height:1.5; color:var(--fg-dim); margin-top:7px;">Stored only on this device. Scoped-token support would need <span style="font-family:ui-monospace,Menlo,monospace; color:var(--fg-muted);">read:jira-work</span> and <span style="font-family:ui-monospace,Menlo,monospace; color:var(--fg-muted);">read:jira-user</span>.</div>
+
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border:1px solid rgba(62,207,142,.22); background:rgba(62,207,142,.05); border-radius:9px; margin-top:18px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span style="font-size:12.5px; color:var(--fg-muted); line-height:1.45;">Credentials stay in IndexedDB and are sent only to your Jira Cloud site during test or sync.</span></div>
+
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button style="display:flex; align-items:center; gap:8px; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-secondary); background:transparent; border:1px solid var(--border-strong); border-radius:8px; padding:10px 14px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>CREATE API TOKEN</button>
+          <button style="display:flex; align-items:center; gap:8px; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-secondary); background:transparent; border:1px solid var(--border-strong); border-radius:8px; padding:10px 14px; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>TEST CONNECTION</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: target + reminder -->
+      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:24px;">
+        <!-- weekly target -->
+        <div style="border:1px solid var(--border); border-radius:12px; background:var(--bg-raised); padding:24px 26px;">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path></svg><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">WEEKLY TARGET</span></div>
+
+          <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label);">TARGET HOURS</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:9px; padding:12px 14px; border:1px solid var(--border-strong); border-radius:9px;"><span style="font-family:var(--font-display); font-weight:800; font-size:22px; letter-spacing:-.02em; color:var(--fg-bright);">40</span><span style="font-size:13px; color:var(--fg-dim);">h / week</span><span style="flex:1;"></span><span style="font-family:var(--font-mono); font-size:11px; color:var(--fg-dim);">8h × 5 days</span></div>
+
+          <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label); margin-top:20px;">WORKING DAYS</div>
+          <div style="display:flex; gap:7px; margin-top:11px;">
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08); border-radius:7px; padding:9px 0; cursor:pointer;">MON</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08); border-radius:7px; padding:9px 0; cursor:pointer;">TUE</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08); border-radius:7px; padding:9px 0; cursor:pointer;">WED</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08); border-radius:7px; padding:9px 0; cursor:pointer;">THU</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08); border-radius:7px; padding:9px 0; cursor:pointer;">FRI</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-faint); border:1px solid var(--border-strong); border-radius:7px; padding:9px 0; cursor:pointer;">SAT</span>
+            <span style="flex:1; text-align:center; font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-faint); border:1px solid var(--border-strong); border-radius:7px; padding:9px 0; cursor:pointer;">SUN</span>
+          </div>
+        </div>
+
+        <!-- reminder -->
+        <div style="border:1px solid var(--border); border-radius:12px; background:var(--bg-raised); padding:24px 26px;">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"></path></svg><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">REMINDER</span></div>
+
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="flex:1;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--fg-bright);">Daily reminder</div><div style="font-size:12.5px; color:var(--fg-muted); margin-top:3px; line-height:1.45;">Nudge me if I'm under target on a working day. Skips PTO and finished weeks.</div></div>
+            <div style="width:42px; height:24px; border-radius:13px; background:#4f7cff; position:relative; flex:none; cursor:pointer;"><div style="width:18px; height:18px; border-radius:50%; background:#fff; position:absolute; top:3px; right:3px;"></div></div>
+          </div>
+
+          <div style="font-family:var(--font-ui); font-size:10.5px; letter-spacing:.04em; color:var(--fg-label); margin-top:20px;">REMINDER TIME</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:9px; padding:12px 14px; border:1px solid var(--border-strong); border-radius:9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5V12l3 1.8"></path></svg><span style="font-family:var(--font-mono); font-size:14px; color:var(--fg-secondary);">16:30</span></div>
+        </div>
+
+        <!-- appearance -->
+        <div style="border:1px solid var(--border); border-radius:12px; background:var(--bg-raised); padding:24px 26px;">
+          <div style="display:flex; align-items:center; gap:9px; margin-bottom:20px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-label)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"></path></svg><span style="font-family:var(--font-ui); font-size:11px; letter-spacing:.04em; color:var(--fg-label);">APPEARANCE</span></div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="flex:1;"><div style="font-family:var(--font-display); font-weight:700; font-size:15px; color:var(--fg-bright);">Theme</div><div style="font-size:12.5px; color:var(--fg-muted); margin-top:3px; line-height:1.45;">Follows your system setting until you pick one.</div></div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:16px;">
+            <span onClick="{{ setLight }}" style="{{ lightChip }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"></path></svg>LIGHT</span>
+            <span onClick="{{ setDark }}" style="{{ darkChip }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg>DARK</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+    </div><!-- /main -->
+  </div><!-- /shell -->
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:840},&quot;defaultView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;today&quot;,&quot;week&quot;,&quot;tickets&quot;,&quot;reports&quot;],&quot;default&quot;:&quot;week&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { view: null, addOpen: false, addDay: 'THU · 18 JUN', collapsed: false, theme: null, notes: {}, addMode: 'ticket', noteText: '', noteMins: 30 };
+
+  componentDidMount(){
+    let saved = null;
+    try { saved = localStorage.getItem('sprintf-theme'); } catch(e){}
+    this._applyTheme(saved);
+    this.setState({ theme: saved });
+    let notes = {};
+    try { notes = JSON.parse(localStorage.getItem('sprintf-notes')) || {}; } catch(err){}
+    if (!notes || !Object.keys(notes).length) {
+      notes = { MON:[{id:1,text:'Sprint standup + unblocked Dana on the auth flow',mins:30}], WED:[{id:2,text:'Reviewed 3 PRs and refreshed the staging deploy',mins:60}] };
+      try { localStorage.setItem('sprintf-notes', JSON.stringify(notes)); } catch(err){}
+    }
+    this.setState({ notes });
+    this._mq = window.matchMedia('(prefers-color-scheme: light)');
+    this._onMq = () => { if (!this.state.theme) this.forceUpdate(); };
+    this._mq.addEventListener && this._mq.addEventListener('change', this._onMq);
+  }
+  componentWillUnmount(){
+    this._mq && this._onMq && this._mq.removeEventListener && this._mq.removeEventListener('change', this._onMq);
+  }
+  _applyTheme(theme){
+    const r = document.documentElement;
+    r.classList.remove('theme-light','theme-dark');
+    if (theme === 'light') r.classList.add('theme-light');
+    else if (theme === 'dark') r.classList.add('theme-dark');
+  }
+  _themeChip(active){
+    const base = "flex:1; display:flex; align-items:center; justify-content:center; gap:7px; font-family:var(--font-ui); font-size:11.5px; letter-spacing:.05em; font-weight:600; border-radius:8px; padding:10px 0; cursor:pointer;";
+    return base + (active
+      ? " color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08);"
+      : " color:var(--fg-muted); border:1px solid var(--border-strong); background:transparent;");
+  }
+  _effectiveTheme(){
+    if (this.state.theme) return this.state.theme;
+    return (this._mq && this._mq.matches) ? 'light' : 'dark';
+  }
+
+  _fmt(m){ const h=Math.floor(m/60), mm=m%60; return h ? (mm ? h+'h '+mm+'m' : h+'h') : mm+'m'; }
+  _saveNotes(notes){ try{ localStorage.setItem('sprintf-notes', JSON.stringify(notes)); }catch(err){} }
+  _addNote(){
+    const t = (this.state.noteText||'').trim(); if(!t) return;
+    const code = (this.state.addDay.split(' ')[0]||'THU').toUpperCase();
+    const notes = { ...this.state.notes };
+    const arr = (notes[code]||[]).slice();
+    arr.push({ id: Date.now(), text: t, mins: this.state.noteMins });
+    notes[code] = arr;
+    this._saveNotes(notes);
+    this.setState({ notes, addOpen:false, noteText:'', noteMins:30, addMode:'ticket' });
+  }
+  _modeTab(active){
+    const base="flex:1; font-family:var(--font-ui); font-size:12px; font-weight:600; letter-spacing:.02em; border-radius:8px; padding:9px 0; cursor:pointer; text-align:center;";
+    return base + (active ? " color:#4f7cff; border:1px solid rgba(79,124,255,.4); background:rgba(79,124,255,.08);" : " color:var(--fg-muted); border:1px solid var(--border-strong); background:transparent;");
+  }
+  _durChip(active){
+    const base="font-family:var(--font-mono); font-size:11.5px; border-radius:7px; padding:6px 11px; cursor:pointer;";
+    return base + (active ? " color:var(--bg-page); background:#4f7cff; border:1px solid #4f7cff; font-weight:700;" : " color:var(--fg-muted); border:1px solid var(--border-strong);");
+  }
+
+  renderVals(){
+    const v = this.state.view || this.props.defaultView || 'week';
+    const go = (view) => () => this.setState({ view });
+    const navBase = "display:flex; align-items:center; gap:12px; padding:9px 11px; border-radius:8px; cursor:pointer; white-space:nowrap; transition:color .12s;";
+    const nav = (name) => navBase + (v === name
+      ? " color:var(--fg-bright); background:var(--bg-active);"
+      : " color:var(--fg-label);");
+    const openAdd = (day) => () => this.setState({ addOpen: true, addDay: day });
+    return {
+      isToday: v === 'today', isWeek: v === 'week', isTickets: v === 'tickets', isReports: v === 'reports', isSettings: v === 'settings',
+      goToday: go('today'), goWeek: go('week'), goTickets: go('tickets'), goReports: go('reports'), goSettings: go('settings'),
+      navToday: nav('today'), navWeek: nav('week'), navTickets: nav('tickets'), navReports: nav('reports'), navSettings: nav('settings'),
+      collapsedCls: this.state.collapsed ? 'collapsed' : '',
+      sbWidth: this.state.collapsed ? '64px' : '218px',
+      toggleCollapse: () => this.setState(s => ({ collapsed: !s.collapsed })),
+      themeLabel: this._effectiveTheme() === 'light' ? 'DARK MODE' : 'LIGHT MODE',
+      themeIcon: this._effectiveTheme() === 'light'
+        ? React.createElement('svg', { width:17, height:17, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.7, strokeLinecap:'round', strokeLinejoin:'round' },
+            React.createElement('path', { d:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z' }))
+        : React.createElement('svg', { width:17, height:17, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.7, strokeLinecap:'round', strokeLinejoin:'round' },
+            React.createElement('circle', { cx:12, cy:12, r:4 }),
+            React.createElement('path', { d:'M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19' })),
+      toggleTheme: () => {
+        const next = this._effectiveTheme() === 'light' ? 'dark' : 'light';
+        this._applyTheme(next);
+        try { localStorage.setItem('sprintf-theme', next); } catch(e){}
+        this.setState({ theme: next });
+      },
+      lightChip: this._themeChip(this._effectiveTheme() === 'light'),
+      darkChip: this._themeChip(this._effectiveTheme() === 'dark'),
+      setLight: () => { this._applyTheme('light'); try{localStorage.setItem('sprintf-theme','light')}catch(e){}; this.setState({ theme:'light' }); },
+      setDark: () => { this._applyTheme('dark'); try{localStorage.setItem('sprintf-theme','dark')}catch(e){}; this.setState({ theme:'dark' }); },
+      addOpen: this.state.addOpen, addDay: this.state.addDay,
+      closeAdd: () => this.setState({ addOpen: false }),
+      openAddNew: openAdd('THU · 18 JUN'),
+      openAddMon: openAdd('MON · 15 JUN'), openAddTue: openAdd('TUE · 16 JUN'),
+      openAddWed: openAdd('WED · 17 JUN'), openAddThu: openAdd('THU · 18 JUN'),
+      openAddFri: openAdd('FRI · 19 JUN'),
+      addTitle: this.state.addMode === 'note' ? 'Personal note' : 'Log time',
+      isTicketMode: this.state.addMode === 'ticket',
+      isNoteMode: this.state.addMode === 'note',
+      modeTabTicket: this._modeTab(this.state.addMode === 'ticket'),
+      modeTabNote: this._modeTab(this.state.addMode === 'note'),
+      setTicketMode: () => this.setState({ addMode:'ticket' }),
+      setNoteMode: () => this.setState({ addMode:'note' }),
+      noteText: this.state.noteText,
+      setNoteText: (ev) => this.setState({ noteText: ev.target.value }),
+      noteDurLabel: this._fmt(this.state.noteMins),
+      noteChip15: this._durChip(this.state.noteMins===15),
+      noteChip30: this._durChip(this.state.noteMins===30),
+      noteChip60: this._durChip(this.state.noteMins===60),
+      noteChip120: this._durChip(this.state.noteMins===120),
+      setNote15: () => this.setState({ noteMins:15 }),
+      setNote30: () => this.setState({ noteMins:30 }),
+      setNote60: () => this.setState({ noteMins:60 }),
+      setNote120: () => this.setState({ noteMins:120 }),
+      addNote: () => this._addNote(),
+      notesMon: (this.state.notes.MON||[]).map(n=>({id:n.id,text:n.text,dur:this._fmt(n.mins)})),
+      notesTue: (this.state.notes.TUE||[]).map(n=>({id:n.id,text:n.text,dur:this._fmt(n.mins)})),
+      notesWed: (this.state.notes.WED||[]).map(n=>({id:n.id,text:n.text,dur:this._fmt(n.mins)})),
+      notesThu: (this.state.notes.THU||[]).map(n=>({id:n.id,text:n.text,dur:this._fmt(n.mins)})),
+      notesFri: (this.state.notes.FRI||[]).map(n=>({id:n.id,text:n.text,dur:this._fmt(n.mins)})),
+      hasNotesThu: (this.state.notes.THU||[]).length > 0,
+      hasNotesFri: (this.state.notes.FRI||[]).length > 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

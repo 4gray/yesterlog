@@ -195,3 +195,42 @@ The v5 bundle's design file was byte-identical to v4. Two user asks:
   already persisted).
 - Optional: theme the JS-driven WEEK ticket palette (segment dots/text) per
   theme — currently fixed vivid colours that read on both backgrounds.
+
+## v6 — handoff bundle 6 import + local notes
+
+### Goal
+Import the latest Claude Design handoff bundle, read
+`Stint - Editorial.dc.html`, and implement the new user-visible additions while
+leaving `Stint - Week Dotted.dc.html` / Dotted workspace area untouched.
+
+### Decisions
+- Treat `Stint - Editorial.dc.html` as the primary source of truth per the
+  bundle README.
+- Keep Jira writes limited to the existing Add Time flow. Personal notes are
+  local-only records and must not call Jira.
+- Preserve Jira worklog identity fields; add local-note identity separately.
+
+### Pending work
+- Done — extracted/imported the handoff bundle into `design/handoff`.
+- Done — read the bundle README, `Stint - Editorial.dc.html`,
+  `Stint - Welcome.dc.html`, and imported `support.js`; ignored Dotted workspace
+  behavior per request.
+- Done — added Epic/Sub metadata support. Jira `parent` fields are normalized
+  into local epic pills when they are actual epic-level parents; `issuetype`
+  continues to drive `EPIC`/`SUB` badges.
+- Done — added local personal notes: IndexedDB storage, Add Time modal note
+  mode, week/today/report rendering, totals, CSV export, and tests.
+- Done — added first-run welcome screen when Jira settings are missing.
+- Done — verified with unit tests, production build, Browser welcome check, and
+  fallback Playwright connected/note-flow QA.
+
+### Verification
+- `npm run lint` clean.
+- `npm run test` — 7 files / 20 tests passed.
+- `npm run build` clean.
+- Browser plugin check at `http://127.0.0.1:5174/`: welcome screen rendered on
+  empty settings, no console errors/warnings.
+- Fallback Playwright QA (Browser sandbox cannot seed IndexedDB): seeded local
+  settings/syncResult/personalNotes, verified WEEK with `EPIC`/`SUB` + local
+  note, used Add Time → Personal note → Save note, verified the new note row in
+  the week column and clean console.

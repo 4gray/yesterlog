@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+  :root{
+    --accent:#4f7cff;
+    --ink:#1b1a17; --board:#e7e5df;
+    --d-bg:#191816; --d-card:#201e1b; --d-line:#2c2a26; --d-strong:#3a3731;
+    --d-bright:#f5f3f0; --d-muted:#9d9b95; --d-label:#67645e;
+    --l-bg:#eef0f3; --l-card:#ffffff; --l-line:#e1e4e9; --l-strong:#d4d8df;
+    --l-ink:#1b1e25; --l-muted:#5a606b; --l-label:#7c828f;
+    --disp:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,'Helvetica Neue',sans-serif;
+    --mono:ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--board); }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:54px 60px; background:var(--board); font-family:var(--disp);">
+
+  <!-- board header -->
+  <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:8px;">
+    <span style="font-family:var(--disp); font-weight:800; font-size:24px; letter-spacing:-.03em; color:var(--ink);">TimeBro</span>
+    <span style="font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:#8a857c; text-transform:uppercase;">Brand &amp; Mascot · v1</span>
+  </div>
+  <div style="font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:#9a958c; margin-bottom:40px;">the bro who watches your hours — a clock that keeps an eye on you</div>
+
+  <div style="display:flex; flex-direction:column; gap:30px;">
+
+    <!-- ROW A: hero lockup + mark -->
+    <div style="display:flex; gap:30px; align-items:flex-start;">
+
+      <!-- hero -->
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">Primary lockup</div>
+        <div style="width:760px; height:380px; border-radius:18px; background:var(--d-bg); box-shadow:0 18px 50px rgba(0,0,0,.16); border:1px solid var(--d-line); display:flex; align-items:center; gap:46px; padding:0 56px; overflow:hidden; position:relative;">
+          <div style="position:absolute; inset:0; background:radial-gradient(420px 320px at 84% 18%, rgba(79,124,255,.14), transparent 70%);"></div>
+
+          <!-- mascot watching -->
+          <div style="flex:none; position:relative;">
+            <svg width="150" height="172" viewBox="0 0 140 160" fill="none">
+              <line x1="70" y1="26" x2="70" y2="13" stroke="#3a3731" stroke-width="3" stroke-linecap="round"></line>
+              <circle cx="70" cy="9" r="4.5" fill="var(--accent)"></circle>
+              <rect x="34" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+              <rect x="86" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+              <rect x="22" y="26" width="96" height="112" rx="40" fill="#2a2723" stroke="#3a3731" stroke-width="2"></rect>
+              <path d="M53 55 Q70 49 87 55" stroke="#cfccc6" stroke-width="5" fill="none" stroke-linecap="round"></path>
+              <circle cx="70" cy="82" r="26" fill="#f5f3f0"></circle>
+              <g stroke="#bdb9b1" stroke-width="3" stroke-linecap="round">
+                <line x1="70" y1="60" x2="70" y2="65"></line>
+                <line x1="96" y1="82" x2="91" y2="82"></line>
+                <line x1="70" y1="104" x2="70" y2="99"></line>
+                <line x1="44" y1="82" x2="49" y2="82"></line>
+              </g>
+              <circle cx="70" cy="82" r="14" fill="var(--accent)"></circle>
+              <g stroke="#f5f3f0" stroke-width="3.5" stroke-linecap="round">
+                <line x1="70" y1="82" x2="79" y2="76"></line>
+                <line x1="70" y1="82" x2="63" y2="78"></line>
+              </g>
+              <circle cx="70" cy="82" r="4" fill="#16150f"></circle>
+            </svg>
+          </div>
+
+          <!-- wordmark -->
+          <div style="position:relative;">
+            <div style="font-family:var(--disp); font-weight:800; font-size:74px; line-height:.9; letter-spacing:-.045em; color:var(--d-bright);">Time<span style="color:var(--accent);">Bro</span></div>
+            <div style="font-family:var(--mono); font-size:12.5px; letter-spacing:.06em; color:var(--d-muted); margin-top:16px;">time tracking, with someone watching</div>
+            <div style="display:inline-flex; align-items:center; gap:8px; margin-top:22px; padding:8px 13px; border:1px solid var(--d-strong); border-radius:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 7"></path><path d="M21 3v4h-4"></path></svg>
+              <span style="font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--d-muted); text-transform:uppercase;">syncs with Jira</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- mark only -->
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">The mark — clock-eye</div>
+        <div style="width:320px; height:380px; border-radius:18px; background:var(--d-card); box-shadow:0 18px 50px rgba(0,0,0,.16); border:1px solid var(--d-line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;">
+          <svg width="172" height="172" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="42" fill="#f5f3f0"></circle>
+            <g stroke="#bdb9b1" stroke-width="3" stroke-linecap="round">
+              <line x1="50" y1="16" x2="50" y2="22"></line>
+              <line x1="84" y1="50" x2="78" y2="50"></line>
+              <line x1="50" y1="84" x2="50" y2="78"></line>
+              <line x1="16" y1="50" x2="22" y2="50"></line>
+            </g>
+            <circle cx="50" cy="50" r="23" fill="var(--accent)"></circle>
+            <g stroke="#f5f3f0" stroke-width="4" stroke-linecap="round">
+              <line x1="50" y1="50" x2="66" y2="41"></line>
+              <line x1="50" y1="50" x2="38" y2="43"></line>
+            </g>
+            <circle cx="50" cy="50" r="6" fill="#16150f"></circle>
+          </svg>
+          <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.07em; color:var(--d-label); text-align:center; line-height:1.7; max-width:220px;">an eye and a clock in one — ticks, hands, iris, a watchful glint</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW B: mascot expressions -->
+    <div>
+      <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">Meet Bro — expression sheet</div>
+      <div style="display:flex; gap:30px; align-items:flex-start;">
+
+        <!-- watching -->
+        <div style="flex:none; width:300px; height:330px; border-radius:18px; background:var(--d-bg); box-shadow:0 18px 50px rgba(0,0,0,.16); border:1px solid var(--d-line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;">
+          <svg width="150" height="172" viewBox="0 0 140 160" fill="none">
+            <line x1="70" y1="26" x2="70" y2="13" stroke="#3a3731" stroke-width="3" stroke-linecap="round"></line>
+            <circle cx="70" cy="9" r="4.5" fill="var(--accent)"></circle>
+            <rect x="34" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="86" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="22" y="26" width="96" height="112" rx="40" fill="#2a2723" stroke="#3a3731" stroke-width="2"></rect>
+            <path d="M53 55 Q70 49 87 55" stroke="#cfccc6" stroke-width="5" fill="none" stroke-linecap="round"></path>
+            <circle cx="70" cy="82" r="26" fill="#f5f3f0"></circle>
+            <g stroke="#bdb9b1" stroke-width="3" stroke-linecap="round"><line x1="70" y1="60" x2="70" y2="65"></line><line x1="96" y1="82" x2="91" y2="82"></line><line x1="70" y1="104" x2="70" y2="99"></line><line x1="44" y1="82" x2="49" y2="82"></line></g>
+            <circle cx="70" cy="82" r="14" fill="var(--accent)"></circle>
+            <g stroke="#f5f3f0" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="82" x2="79" y2="76"></line><line x1="70" y1="82" x2="63" y2="78"></line></g>
+            <circle cx="70" cy="82" r="4" fill="#16150f"></circle>
+          </svg>
+          <div style="text-align:center;">
+            <div style="font-family:var(--disp); font-weight:800; font-size:17px; letter-spacing:-.02em; color:var(--d-bright);">Watching</div>
+            <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; color:var(--d-label); margin-top:6px;">idle / tracking</div>
+          </div>
+        </div>
+
+        <!-- logged / happy -->
+        <div style="flex:none; width:300px; height:330px; border-radius:18px; background:var(--d-bg); box-shadow:0 18px 50px rgba(0,0,0,.16); border:1px solid var(--d-line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;">
+          <svg width="150" height="172" viewBox="0 0 140 160" fill="none">
+            <line x1="70" y1="26" x2="70" y2="13" stroke="#3a3731" stroke-width="3" stroke-linecap="round"></line>
+            <circle cx="70" cy="9" r="4.5" fill="#3ecf8e"></circle>
+            <rect x="34" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="86" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="22" y="26" width="96" height="112" rx="40" fill="#2a2723" stroke="#3a3731" stroke-width="2"></rect>
+            <path d="M52 50 Q70 42 88 50" stroke="#cfccc6" stroke-width="5" fill="none" stroke-linecap="round"></path>
+            <circle cx="70" cy="82" r="26" fill="#f5f3f0"></circle>
+            <!-- happy closed eye -->
+            <path d="M56 86 Q70 72 84 86" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round"></path>
+            <path d="M88 64 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="#3ecf8e"></path>
+          </svg>
+          <div style="text-align:center;">
+            <div style="font-family:var(--disp); font-weight:800; font-size:17px; letter-spacing:-.02em; color:var(--d-bright);">Nice, logged!</div>
+            <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; color:var(--d-label); margin-top:6px;">on target / saved</div>
+          </div>
+        </div>
+
+        <!-- nudge / alert -->
+        <div style="flex:none; width:300px; height:330px; border-radius:18px; background:var(--d-bg); box-shadow:0 18px 50px rgba(0,0,0,.16); border:1px solid var(--d-line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;">
+          <svg width="150" height="172" viewBox="0 0 140 160" fill="none">
+            <line x1="70" y1="26" x2="70" y2="13" stroke="#3a3731" stroke-width="3" stroke-linecap="round"></line>
+            <circle cx="70" cy="9" r="4.5" fill="#e0a44a"></circle>
+            <rect x="34" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="86" y="134" width="20" height="13" rx="6.5" fill="#211f1c"></rect>
+            <rect x="22" y="26" width="96" height="112" rx="40" fill="#2a2723" stroke="#3a3731" stroke-width="2"></rect>
+            <!-- concerned brows -->
+            <path d="M52 52 L66 57" stroke="#cfccc6" stroke-width="5" fill="none" stroke-linecap="round"></path>
+            <path d="M88 52 L74 57" stroke="#cfccc6" stroke-width="5" fill="none" stroke-linecap="round"></path>
+            <circle cx="70" cy="84" r="26" fill="#f5f3f0"></circle>
+            <g stroke="#bdb9b1" stroke-width="3" stroke-linecap="round"><line x1="70" y1="62" x2="70" y2="67"></line><line x1="96" y1="84" x2="91" y2="84"></line><line x1="70" y1="106" x2="70" y2="101"></line><line x1="44" y1="84" x2="49" y2="84"></line></g>
+            <circle cx="70" cy="84" r="14" fill="var(--accent)"></circle>
+            <g stroke="#f5f3f0" stroke-width="3.5" stroke-linecap="round"><line x1="70" y1="84" x2="79" y2="78"></line><line x1="70" y1="84" x2="63" y2="80"></line></g>
+            <circle cx="70" cy="84" r="4" fill="#16150f"></circle>
+            <!-- alert badge -->
+            <circle cx="104" cy="44" r="13" fill="#e0a44a"></circle>
+            <line x1="104" y1="38" x2="104" y2="46" stroke="#191816" stroke-width="3" stroke-linecap="round"></line>
+            <circle cx="104" cy="51" r="1.8" fill="#191816"></circle>
+          </svg>
+          <div style="text-align:center;">
+            <div style="font-family:var(--disp); font-weight:800; font-size:17px; letter-spacing:-.02em; color:var(--d-bright);">You're behind</div>
+            <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.05em; color:var(--d-label); margin-top:6px;">under target nudge</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW C: app icons + light lockup -->
+    <div style="display:flex; gap:30px; align-items:flex-start;">
+
+      <!-- app icons -->
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">App icon &amp; favicon</div>
+        <div style="width:500px; height:250px; border-radius:18px; background:#fff; box-shadow:0 18px 50px rgba(0,0,0,.12); border:1px solid var(--l-line); display:flex; align-items:center; justify-content:center; gap:40px;">
+
+          <!-- big squircle icon -->
+          <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <div style="width:104px; height:104px; border-radius:26px; background:var(--accent); box-shadow:0 10px 24px rgba(79,124,255,.4); display:flex; align-items:center; justify-content:center;">
+              <svg width="68" height="68" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="40" fill="#f5f3f0"></circle>
+                <g stroke="#bdb9b1" stroke-width="4" stroke-linecap="round"><line x1="50" y1="17" x2="50" y2="23"></line><line x1="83" y1="50" x2="77" y2="50"></line><line x1="50" y1="83" x2="50" y2="77"></line><line x1="17" y1="50" x2="23" y2="50"></line></g>
+                <circle cx="50" cy="50" r="22" fill="#2f4ea8"></circle>
+                <g stroke="#f5f3f0" stroke-width="4.5" stroke-linecap="round"><line x1="50" y1="50" x2="66" y2="41"></line><line x1="50" y1="50" x2="38" y2="43"></line></g>
+                <circle cx="50" cy="50" r="6" fill="#16150f"></circle>
+              </svg>
+            </div>
+            <span style="font-family:var(--mono); font-size:10px; letter-spacing:.07em; color:var(--l-label);">1024 · macOS</span>
+          </div>
+
+          <!-- medium -->
+          <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <div style="width:60px; height:60px; border-radius:15px; background:var(--accent); display:flex; align-items:center; justify-content:center;">
+              <svg width="40" height="40" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="40" fill="#f5f3f0"></circle>
+                <circle cx="50" cy="50" r="23" fill="#2f4ea8"></circle>
+                <g stroke="#f5f3f0" stroke-width="5" stroke-linecap="round"><line x1="50" y1="50" x2="66" y2="41"></line><line x1="50" y1="50" x2="39" y2="43"></line></g>
+                <circle cx="50" cy="50" r="6.5" fill="#16150f"></circle>
+              </svg>
+            </div>
+            <span style="font-family:var(--mono); font-size:10px; letter-spacing:.07em; color:var(--l-label);">menu bar</span>
+          </div>
+
+          <!-- favicon -->
+          <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <div style="width:32px; height:32px; border-radius:8px; background:var(--accent); display:flex; align-items:center; justify-content:center;">
+              <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="40" fill="#f5f3f0"></circle>
+                <circle cx="50" cy="50" r="24" fill="#2f4ea8"></circle>
+                <g stroke="#f5f3f0" stroke-width="7" stroke-linecap="round"><line x1="50" y1="50" x2="67" y2="40"></line><line x1="50" y1="50" x2="38" y2="42"></line></g>
+                <circle cx="50" cy="50" r="7" fill="#16150f"></circle>
+              </svg>
+            </div>
+            <span style="font-family:var(--mono); font-size:10px; letter-spacing:.07em; color:var(--l-label);">16 · favicon</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- light lockup -->
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">On light</div>
+        <div style="width:430px; height:250px; border-radius:18px; background:var(--l-bg); box-shadow:0 18px 50px rgba(0,0,0,.12); border:1px solid var(--l-line); display:flex; align-items:center; gap:26px; padding:0 40px;">
+          <svg width="98" height="98" viewBox="0 0 100 100" fill="none" style="flex:none;">
+            <circle cx="50" cy="50" r="42" fill="#fff" stroke="#d4d8df" stroke-width="1.5"></circle>
+            <g stroke="#b8bcc6" stroke-width="3" stroke-linecap="round"><line x1="50" y1="16" x2="50" y2="22"></line><line x1="84" y1="50" x2="78" y2="50"></line><line x1="50" y1="84" x2="50" y2="78"></line><line x1="16" y1="50" x2="22" y2="50"></line></g>
+            <circle cx="50" cy="50" r="23" fill="#3b63d6"></circle>
+            <g stroke="#fff" stroke-width="4" stroke-linecap="round"><line x1="50" y1="50" x2="66" y2="41"></line><line x1="50" y1="50" x2="38" y2="43"></line></g>
+            <circle cx="50" cy="50" r="6" fill="#11151f"></circle>
+          </svg>
+          <div>
+            <div style="font-family:var(--disp); font-weight:800; font-size:50px; line-height:.9; letter-spacing:-.045em; color:var(--l-ink);">Time<span style="color:#3b63d6;">Bro</span></div>
+            <div style="font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--l-muted); margin-top:12px;">time tracking, with someone watching</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW D: color + type -->
+    <div style="display:flex; gap:30px; align-items:flex-start;">
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">Palette</div>
+        <div style="display:flex; gap:14px; padding:18px; border-radius:16px; background:#fff; box-shadow:0 12px 36px rgba(0,0,0,.1); border:1px solid var(--l-line);">
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;"><div style="width:64px; height:64px; border-radius:12px; background:#4f7cff;"></div><span style="font-family:var(--mono); font-size:9.5px; color:var(--l-muted);">#4F7CFF</span><span style="font-family:var(--mono); font-size:8.5px; color:var(--l-label); letter-spacing:.06em;">BRO BLUE</span></div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;"><div style="width:64px; height:64px; border-radius:12px; background:#191816;"></div><span style="font-family:var(--mono); font-size:9.5px; color:var(--l-muted);">#191816</span><span style="font-family:var(--mono); font-size:8.5px; color:var(--l-label); letter-spacing:.06em;">NIGHT</span></div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;"><div style="width:64px; height:64px; border-radius:12px; background:#3ecf8e;"></div><span style="font-family:var(--mono); font-size:9.5px; color:var(--l-muted);">#3ECF8E</span><span style="font-family:var(--mono); font-size:8.5px; color:var(--l-label); letter-spacing:.06em;">ON TRACK</span></div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;"><div style="width:64px; height:64px; border-radius:12px; background:#e0a44a;"></div><span style="font-family:var(--mono); font-size:9.5px; color:var(--l-muted);">#E0A44A</span><span style="font-family:var(--mono); font-size:8.5px; color:var(--l-label); letter-spacing:.06em;">BEHIND</span></div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:center;"><div style="width:64px; height:64px; border-radius:12px; background:#f5f3f0; border:1px solid var(--l-line);"></div><span style="font-family:var(--mono); font-size:9.5px; color:var(--l-muted);">#F5F3F0</span><span style="font-family:var(--mono); font-size:8.5px; color:var(--l-label); letter-spacing:.06em;">BONE</span></div>
+        </div>
+      </div>
+
+      <div style="flex:none;">
+        <div style="font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; color:#8a857c; text-transform:uppercase; margin-bottom:11px;">Type</div>
+        <div style="padding:20px 24px; border-radius:16px; background:#fff; box-shadow:0 12px 36px rgba(0,0,0,.1); border:1px solid var(--l-line); min-width:360px;">
+          <div style="font-family:var(--disp); font-weight:800; font-size:30px; letter-spacing:-.04em; color:var(--l-ink);">Display · 800</div>
+          <div style="font-family:var(--mono); font-size:9.5px; color:var(--l-label); letter-spacing:.06em; margin-top:2px;">SF PRO DISPLAY — WORDMARK &amp; NUMBERS</div>
+          <div style="height:1px; background:var(--l-line); margin:16px 0;"></div>
+          <div style="font-family:var(--mono); font-size:14px; color:var(--l-ink); letter-spacing:.02em;">FTDM-328 · 2h 45m · 16:30</div>
+          <div style="font-family:var(--mono); font-size:9.5px; color:var(--l-label); letter-spacing:.06em; margin-top:6px;">SF MONO — TICKETS, TIME &amp; LABELS</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:1180},&quot;accentColor&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#4f7cff&quot;,&quot;#6bd0c2&quot;,&quot;#bda6f5&quot;,&quot;#e0a44a&quot;],&quot;default&quot;:&quot;#4f7cff&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  componentDidMount(){ this._apply(); }
+  componentDidUpdate(){ this._apply(); }
+  _apply(){
+    const a = this.props.accentColor;
+    if (a) document.documentElement.style.setProperty('--accent', a);
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

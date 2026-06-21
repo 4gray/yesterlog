@@ -20,6 +20,7 @@ describe("week calculations", () => {
         skippedDates: ["2026-06-10"]
       },
       undefined,
+      undefined,
       new Date(2026, 5, 10, 9)
     );
 
@@ -64,11 +65,42 @@ describe("week calculations", () => {
       DEFAULT_SETTINGS,
       { weekKey: "2026-06-08", skippedDates: [] },
       syncResult,
+      undefined,
       new Date(2026, 5, 9, 9)
     );
 
     expect(state.remainingWeekHours).toBe(31);
     expect(state.days[1].trackedHours).toBe(9);
     expect(state.days[1].missingHours).toBe(0);
+  });
+
+  it("counts local personal notes toward day and week tracking", () => {
+    const timestamp = new Date(2026, 5, 9, 10).toISOString();
+    const state = buildWeekState(
+      monday,
+      DEFAULT_SETTINGS,
+      { weekKey: "2026-06-08", skippedDates: [] },
+      undefined,
+      [
+        {
+          id: "note-1",
+          weekKey: "2026-06-08",
+          dateKey: "2026-06-09",
+          text: "Planning without a ticket",
+          timeSpentSeconds: 90 * 60,
+          startedISO: timestamp,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        }
+      ],
+      new Date(2026, 5, 9, 9)
+    );
+
+    expect(state.personalNoteHours).toBe(1.5);
+    expect(state.jiraTrackedWeekHours).toBe(0);
+    expect(state.trackedWeekHours).toBe(1.5);
+    expect(state.remainingWeekHours).toBe(38.5);
+    expect(state.days[1].trackedHours).toBe(1.5);
+    expect(state.days[1].personalNotes[0].text).toBe("Planning without a ticket");
   });
 });

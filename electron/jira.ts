@@ -3,6 +3,7 @@ import type {
   AddWorklogResult,
   AppSettings,
   JiraConnectionResult,
+  JiraEpicInfo,
   JiraIssueSummary,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -27,6 +28,7 @@ interface JiraSearchIssue {
   fields?: {
     summary?: string;
     issuetype?: JiraIssueTypeResponse;
+    parent?: JiraParentResponse;
   };
 }
 
@@ -46,6 +48,7 @@ interface JiraTicketIssue {
     project?: { key?: string; name?: string };
     status?: { name?: string; statusCategory?: { key?: string } };
     issuetype?: JiraIssueTypeResponse;
+    parent?: JiraParentResponse;
   };
 }
 
@@ -75,6 +78,15 @@ interface JiraIssueTypeResponse {
   name?: string;
   subtask?: boolean;
   hierarchyLevel?: number;
+}
+
+interface JiraParentResponse {
+  id?: string;
+  key?: string;
+  fields?: {
+    summary?: string;
+    issuetype?: JiraIssueTypeResponse;
+  };
 }
 
 class JiraApiError extends Error {
@@ -185,6 +197,10 @@ const mergeIssue = (bucket: SyncDayBucket, issue: JiraIssueSummary) => {
       existing.issueType = issue.issueType;
     }
 
+    if (!existing.epic && issue.epic) {
+      existing.epic = issue.epic;
+    }
+
     if (issue.comments?.length) {
       existing.comments = Array.from(new Set([...(existing.comments ?? []), ...issue.comments]));
     }
@@ -208,6 +224,26 @@ const normalizeIssueType = (issueType?: JiraIssueTypeResponse): JiraIssueTypeInf
     name: issueType.name,
     subtask: issueType.subtask,
     hierarchyLevel: issueType.hierarchyLevel
+  };
+};
+
+const normalizeEpic = (settings: AppSettings, parent?: JiraParentResponse): JiraEpicInfo | undefined => {
+  if (!parent?.key) {
+    return undefined;
+  }
+
+  const parentType = normalizeIssueType(parent.fields?.issuetype);
+  const normalizedName = parentType?.name?.trim().toLowerCase().replace(/[\s_-]+/g, "");
+
+  if (normalizedName !== "epic" && (parentType?.hierarchyLevel ?? 0) < 1) {
+    return undefined;
+  }
+
+  return {
+    id: parent.id,
+    key: parent.key,
+    summary: parent.fields?.summary ?? parent.key,
+    url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${parent.key}`
   };
 };
 
@@ -247,7 +283,7 @@ const searchCandidateIssues = async (settings: AppSettings, weekStart: Date, wee
     const params = new URLSearchParams({
       jql,
       maxResults: "100",
-      fields: "summary,issuetype"
+      fields: "summary,issuetype,parent"
     });
 
     if (nextPageToken) {
@@ -314,6 +350,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   for (const issue of candidateIssues) {
     const summary = issue.fields?.summary ?? "Untitled Jira issue";
     const issueType = normalizeIssueType(issue.fields?.issuetype);
+    const epic = normalizeEpic(settings, issue.fields?.parent);
     const worklogs = await fetchIssueWorklogs(settings, issue.key, weekStart, weekEndExclusive);
 
     for (const worklog of worklogs) {
@@ -337,6 +374,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         issueKey: issue.key,
         issueSummary: summary,
         issueType,
+        epic,
         authorAccountId,
         started: worklog.started,
         timeSpentSeconds: worklog.timeSpentSeconds,
@@ -360,6 +398,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         summary,
         url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`,
         issueType,
+        epic,
         loggedSeconds: worklog.timeSpentSeconds,
         comments: comment ? [comment] : []
       });
@@ -383,7 +422,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   };
 };
 
-const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype";
+const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent";
 
 const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
   if (key === "new" || key === "indeterminate" || key === "done") {
@@ -417,6 +456,7 @@ const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => 
     statusCategory: normalizeStatusCategory(fields.status?.statusCategory?.key),
     loggedSecondsTotal,
     issueType: normalizeIssueType(fields.issuetype),
+    epic: normalizeEpic(settings, fields.parent),
     url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`
   };
 };

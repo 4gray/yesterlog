@@ -48,6 +48,18 @@ describe("TodayView", () => {
         selectedTicket={ticket}
         ticketOptions={[ticket, touchedTicket]}
         todayWorklogs={[worklog]}
+        personalNotes={[
+          {
+            id: "note-1",
+            weekKey: "2026-06-15",
+            dateKey: "2026-06-18",
+            text: "Mentoring and planning",
+            timeSpentSeconds: 30 * 60,
+            startedISO: "2026-06-18T12:00:00.000Z",
+            createdAt: "2026-06-18T12:00:00.000Z",
+            updatedAt: "2026-06-18T12:00:00.000Z"
+          }
+        ]}
         issueUrlsByKey={{ [ticket.key]: ticket.url }}
         issueTypesByKey={{ [ticket.key]: ticket.issueType, [touchedTicket.key]: touchedTicket.issueType }}
         todayTrackedHours={1}
@@ -68,5 +80,7 @@ describe("TodayView", () => {
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-401");
     expect(markup).toContain("EPIC");
     expect(markup).toContain("SUB");
+    expect(markup).toContain("Mentoring and planning");
+    expect(markup).toContain("LOCAL");
   });
 });

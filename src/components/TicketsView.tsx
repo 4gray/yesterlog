@@ -1,6 +1,7 @@
 import { Loader2, Star } from "lucide-react";
 import type { JiraTicket } from "../../shared/types";
 import { formatHours } from "../utils/date";
+import { EpicPill } from "./EpicPill";
 import { TicketKeyLink } from "./TicketKeyLink";
 
 interface TicketsViewProps {
@@ -53,14 +54,15 @@ const TicketRow = ({
         issueKey={ticket.key}
         url={ticket.url}
         issueType={ticket.issueType}
+        epic={ticket.epic}
         keyClassName={`ticket-key ${keyTone(ticket)}`}
         className="ticket-row-key"
       />
       <span className={`ticket-summary ${closed ? "is-closed" : ""}`} title={ticket.summary}>
         {ticket.summary}
       </span>
-      <span className="ticket-project" title={ticket.projectName}>
-        {ticket.projectName}
+      <span className="ticket-project" title={ticket.epic?.summary ?? ticket.projectName}>
+        {ticket.epic ? <EpicPill epic={ticket.epic} /> : ticket.projectName}
       </span>
       <span className={`ticket-hours ${!hours ? "is-dim" : ""}`}>{hours ? formatHours(hours) : "—"}</span>
       <button type="button" className={`ticket-log ${closed ? "ghost" : ""}`} onClick={() => onLog(ticket)}>

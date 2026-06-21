@@ -9,8 +9,10 @@ const weekState: WeekState = {
   weekEndExclusiveISO: "2026-06-21T22:00:00.000Z",
   weekRangeLabel: "Jun 15-21",
   weeklyTargetHours: 40,
-  trackedWeekHours: 2,
-  remainingWeekHours: 38,
+  trackedWeekHours: 2.5,
+  jiraTrackedWeekHours: 2,
+  personalNoteHours: 0.5,
+  remainingWeekHours: 37.5,
   dailyTargetHours: 8,
   activeWorkingDates: ["2026-06-18"],
   skippedDates: [],
@@ -23,8 +25,8 @@ const weekState: WeekState = {
       isConfiguredWorkingDay: true,
       isSkipped: false,
       targetHours: 8,
-      trackedHours: 2,
-      missingHours: 6,
+      trackedHours: 2.5,
+      missingHours: 5.5,
       issues: [
         {
           id: "133470",
@@ -34,6 +36,18 @@ const weekState: WeekState = {
           issueType: { name: "Epic", hierarchyLevel: 1 },
           loggedSeconds: 2 * 3600,
           comments: ["Follow-up on access package structure"]
+        }
+      ],
+      personalNotes: [
+        {
+          id: "note-1",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-18",
+          text: "Mentored a teammate on release planning",
+          timeSpentSeconds: 30 * 60,
+          startedISO: "2026-06-18T12:00:00.000Z",
+          createdAt: "2026-06-18T12:00:00.000Z",
+          updatedAt: "2026-06-18T12:00:00.000Z"
         }
       ]
     }
@@ -60,5 +74,7 @@ describe("WeekView", () => {
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
     expect(markup).toContain("Open FTDM-397 in Jira");
     expect(markup).toContain("EPIC");
+    expect(markup).toContain("Mentored a teammate on release planning");
+    expect(markup).toContain("NOTE");
   });
 });
