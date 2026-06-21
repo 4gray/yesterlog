@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, ChevronDown, Clock, Loader2, MessageSquare } from "lucide-react";
+import { Calendar, ChevronDown, Clock, Loader2, MessageSquare, Pencil } from "lucide-react";
 import type { JiraTicket, JiraWorklog } from "../../shared/types";
 import { formatClock, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
@@ -29,6 +29,7 @@ interface TodayViewProps {
   logError?: string;
   logMessage?: string;
   onLog: (payload: LogPayload) => Promise<boolean>;
+  onEditWorklog: (worklog: JiraWorklog) => void;
   onSelectTicket: (ticket: JiraTicket) => void;
 }
 
@@ -59,6 +60,7 @@ export const TodayView = ({
   logError,
   logMessage,
   onLog,
+  onEditWorklog,
   onSelectTicket
 }: TodayViewProps) => {
   const [activeKey, setActiveKey] = useState<string | undefined>(selectedTicket?.key ?? ticketOptions[0]?.key);
@@ -309,6 +311,15 @@ export const TodayView = ({
                         {formatHm24(start)}–{formatHm24(end)}
                       </span>
                       <span className="entry-dur">{formatClock(worklog.timeSpentSeconds)}</span>
+                      <button
+                        type="button"
+                        className="entry-edit"
+                        onClick={() => onEditWorklog(worklog)}
+                        title="Edit worklog"
+                        aria-label={`Edit worklog for ${worklog.issueKey}`}
+                      >
+                        <Pencil size={13} strokeWidth={2} />
+                      </button>
                     </div>
                     {worklog.comment && (
                       <div className="entry-note">

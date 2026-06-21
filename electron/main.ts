@@ -1,13 +1,15 @@
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import path from "node:path";
-import { addWorklog, fetchAssignedTickets, testJiraConnection, syncJiraWorklogs } from "./jira";
+import { addWorklog, deleteWorklog, fetchAssignedTickets, testJiraConnection, syncJiraWorklogs, updateWorklog } from "./jira";
 import { scheduleReminder } from "./reminders";
 import type {
   AddWorklogRequest,
   AppSettings,
+  DeleteWorklogRequest,
   ReminderSchedulePayload,
   SyncRequest,
-  TicketsRequest
+  TicketsRequest,
+  UpdateWorklogRequest
 } from "../shared/types";
 
 let mainWindow: BrowserWindow | undefined;
@@ -83,6 +85,14 @@ ipcMain.handle("jira:fetch-tickets", (_event, request: TicketsRequest) => {
 
 ipcMain.handle("jira:add-worklog", (_event, request: AddWorklogRequest) => {
   return addWorklog(request);
+});
+
+ipcMain.handle("jira:update-worklog", (_event, request: UpdateWorklogRequest) => {
+  return updateWorklog(request);
+});
+
+ipcMain.handle("jira:delete-worklog", (_event, request: DeleteWorklogRequest) => {
+  return deleteWorklog(request);
 });
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {

@@ -1,4 +1,4 @@
-import { Loader2, MessageSquare, Plus, RotateCw } from "lucide-react";
+import { Loader2, MessageSquare, Pencil, Plus, RotateCw } from "lucide-react";
 import type { DayTrackingSummary, JiraWorklog, SyncResult, WeekState } from "../../shared/types";
 import {
   formatHours,
@@ -19,6 +19,7 @@ interface WeekViewProps {
   onCurrentWeek: () => void;
   onNextWeek: () => void;
   onAddTime: (date?: Date) => void;
+  onEditWorklog: (worklog: JiraWorklog) => void;
   onToggleSkipped: (dateKey: string) => void;
 }
 
@@ -58,6 +59,7 @@ const DayColumn = ({
   colorOf,
   worklogsByKey,
   onAddTime,
+  onEditWorklog,
   onToggleSkipped
 }: {
   day: DayTrackingSummary;
@@ -65,6 +67,7 @@ const DayColumn = ({
   colorOf: (key: string) => (typeof PALETTE)[number];
   worklogsByKey: Map<string, JiraWorklog[]>;
   onAddTime: (date?: Date) => void;
+  onEditWorklog: (worklog: JiraWorklog) => void;
   onToggleSkipped: (dateKey: string) => void;
 }) => {
   const date = fromLocalDateKey(day.dateKey);
@@ -156,10 +159,21 @@ const DayColumn = ({
                       <span className="day-log-spacer" />
                       {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
                       <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
+                      {logs.length === 1 && (
+                        <button
+                          type="button"
+                          className="day-log-edit"
+                          onClick={() => onEditWorklog(logs[0])}
+                          title="Edit worklog"
+                          aria-label={`Edit worklog for ${issue.key}`}
+                        >
+                          <Pencil size={12} strokeWidth={2} />
+                        </button>
+                      )}
                     </div>
                     <div className="day-log-summary">{issue.summary}</div>
 
-                    {comments.length > 0 && (
+                    {(comments.length > 0 || logs.length > 1) && (
                       <div className="wl-pop">
                         <div className="wl-pop-head">
                           <span className="seg-dot" style={{ background: color.seg }} />
@@ -175,12 +189,42 @@ const DayColumn = ({
                         </div>
                         <div className="wl-pop-summary">{issue.summary}</div>
                         {range && <div className="wl-pop-range">{range}</div>}
-                        {comments.map((comment, index) => (
-                          <div className="wl-pop-comment" key={`${issue.key}-comment-${index}`}>
-                            <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
-                            <span>{comment}</span>
-                          </div>
-                        ))}
+                        {logs.length > 0
+                          ? logs.map((log) => {
+                              const start = new Date(log.started);
+                              const end = new Date(start.getTime() + log.timeSpentSeconds * 1000);
+
+                              return (
+                                <div className="wl-pop-worklog" key={log.id}>
+                                  <div className="wl-pop-worklog-head">
+                                    <span>
+                                      {hm(start)}–{hm(end)} · {formatHours(log.timeSpentSeconds / 3600)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="wl-pop-edit"
+                                      onClick={() => onEditWorklog(log)}
+                                      title="Edit worklog"
+                                      aria-label={`Edit worklog for ${log.issueKey}`}
+                                    >
+                                      <Pencil size={12} strokeWidth={2} />
+                                    </button>
+                                  </div>
+                                  {log.comment && (
+                                    <div className="wl-pop-comment">
+                                      <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                                      <span>{log.comment}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          : comments.map((comment, index) => (
+                              <div className="wl-pop-comment" key={`${issue.key}-comment-${index}`}>
+                                <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                                <span>{comment}</span>
+                              </div>
+                            ))}
                       </div>
                     )}
                   </div>
@@ -235,6 +279,7 @@ export const WeekView = ({
   onCurrentWeek,
   onNextWeek,
   onAddTime,
+  onEditWorklog,
   onToggleSkipped
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
@@ -332,6 +377,7 @@ export const WeekView = ({
               colorOf={colorOf}
               worklogsByKey={worklogsByKey}
               onAddTime={onAddTime}
+              onEditWorklog={onEditWorklog}
               onToggleSkipped={onToggleSkipped}
             />
           );

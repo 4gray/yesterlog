@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Calendar, ChevronDown, Clock, Loader2, X } from "lucide-react";
-import type { JiraTicket } from "../../shared/types";
+import { Calendar, ChevronDown, Clock, Loader2, Trash2, X } from "lucide-react";
+import type { JiraTicket, JiraWorklog } from "../../shared/types";
 import { formatClock, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
@@ -17,9 +17,12 @@ interface AddTimeModalProps {
   ticketOptions: JiraTicket[];
   isConfigured: boolean;
   isLogging: boolean;
+  isDeleting?: boolean;
   logError?: string;
+  editingWorklog?: JiraWorklog;
   onClose: () => void;
   onLog: (payload: LogPayload) => Promise<boolean>;
+  onDelete?: () => Promise<boolean>;
 }
 
 const PRESETS: Array<{ label: string; seconds: number }> = [
@@ -30,6 +33,15 @@ const PRESETS: Array<{ label: string; seconds: number }> = [
 ];
 
 const pad = (value: number) => String(value).padStart(2, "0");
+
+const getInitialStart = (date: Date, editingWorklog?: JiraWorklog) => {
+  if (!editingWorklog) {
+    return date;
+  }
+
+  const started = new Date(editingWorklog.started);
+  return Number.isNaN(started.getTime()) ? date : started;
+};
 
 const dayLabel = (date: Date) =>
   `${new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date).toUpperCase()} · ${date.getDate()} ${new Intl.DateTimeFormat(
@@ -44,21 +56,34 @@ export const AddTimeModal = ({
   ticketOptions,
   isConfigured,
   isLogging,
+  isDeleting = false,
   logError,
+  editingWorklog,
   onClose,
-  onLog
+  onLog,
+  onDelete
 }: AddTimeModalProps) => {
-  const [activeKey, setActiveKey] = useState<string | undefined>(ticketOptions[0]?.key);
+  const isEditing = Boolean(editingWorklog);
+  const initialStart = getInitialStart(date, editingWorklog);
+  const [activeKey, setActiveKey] = useState<string | undefined>(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [durationSeconds, setDurationSeconds] = useState(2 * 60 * 60);
-  const [durationText, setDurationText] = useState("2h 00m");
-  const [dateStr, setDateStr] = useState(toLocalDateKey(date));
-  const [timeStr, setTimeStr] = useState(`${pad(date.getHours())}:${pad(date.getMinutes())}`);
-  const [note, setNote] = useState("");
+  const [durationSeconds, setDurationSeconds] = useState(editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60);
+  const [durationText, setDurationText] = useState(formatClock(editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60));
+  const [dateStr, setDateStr] = useState(toLocalDateKey(initialStart));
+  const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
+  const [note, setNote] = useState(editingWorklog?.comment ?? "");
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  const activeTicket = ticketOptions.find((ticket) => ticket.key === activeKey);
-  const canSubmit = Boolean(isConfigured && activeTicket && durationSeconds > 0 && !isLogging);
+  const ticketFromOptions = ticketOptions.find((ticket) => ticket.key === activeKey);
+  const activeTicket = ticketFromOptions ?? (editingWorklog && activeKey === editingWorklog.issueKey
+    ? {
+        key: editingWorklog.issueKey,
+        summary: editingWorklog.issueSummary,
+        url: editingWorklog.issueUrl,
+        issueType: editingWorklog.issueType
+      }
+    : undefined);
+  const canSubmit = Boolean(isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
 
   const handleSubmit = async () => {
     if (!activeTicket || durationSeconds <= 0) {
@@ -75,6 +100,44 @@ export const AddTimeModal = ({
       onClose();
     }
   };
+
+  const handleDelete = async () => {
+    if (!editingWorklog || !onDelete || isDeleting) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${formatClock(editingWorklog.timeSpentSeconds)} from ${editingWorklog.issueKey}? This removes the Jira worklog.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const ok = await onDelete();
+    if (ok) {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    const start = getInitialStart(date, editingWorklog);
+    const seconds = editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60;
+
+    setActiveKey(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
+    setPickerOpen(false);
+    setDurationSeconds(seconds);
+    setDurationText(formatClock(seconds));
+    setDateStr(toLocalDateKey(start));
+    setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
+    setNote(editingWorklog?.comment ?? "");
+  }, [date, editingWorklog?.id]);
+
+  useEffect(() => {
+    if (!isEditing && !activeKey && ticketOptions[0]) {
+      setActiveKey(ticketOptions[0].key);
+    }
+  }, [activeKey, isEditing, ticketOptions]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -116,17 +179,31 @@ export const AddTimeModal = ({
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Log time">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={isEditing ? "Edit time entry" : "Log time"}>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-panel">
         <div className="modal-head">
           <div className="modal-title-row">
-            <span className="modal-title">Log time</span>
+            <span className="modal-title">{isEditing ? "Edit time" : "Log time"}</span>
             <span className="modal-day">{dayLabel(date)}</span>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            <X size={14} strokeWidth={2.2} />
-          </button>
+          <div className="modal-head-actions">
+            {isEditing && onDelete && (
+              <button
+                type="button"
+                className="modal-delete"
+                onClick={handleDelete}
+                disabled={isLogging || isDeleting}
+                title="Delete worklog"
+                aria-label="Delete worklog"
+              >
+                {isDeleting ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} strokeWidth={2} />}
+              </button>
+            )}
+            <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+              <X size={14} strokeWidth={2.2} />
+            </button>
+          </div>
         </div>
 
         <div className="modal-body">
@@ -143,9 +220,15 @@ export const AddTimeModal = ({
               ) : null}
               <button
                 type="button"
-                className="modal-ticket"
-                onClick={() => setPickerOpen((open) => !open)}
-                disabled={ticketOptions.length === 0}
+                className={`modal-ticket ${isEditing ? "is-locked" : ""}`}
+                onClick={() => {
+                  if (!isEditing) {
+                    setPickerOpen((open) => !open);
+                  }
+                }}
+                disabled={!isEditing && ticketOptions.length === 0}
+                aria-disabled={isEditing}
+                title={isEditing ? "Ticket cannot be changed for an existing Jira worklog" : undefined}
               >
                 {activeTicket ? (
                   <span className="modal-ticket-summary">{activeTicket.summary}</span>
@@ -154,10 +237,10 @@ export const AddTimeModal = ({
                     {isConfigured ? "No assigned tickets" : "Connect Jira to choose a ticket"}
                   </span>
                 )}
-                <ChevronDown size={16} color="#5d636f" />
+                {!isEditing && <ChevronDown size={16} color="#5d636f" />}
               </button>
             </div>
-            {pickerOpen && ticketOptions.length > 0 && (
+            {!isEditing && pickerOpen && ticketOptions.length > 0 && (
               <div className="ticket-picker">
                 {ticketOptions.map((ticket) => (
                   <button
@@ -222,7 +305,7 @@ export const AddTimeModal = ({
           </div>
           <textarea
             className="note-textarea"
-            placeholder="Add a note… syncs to the Jira worklog comment"
+            placeholder={isEditing ? "Update the Jira worklog comment" : "Add a note… syncs to the Jira worklog comment"}
             value={note}
             onChange={(event) => setNote(event.target.value)}
             rows={2}
@@ -243,7 +326,11 @@ export const AddTimeModal = ({
             </button>
             <button type="button" className="primary-button" onClick={handleSubmit} disabled={!canSubmit}>
               {isLogging ? <Loader2 className="spin" size={15} /> : null}
-              {activeTicket ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}` : "Log time"}
+              {isEditing
+                ? `Save ${formatClock(durationSeconds)}`
+                : activeTicket
+                  ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
+                  : "Log time"}
             </button>
           </div>
         </div>

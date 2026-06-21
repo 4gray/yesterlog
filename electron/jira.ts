@@ -2,6 +2,8 @@ import type {
   AddWorklogRequest,
   AddWorklogResult,
   AppSettings,
+  DeleteWorklogRequest,
+  DeleteWorklogResult,
   JiraConnectionResult,
   JiraIssueSummary,
   JiraIssueTypeInfo,
@@ -12,7 +14,9 @@ import type {
   SyncResult,
   TicketsRequest,
   TicketsResult,
-  TicketStatusCategory
+  TicketStatusCategory,
+  UpdateWorklogRequest,
+  UpdateWorklogResult
 } from "../shared/types";
 import { adfToPlainText } from "../shared/adf";
 
@@ -165,7 +169,12 @@ const jiraRequest = async <T>(settings: AppSettings, path: string, init: Request
     throw new JiraApiError(`Jira request failed: ${message}`, response.status);
   }
 
-  return (await response.json()) as T;
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 };
 
 const toDateKey = (date: Date) => {
@@ -331,11 +340,13 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
 
       const dateKey = toDateKey(startedDate);
       const comment = adfToPlainText(worklog.comment);
+      const issueUrl = `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`;
       const normalized: JiraWorklog = {
         id: worklog.id,
         issueId: issue.id,
         issueKey: issue.key,
         issueSummary: summary,
+        issueUrl,
         issueType,
         authorAccountId,
         started: worklog.started,
@@ -358,7 +369,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         id: issue.id,
         key: issue.key,
         summary,
-        url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`,
+        url: issueUrl,
         issueType,
         loggedSeconds: worklog.timeSpentSeconds,
         comments: comment ? [comment] : []
@@ -471,12 +482,19 @@ const plainTextToAdf = (text: string) => ({
     }))
 });
 
-export const addWorklog = async (request: AddWorklogRequest): Promise<AddWorklogResult> => {
-  const { settings, issueKey, timeSpentSeconds, startedISO, comment } = request;
-
+const validateWorklogDuration = (timeSpentSeconds: number) => {
   if (!Number.isFinite(timeSpentSeconds) || timeSpentSeconds <= 0) {
     throw new JiraApiError("Worklog duration must be greater than zero.");
   }
+};
+
+const buildWorklogBody = (
+  timeSpentSeconds: number,
+  startedISO: string,
+  comment: string | undefined,
+  options: { includeEmptyComment: boolean }
+) => {
+  validateWorklogDuration(timeSpentSeconds);
 
   const body: Record<string, unknown> = {
     timeSpentSeconds: Math.round(timeSpentSeconds),
@@ -484,9 +502,16 @@ export const addWorklog = async (request: AddWorklogRequest): Promise<AddWorklog
   };
 
   const trimmedComment = comment?.trim();
-  if (trimmedComment) {
-    body.comment = plainTextToAdf(trimmedComment);
+  if (trimmedComment || options.includeEmptyComment) {
+    body.comment = plainTextToAdf(trimmedComment ?? "");
   }
+
+  return body;
+};
+
+export const addWorklog = async (request: AddWorklogRequest): Promise<AddWorklogResult> => {
+  const { settings, issueKey, timeSpentSeconds, startedISO, comment } = request;
+  const body = buildWorklogBody(timeSpentSeconds, startedISO, comment, { includeEmptyComment: false });
 
   const created = await jiraRequest<{ id: string }>(
     settings,
@@ -503,5 +528,43 @@ export const addWorklog = async (request: AddWorklogRequest): Promise<AddWorklog
     worklogId: created.id,
     issueKey,
     timeSpentSeconds: Math.round(timeSpentSeconds)
+  };
+};
+
+export const updateWorklog = async (request: UpdateWorklogRequest): Promise<UpdateWorklogResult> => {
+  const { settings, issueKey, worklogId, timeSpentSeconds, startedISO, comment } = request;
+  const body = buildWorklogBody(timeSpentSeconds, startedISO, comment, { includeEmptyComment: true });
+
+  const updated = await jiraRequest<{ id?: string; timeSpentSeconds?: number }>(
+    settings,
+    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  return {
+    ok: true,
+    worklogId: updated.id ?? worklogId,
+    issueKey,
+    timeSpentSeconds: updated.timeSpentSeconds ?? Math.round(timeSpentSeconds)
+  };
+};
+
+export const deleteWorklog = async (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
+  const { settings, issueKey, worklogId } = request;
+
+  await jiraRequest<void>(
+    settings,
+    `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog/${encodeURIComponent(worklogId)}`,
+    { method: "DELETE" }
+  );
+
+  return {
+    ok: true,
+    worklogId,
+    issueKey
   };
 };

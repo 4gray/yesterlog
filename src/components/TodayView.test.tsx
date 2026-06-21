@@ -58,6 +58,7 @@ describe("TodayView", () => {
         isConfigured={true}
         isLogging={false}
         onLog={async () => true}
+        onEditWorklog={() => undefined}
         onSelectTicket={() => undefined}
       />
     );
@@ -68,5 +69,6 @@ describe("TodayView", () => {
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-401");
     expect(markup).toContain("EPIC");
     expect(markup).toContain("SUB");
+    expect(markup).toContain("Edit worklog for FTDM-397");
   });
 });

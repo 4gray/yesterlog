@@ -921,10 +921,12 @@ a {
   z-index: 40;
 }
 
-.wl:hover .wl-pop {
+.wl:hover .wl-pop,
+.wl:focus-within .wl-pop {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .wl-pop::after {
@@ -985,6 +987,58 @@ a {
   font-size: 12px;
   line-height: 1.45;
   color: var(--muted);
+}
+
+.wl-pop-worklog {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.wl-pop-worklog .wl-pop-comment {
+  border-top: none;
+  margin-top: 8px;
+  padding-top: 0;
+}
+
+.wl-pop-worklog-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.wl-pop-worklog-head span {
+  flex: 1;
+}
+
+.day-log-edit,
+.wl-pop-edit {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.day-log-edit {
+  width: 22px;
+  height: 22px;
+  opacity: 0.72;
+}
+
+.day-log-edit:hover,
+.wl-pop-edit:hover {
+  color: var(--blue-soft);
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
 }
 
 .day-spacer {
@@ -1124,6 +1178,12 @@ a {
   color: var(--blue);
 }
 
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .modal-close {
   display: grid;
   place-items: center;
@@ -1139,6 +1199,24 @@ a {
 .modal-close:hover {
   color: var(--text-bright);
   border-color: var(--border-strong);
+}
+
+.modal-delete {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 139, 132, 0.36);
+  border-radius: 7px;
+  background: none;
+  color: #ff8b84;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.modal-delete:hover {
+  color: #ffd0cc;
+  border-color: rgba(255, 139, 132, 0.72);
+  background: rgba(255, 139, 132, 0.08);
 }
 
 .modal-body {
@@ -1174,6 +1252,10 @@ a {
   border-radius: 9px;
   background: none;
   text-align: left;
+}
+
+.modal-ticket.is-locked {
+  cursor: default;
 }
 
 .modal-ticket-summary {
@@ -1616,8 +1698,8 @@ a {
 
 .entry-top {
   display: flex;
-  align-items: baseline;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
 }
 
 .entry-key {
@@ -1654,6 +1736,25 @@ a {
   font-size: 13px;
   color: var(--text);
   flex: none;
+}
+
+.entry-edit {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: none;
+  color: var(--dim);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.entry-edit:hover {
+  color: var(--blue-soft);
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
 }
 
 .entry-note {

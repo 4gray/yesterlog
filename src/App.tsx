@@ -4,6 +4,7 @@ import type {
   JiraConnectionResult,
   JiraIssueTypeInfo,
   JiraTicket,
+  JiraWorklog,
   SyncResult,
   TicketsResult,
   WeekOverride
@@ -88,10 +89,12 @@ export const App = () => {
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>();
   const [isLogging, setIsLogging] = useState(false);
+  const [isDeletingWorklog, setIsDeletingWorklog] = useState(false);
   const [logError, setLogError] = useState<string | undefined>();
   const [logMessage, setLogMessage] = useState<string | undefined>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
+  const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
   const [theme, setTheme] = useState<ThemeMode | null>(() => {
     try {
       const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
@@ -434,11 +437,85 @@ export const App = () => {
     }
   };
 
+  const handleUpdateWorklog = async (payload: {
+    issueKey: string;
+    timeSpentSeconds: number;
+    startedISO: string;
+    comment?: string;
+  }) => {
+    if (!editingWorklog) {
+      return false;
+    }
+
+    setIsLogging(true);
+    setLogError(undefined);
+    setLogMessage(undefined);
+
+    try {
+      const result = await nativeApi.updateWorklog({
+        settings,
+        issueKey: editingWorklog.issueKey,
+        worklogId: editingWorklog.id,
+        timeSpentSeconds: payload.timeSpentSeconds,
+        startedISO: payload.startedISO,
+        comment: payload.comment
+      });
+      setLogMessage(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
+      await handleSync();
+      await loadTickets();
+      return true;
+    } catch (error) {
+      setLogError(error instanceof Error ? error.message : "Unable to update Jira worklog.");
+      return false;
+    } finally {
+      setIsLogging(false);
+    }
+  };
+
+  const handleDeleteWorklog = async () => {
+    if (!editingWorklog) {
+      return false;
+    }
+
+    setIsDeletingWorklog(true);
+    setLogError(undefined);
+    setLogMessage(undefined);
+
+    try {
+      const result = await nativeApi.deleteWorklog({
+        settings,
+        issueKey: editingWorklog.issueKey,
+        worklogId: editingWorklog.id
+      });
+      setLogMessage(`Deleted worklog from ${result.issueKey}.`);
+      await handleSync();
+      await loadTickets();
+      return true;
+    } catch (error) {
+      setLogError(error instanceof Error ? error.message : "Unable to delete Jira worklog.");
+      return false;
+    } finally {
+      setIsDeletingWorklog(false);
+    }
+  };
+
   const syncState = isSyncing ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
   const banner = syncError ?? syncMessage;
 
-  const openAddTime = (date?: Date) => setAddModalDate(date ?? new Date());
+  const openAddTime = (date?: Date) => {
+    setEditingWorklog(undefined);
+    setLogError(undefined);
+    setLogMessage(undefined);
+    setAddModalDate(date ?? new Date());
+  };
+
+  const openEditWorklog = (worklog: JiraWorklog) => {
+    setAddModalDate(undefined);
+    setLogError(undefined);
+    setLogMessage(undefined);
+    setEditingWorklog(worklog);
+  };
 
   return (
     <div className="app-shell">
@@ -483,6 +560,7 @@ export const App = () => {
               logError={logError}
               logMessage={logMessage}
               onLog={handleAddWorklog}
+              onEditWorklog={openEditWorklog}
               onSelectTicket={setSelectedTicket}
             />
           ) : view === "week" ? (
@@ -496,6 +574,7 @@ export const App = () => {
               onCurrentWeek={() => goToWeek(new Date())}
               onNextWeek={() => setWeekStart((current) => addDays(current, 7))}
               onAddTime={openAddTime}
+              onEditWorklog={openEditWorklog}
               onToggleSkipped={handleToggleSkipped}
             />
           ) : view === "tickets" ? (
@@ -538,6 +617,21 @@ export const App = () => {
           logError={logError}
           onClose={() => setAddModalDate(undefined)}
           onLog={handleAddWorklog}
+        />
+      )}
+
+      {editingWorklog && (
+        <AddTimeModal
+          date={new Date(editingWorklog.started)}
+          ticketOptions={ticketOptions}
+          isConfigured={isConfigured}
+          isLogging={isLogging}
+          isDeleting={isDeletingWorklog}
+          logError={logError}
+          editingWorklog={editingWorklog}
+          onClose={() => setEditingWorklog(undefined)}
+          onLog={handleUpdateWorklog}
+          onDelete={handleDeleteWorklog}
         />
       )}
     </div>

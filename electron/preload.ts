@@ -3,12 +3,16 @@ import type {
   AddWorklogRequest,
   AddWorklogResult,
   AppSettings,
+  DeleteWorklogRequest,
+  DeleteWorklogResult,
   JiraConnectionResult,
   ReminderSchedulePayload,
   SyncRequest,
   SyncResult,
   TicketsRequest,
-  TicketsResult
+  TicketsResult,
+  UpdateWorklogRequest,
+  UpdateWorklogResult
 } from "../shared/types";
 
 const timeBroApi = {
@@ -23,6 +27,12 @@ const timeBroApi = {
   },
   addWorklog: (request: AddWorklogRequest): Promise<AddWorklogResult> => {
     return ipcRenderer.invoke("jira:add-worklog", request);
+  },
+  updateWorklog: (request: UpdateWorklogRequest): Promise<UpdateWorklogResult> => {
+    return ipcRenderer.invoke("jira:update-worklog", request);
+  },
+  deleteWorklog: (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
+    return ipcRenderer.invoke("jira:delete-worklog", request);
   },
   scheduleReminder: (payload: ReminderSchedulePayload): Promise<{ scheduled: boolean; fireAt?: string }> => {
     return ipcRenderer.invoke("reminder:schedule", payload);

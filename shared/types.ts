@@ -36,6 +36,7 @@ export interface JiraWorklog {
   issueId: string;
   issueKey: string;
   issueSummary: string;
+  issueUrl?: string;
   issueType?: JiraIssueTypeInfo;
   authorAccountId: string;
   started: string;
@@ -135,6 +136,34 @@ export interface AddWorklogResult {
   worklogId: string;
   issueKey: string;
   timeSpentSeconds: number;
+}
+
+export interface UpdateWorklogRequest {
+  settings: AppSettings;
+  issueKey: string;
+  worklogId: string;
+  timeSpentSeconds: number;
+  startedISO: string;
+  comment?: string;
+}
+
+export interface UpdateWorklogResult {
+  ok: boolean;
+  worklogId: string;
+  issueKey: string;
+  timeSpentSeconds: number;
+}
+
+export interface DeleteWorklogRequest {
+  settings: AppSettings;
+  issueKey: string;
+  worklogId: string;
+}
+
+export interface DeleteWorklogResult {
+  ok: boolean;
+  worklogId: string;
+  issueKey: string;
 }
 
 export interface SyncRequest {
