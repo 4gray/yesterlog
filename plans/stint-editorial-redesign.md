@@ -195,3 +195,99 @@ The v5 bundle's design file was byte-identical to v4. Two user asks:
   already persisted).
 - Optional: theme the JS-driven WEEK ticket palette (segment dots/text) per
   theme — currently fixed vivid colours that read on both backgrounds.
+
+## v6 — handoff bundle 6 import + local notes
+
+### Goal
+Import the latest Claude Design handoff bundle, read
+`Stint - Editorial.dc.html`, and implement the new user-visible additions while
+leaving `Stint - Week Dotted.dc.html` / Dotted workspace area untouched.
+
+### Decisions
+- Treat `Stint - Editorial.dc.html` as the primary source of truth per the
+  bundle README.
+- Keep Jira writes limited to the existing Add Time flow. Personal notes are
+  local-only records and must not call Jira.
+- Preserve Jira worklog identity fields; add local-note identity separately.
+
+### Pending work
+- Done — extracted/imported the handoff bundle into `design/handoff`.
+- Done — read the bundle README, `Stint - Editorial.dc.html`,
+  `Stint - Welcome.dc.html`, and imported `support.js`; ignored Dotted workspace
+  behavior per request.
+- Done — added Epic/Sub metadata support. Jira `parent` fields are normalized
+  into local epic pills when they are actual epic-level parents; `issuetype`
+  continues to drive `EPIC`/`SUB` badges.
+- Done — added local personal notes: IndexedDB storage, Add Time modal note
+  mode, week/today/report rendering, totals, CSV export, and tests.
+- Done — added first-run welcome screen when Jira settings are missing.
+- Done — verified with unit tests, production build, Browser welcome check, and
+  fallback Playwright connected/note-flow QA.
+
+### Verification
+- `npm run lint` clean.
+- `npm run test` — 7 files / 20 tests passed.
+- `npm run build` clean.
+- Browser plugin check at `http://127.0.0.1:5174/`: welcome screen rendered on
+  empty settings, no console errors/warnings.
+- Fallback Playwright QA (Browser sandbox cannot seed IndexedDB): seeded local
+  settings/syncResult/personalNotes, verified WEEK with `EPIC`/`SUB` + local
+  note, used Add Time → Personal note → Save note, verified the new note row in
+  the week column and clean console.
+
+## v7 — Add Time duration + working-day picker
+
+### Goal
+Make Add Time safe for longer entries and weekend usage:
+- no Sunday/weekend selection from the header;
+- dialog allows changing the day, but only among configured active working
+  days in the current week;
+- ticket worklogs and personal notes support custom Jira-style units without
+  asking the user to type raw `1h` / `1d` / `1w` syntax.
+
+### Decisions
+- Use a `Custom` preset that reveals a numeric input and H/D/W unit toggles.
+  The app converts those controls to seconds (`1D = 8h`, `1W = 5D`) before
+  calling Jira or saving a local note.
+- Reuse the existing header default: if today is not an active working day,
+  default to the latest active working day before today, usually Friday.
+
+### Pending work
+- Done — updated `AddTimeModal` UI and `App` day options.
+- Done — added focused tests for working-day fallback and custom duration
+  mapping.
+- Done — ran lint/test/build and rendered QA.
+
+### Verification
+- `npm run lint` clean.
+- `npm run test` — 8 files / 23 tests passed.
+- `npm run build` clean.
+- Playwright rendered QA at `http://127.0.0.1:5174/`: fixed browser date to
+  Sunday 2026-06-21, confirmed header Add Time selected Friday 2026-06-19,
+  saved a personal note via Custom `1D`, and verified it rendered on Friday as
+  `8h 00m` with no console errors.
+- Playwright modal screenshot verified Custom amount + H/D/W controls and
+  working-day selector are visible without clipping.
+
+## v8 — compact chrome cleanup
+
+### Goal
+Remove the empty top titlebar strip and the TimeBro brand block from the left
+sidebar so the app starts closer to the top of the window while still leaving
+room for macOS traffic-light controls.
+
+### Pending work
+- Done — removed the renderer `.titlebar`, sidebar logo/name, and adjusted top
+  spacing for macOS traffic lights.
+- Done — added Electron drag regions to the sidebar chrome gap and top view
+  headers, with `no-drag` preserved on controls.
+- Done — verified layout and committed all remaining changes.
+
+### Verification
+- `npm run lint` clean.
+- `npm run test` — 8 files / 23 tests passed.
+- `npm run build` clean.
+- Playwright rendered QA at `http://127.0.0.1:5174/`: confirmed `.titlebar`
+  and sidebar brand elements are absent, sidebar nav starts at `52px`, main
+  week header starts at `0px`, `ADD TIME` remains clickable and opens the
+  modal, with no console errors.

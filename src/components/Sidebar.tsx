@@ -29,11 +29,6 @@ export const Sidebar = ({
 }: SidebarProps) => {
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
-      <div className="sb-brand">
-        <div className="sb-logo">%d</div>
-        <span className="nav-label sb-word">TimeBro</span>
-      </div>
-
       <nav className="sb-nav">
         {NAV.map(({ id, label, Icon }) => (
           <button

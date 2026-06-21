@@ -4,6 +4,7 @@ import {
   formatDuration,
   formatWeekRangeCompact,
   getIsoWeekNumber,
+  jiraUnitDurationToSeconds,
   parseDurationToSeconds
 } from "./date";
 
@@ -65,5 +66,18 @@ describe("parseDurationToSeconds", () => {
     expect(parseDurationToSeconds("1.5")).toBe(90 * 60);
     expect(parseDurationToSeconds("")).toBeNull();
     expect(parseDurationToSeconds("abc")).toBeNull();
+  });
+});
+
+describe("jiraUnitDurationToSeconds", () => {
+  it("maps custom H/D/W controls to Jira duration seconds", () => {
+    expect(jiraUnitDurationToSeconds("1.5", "h")).toBe(90 * 60);
+    expect(jiraUnitDurationToSeconds("1", "d")).toBe(8 * 3600);
+    expect(jiraUnitDurationToSeconds(1, "w")).toBe(40 * 3600);
+  });
+
+  it("rejects non-positive custom durations", () => {
+    expect(jiraUnitDurationToSeconds("", "h")).toBe(0);
+    expect(jiraUnitDurationToSeconds("-1", "d")).toBe(0);
   });
 });

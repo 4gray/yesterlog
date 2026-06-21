@@ -48,6 +48,18 @@ describe("TodayView", () => {
         selectedTicket={ticket}
         ticketOptions={[ticket, touchedTicket]}
         todayWorklogs={[worklog]}
+        personalNotes={[
+          {
+            id: "note-1",
+            weekKey: "2026-06-15",
+            dateKey: "2026-06-18",
+            text: "Mentoring and planning",
+            timeSpentSeconds: 2 * 3600,
+            startedISO: "2026-06-18T12:00:00.000Z",
+            createdAt: "2026-06-18T12:00:00.000Z",
+            updatedAt: "2026-06-18T12:00:00.000Z"
+          }
+        ]}
         issueUrlsByKey={{ [ticket.key]: ticket.url }}
         issueTypesByKey={{ [ticket.key]: ticket.issueType, [touchedTicket.key]: touchedTicket.issueType }}
         todayTrackedHours={1}
@@ -70,5 +82,10 @@ describe("TodayView", () => {
     expect(markup).toContain("EPIC");
     expect(markup).toContain("SUB");
     expect(markup).toContain("Edit worklog for FTDM-397");
+    expect(markup).toContain("Mentoring and planning");
+    expect(markup).toContain("LOCAL");
+    expect(markup).toContain(
+      '<span class="entry-summary">Mentoring and planning</span><span class="entry-leader"></span><span class="entry-range">14:00–16:00</span><span class="entry-dur">2h</span>'
+    );
   });
 });

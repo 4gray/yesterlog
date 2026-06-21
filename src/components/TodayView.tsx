@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, ChevronDown, Clock, Loader2, MessageSquare, Pencil } from "lucide-react";
-import type { JiraTicket, JiraWorklog } from "../../shared/types";
-import { formatClock, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
+import { Calendar, ChevronDown, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
+import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -17,6 +17,7 @@ interface TodayViewProps {
   selectedTicket?: JiraTicket;
   ticketOptions: JiraTicket[];
   todayWorklogs: JiraWorklog[];
+  personalNotes: PersonalNote[];
   issueUrlsByKey: Record<string, string>;
   issueTypesByKey: Record<string, JiraTicket["issueType"]>;
   todayTrackedHours: number;
@@ -48,6 +49,7 @@ export const TodayView = ({
   selectedTicket,
   ticketOptions,
   todayWorklogs,
+  personalNotes,
   issueUrlsByKey,
   issueTypesByKey,
   todayTrackedHours,
@@ -148,6 +150,10 @@ export const TodayView = ({
   const sortedWorklogs = [...todayWorklogs].sort(
     (a, b) => new Date(a.started).getTime() - new Date(b.started).getTime()
   );
+  const sortedPersonalNotes = [...personalNotes].sort(
+    (a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime()
+  );
+  const entryCount = sortedWorklogs.length + sortedPersonalNotes.length;
 
   return (
     <div className="view view-scroll">
@@ -186,6 +192,7 @@ export const TodayView = ({
                   issueKey={activeTicket.key}
                   url={activeTicket.url}
                   issueType={activeTicket.issueType}
+                  epic={activeTicket.epic}
                   keyClassName="composer-target-key"
                 />
               ) : null}
@@ -285,51 +292,74 @@ export const TodayView = ({
           )}
 
           <div className="entries-title">
-            TODAY'S ENTRIES — {sortedWorklogs.length} {sortedWorklogs.length === 1 ? "LOG" : "LOGS"}
+            TODAY'S ENTRIES — {entryCount} {entryCount === 1 ? "LOG" : "LOGS"}
           </div>
           <div>
-            {sortedWorklogs.length === 0 ? (
+            {entryCount === 0 ? (
               <div className="empty-note" style={{ padding: "14px 0" }}>
                 Nothing logged today yet.
               </div>
             ) : (
-              sortedWorklogs.map((worklog) => {
-                const start = new Date(worklog.started);
-                const end = new Date(start.getTime() + worklog.timeSpentSeconds * 1000);
-                return (
-                  <div className="entry" key={worklog.id}>
-                    <div className="entry-top">
-                      <TicketKeyLink
-                        issueKey={worklog.issueKey}
-                        url={issueUrlsByKey[worklog.issueKey]}
-                        issueType={worklog.issueType ?? issueTypesByKey[worklog.issueKey]}
-                        keyClassName="entry-key"
-                      />
-                      <span className="entry-summary">{worklog.issueSummary}</span>
-                      <span className="entry-leader" />
-                      <span className="entry-range">
-                        {formatHm24(start)}–{formatHm24(end)}
-                      </span>
-                      <span className="entry-dur">{formatClock(worklog.timeSpentSeconds)}</span>
-                      <button
-                        type="button"
-                        className="entry-edit"
-                        onClick={() => onEditWorklog(worklog)}
-                        title="Edit worklog"
-                        aria-label={`Edit worklog for ${worklog.issueKey}`}
-                      >
-                        <Pencil size={13} strokeWidth={2} />
-                      </button>
-                    </div>
-                    {worklog.comment && (
-                      <div className="entry-note">
-                        <MessageSquare size={13} stroke="#4b515c" strokeWidth={1.7} />
-                        <span>{worklog.comment}</span>
+              <>
+                {sortedWorklogs.map((worklog) => {
+                  const start = new Date(worklog.started);
+                  const end = new Date(start.getTime() + worklog.timeSpentSeconds * 1000);
+                  return (
+                    <div className="entry" key={worklog.id}>
+                      <div className="entry-top">
+                        <TicketKeyLink
+                          issueKey={worklog.issueKey}
+                          url={issueUrlsByKey[worklog.issueKey]}
+                          issueType={worklog.issueType ?? issueTypesByKey[worklog.issueKey]}
+                          epic={worklog.epic}
+                          keyClassName="entry-key"
+                        />
+                        <span className="entry-summary">{worklog.issueSummary}</span>
+                        <span className="entry-leader" />
+                        <span className="entry-range">
+                          {formatHm24(start)}–{formatHm24(end)}
+                        </span>
+                        <span className="entry-dur">{formatClock(worklog.timeSpentSeconds)}</span>
+                        <button
+                          type="button"
+                          className="entry-edit"
+                          onClick={() => onEditWorklog(worklog)}
+                          title="Edit worklog"
+                          aria-label={`Edit worklog for ${worklog.issueKey}`}
+                        >
+                          <Pencil size={13} strokeWidth={2} />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                );
-              })
+                      {worklog.comment && (
+                        <div className="entry-note">
+                          <MessageSquare size={13} stroke="#4b515c" strokeWidth={1.7} />
+                          <span>{worklog.comment}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {sortedPersonalNotes.map((note) => {
+                  const start = new Date(note.startedISO);
+                  const end = new Date(start.getTime() + note.timeSpentSeconds * 1000);
+                  return (
+                    <div className="entry entry-local" key={note.id}>
+                      <div className="entry-top">
+                        <span className="entry-key is-local">
+                          <PenLine size={12} strokeWidth={1.9} />
+                          LOCAL
+                        </span>
+                        <span className="entry-summary">{note.text}</span>
+                        <span className="entry-leader" />
+                        <span className="entry-range">
+                          {formatHm24(start)}–{formatHm24(end)}
+                        </span>
+                        <span className="entry-dur">{formatDuration(note.timeSpentSeconds / 3600)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         </div>
@@ -349,6 +379,7 @@ export const TodayView = ({
                       issueKey={ticket.key}
                       url={ticket.url}
                       issueType={ticket.issueType}
+                      epic={ticket.epic}
                       keyClassName={`touched-key ${ticket.projectKey === "FTDM" ? "" : "is-amber"}`}
                     />
                     <div className="touched-meta">{ticket.statusName}</div>

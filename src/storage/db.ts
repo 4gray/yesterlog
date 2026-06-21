@@ -1,4 +1,4 @@
-import type { AppSettings, SyncResult, WeekOverride } from "../../shared/types";
+import type { AppSettings, PersonalNote, SyncResult, WeekOverride } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
@@ -6,7 +6,7 @@ const DB_VERSION = 3;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 
-type StoreName = "settings" | "weekOverrides" | "syncResults" | "favorites";
+type StoreName = "settings" | "weekOverrides" | "syncResults" | "favorites" | "personalNotes";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -35,6 +35,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("favorites")) {
         db.createObjectStore("favorites", { keyPath: "id" });
+      }
+
+      if (!db.objectStoreNames.contains("personalNotes")) {
+        db.createObjectStore("personalNotes", { keyPath: "weekKey" });
       }
     };
 
@@ -108,4 +112,13 @@ export const getFavoriteKeys = async (): Promise<string[]> => {
 
 export const saveFavoriteKeys = (keys: string[]) => {
   return writeStore("favorites", { id: FAVORITES_KEY, keys });
+};
+
+export const getPersonalNotes = async (weekKey: string): Promise<PersonalNote[]> => {
+  const stored = await readStore<{ weekKey: string; notes: PersonalNote[] }>("personalNotes", weekKey);
+  return stored?.notes ?? [];
+};
+
+export const savePersonalNotes = (weekKey: string, notes: PersonalNote[]) => {
+  return writeStore("personalNotes", { weekKey, notes });
 };

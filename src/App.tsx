@@ -5,6 +5,7 @@ import type {
   JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
+  PersonalNote,
   SyncResult,
   TicketsResult,
   WeekOverride
@@ -16,21 +17,24 @@ import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
+import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeView";
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import {
   getFavoriteKeys,
+  getPersonalNotes,
   getSettings,
   getSyncResult,
   getWeekOverride,
   saveFavoriteKeys,
+  savePersonalNotes,
   saveSettings,
   saveSyncResult,
   saveWeekOverride
 } from "./storage/db";
-import { addDays, formatDuration, toLocalDateKey } from "./utils/date";
+import { addDays, formatDuration, fromLocalDateKey, toLocalDateKey } from "./utils/date";
 
 const isJiraConfigured = (settings: AppSettings) =>
   Boolean(settings.jiraBaseUrl.trim() && settings.jiraEmail.trim() && settings.jiraApiToken.trim());
@@ -83,6 +87,7 @@ export const App = () => {
     })
   }));
   const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
+  const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -102,6 +107,7 @@ export const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
+  const [welcomeConnected, setWelcomeConnected] = useState(false);
   const [theme, setTheme] = useState<ThemeMode | null>(() => {
     if (demoConfig?.theme) {
       return demoConfig.theme;
@@ -121,8 +127,8 @@ export const App = () => {
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
   const weekState = useMemo(
-    () => buildWeekState(weekStart, settings, weekOverride, syncResult, demoScenario?.today ?? new Date()),
-    [demoScenario, settings, syncResult, weekOverride, weekStart]
+    () => buildWeekState(weekStart, settings, weekOverride, syncResult, personalNotes, currentDate),
+    [currentDate, personalNotes, settings, syncResult, weekOverride, weekStart]
   );
 
   const isConfigured = isJiraConfigured(settings);
@@ -179,9 +185,11 @@ export const App = () => {
   }, [selectedTicket, syncResult, tickets]);
 
   const todayKey = toLocalDateKey(currentDate);
+  const todaySummary = weekState.days.find((day) => day.dateKey === todayKey);
   const todayBucket = syncResult?.daySummaries[todayKey];
   const todayWorklogs = todayBucket?.worklogs ?? [];
-  const todayTrackedHours = (todayBucket?.trackedSeconds ?? 0) / 3600;
+  const todayPersonalNotes = todaySummary?.personalNotes ?? [];
+  const todayTrackedHours = todaySummary?.trackedHours ?? (todayBucket?.trackedSeconds ?? 0) / 3600;
 
   const ticketOptions = useMemo(() => {
     const map = new Map<string, JiraTicket>();
@@ -200,6 +208,8 @@ export const App = () => {
     }
     return [...map.values()];
   }, [favoriteKeys, selectedTicket, tickets]);
+
+  const addTimeDateOptions = weekState.activeWorkingDates;
 
   const touchedNotLogged = useMemo(() => {
     const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
@@ -234,11 +244,13 @@ export const App = () => {
     let isMounted = true;
 
     const loadInitialState = async () => {
-      const [storedSettings, storedOverride, storedSyncResult, storedFavorites] = await Promise.all([
+      const weekKey = toLocalDateKey(weekStart);
+      const [storedSettings, storedOverride, storedSyncResult, storedFavorites, storedPersonalNotes] = await Promise.all([
         getSettings(),
-        getWeekOverride(toLocalDateKey(weekStart)),
-        getSyncResult(toLocalDateKey(weekStart)),
-        getFavoriteKeys()
+        getWeekOverride(weekKey),
+        getSyncResult(weekKey),
+        getFavoriteKeys(),
+        getPersonalNotes(weekKey)
       ]);
 
       if (!isMounted) {
@@ -250,6 +262,7 @@ export const App = () => {
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
       setFavoriteKeys(storedFavorites);
+      setPersonalNotes(storedPersonalNotes);
       setIsBooting(false);
     };
 
@@ -273,9 +286,10 @@ export const App = () => {
     const weekKey = toLocalDateKey(weekStart);
 
     const loadWeek = async () => {
-      const [storedOverride, storedSyncResult] = await Promise.all([
+      const [storedOverride, storedSyncResult, storedPersonalNotes] = await Promise.all([
         getWeekOverride(weekKey),
-        getSyncResult(weekKey)
+        getSyncResult(weekKey),
+        getPersonalNotes(weekKey)
       ]);
 
       if (!isMounted) {
@@ -284,6 +298,7 @@ export const App = () => {
 
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
+      setPersonalNotes(storedPersonalNotes);
       setSyncError(undefined);
       setSyncMessage(undefined);
     };
@@ -398,6 +413,35 @@ export const App = () => {
     setSettingsDraft(cleanedSettings);
     setSavedMessage(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
     window.setTimeout(() => setSavedMessage(undefined), 2500);
+  };
+
+  const handleWelcomeConnect = async (payload: WelcomeConnectPayload): Promise<JiraConnectionResult> => {
+    const cleanedSettings: AppSettings = {
+      ...settingsDraft,
+      ...payload,
+      jiraBaseUrl: normalizeJiraSiteInput(payload.jiraBaseUrl),
+      jiraEmail: payload.jiraEmail.trim(),
+      weeklyTargetHours: settingsDraft.weeklyTargetHours || DEFAULT_SETTINGS.weeklyTargetHours,
+      workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : DEFAULT_SETTINGS.workingDays
+    };
+
+    const result = await nativeApi.testJiraConnection(cleanedSettings);
+
+    if (result.ok) {
+      await saveSettings(cleanedSettings);
+      setSettings(cleanedSettings);
+      setSettingsDraft(cleanedSettings);
+      setTestResult(result);
+      setWelcomeConnected(true);
+      setTicketsLoading(true);
+      setTicketsError(undefined);
+      nativeApi.fetchAssignedTickets({ settings: cleanedSettings })
+        .then(setTickets)
+        .catch((error) => setTicketsError(error instanceof Error ? error.message : "Unable to load tickets."))
+        .finally(() => setTicketsLoading(false));
+    }
+
+    return result;
   };
 
   const handleTestConnection = async () => {
@@ -563,6 +607,55 @@ export const App = () => {
     }
   };
 
+  const handleAddPersonalNote = async (payload: {
+    text: string;
+    timeSpentSeconds: number;
+    startedISO: string;
+  }) => {
+    const started = new Date(payload.startedISO);
+    const noteWeekKey = toLocalDateKey(getWeekBounds(started).weekStart);
+    const now = new Date().toISOString();
+    const note: PersonalNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      weekKey: noteWeekKey,
+      dateKey: toLocalDateKey(started),
+      text: payload.text.trim(),
+      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
+      startedISO: payload.startedISO,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    if (!note.text || note.timeSpentSeconds <= 0) {
+      setLogError("Add a note and a duration before saving.");
+      return false;
+    }
+
+    try {
+      if (demoScenario) {
+        setPersonalNotes((current) => [...current, note]);
+        setLogError(undefined);
+        setLogMessage(`Demo saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
+        return true;
+      }
+
+      const currentNotes = noteWeekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(noteWeekKey);
+      const nextNotes = [...currentNotes, note].sort(
+        (a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime()
+      );
+      await savePersonalNotes(noteWeekKey, nextNotes);
+      if (noteWeekKey === weekState.weekKey) {
+        setPersonalNotes(nextNotes);
+      }
+      setLogError(undefined);
+      setLogMessage(`Saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
+      return true;
+    } catch (error) {
+      setLogError(error instanceof Error ? error.message : "Unable to save the personal note locally.");
+      return false;
+    }
+  };
+
   const syncState = isSyncing ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
   const banner = syncError ?? syncMessage;
@@ -571,7 +664,20 @@ export const App = () => {
     setEditingWorklog(undefined);
     setLogError(undefined);
     setLogMessage(undefined);
-    setAddModalDate(date ?? currentDate);
+
+    const preferredDateKey = date ? toLocalDateKey(date) : toLocalDateKey(currentDate);
+    const fallbackDateKey =
+      [...weekState.days]
+        .reverse()
+        .find((day) => day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey <= preferredDateKey)?.dateKey ??
+      addTimeDateOptions[0] ??
+      weekState.days[0]?.dateKey ??
+      preferredDateKey;
+    const selectedDateKey = addTimeDateOptions.includes(preferredDateKey) ? preferredDateKey : fallbackDateKey;
+    const selectedDate = fromLocalDateKey(selectedDateKey);
+    selectedDate.setHours(currentDate.getHours(), currentDate.getMinutes(), 0, 0);
+
+    setAddModalDate(selectedDate);
   };
 
   const openEditWorklog = (worklog: JiraWorklog) => {
@@ -581,6 +687,23 @@ export const App = () => {
     setEditingWorklog(worklog);
   };
 
+  if (!demoScenario && !isBooting && (!isConfigured || welcomeConnected)) {
+    return (
+      <div className="app-shell" data-theme={effectiveTheme} data-view="welcome">
+        <WelcomeView
+          initialSettings={settingsDraft}
+          isConnected={welcomeConnected}
+          connectedSettings={settings}
+          onConnect={handleWelcomeConnect}
+          onEnterApp={() => {
+            setWelcomeConnected(false);
+            setView("week");
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className="app-shell"
@@ -589,8 +712,6 @@ export const App = () => {
       data-theme={effectiveTheme}
       data-view={view}
     >
-      <div className="titlebar" />
-
       <div className="shell-body">
         <Sidebar
           view={view}
@@ -618,6 +739,7 @@ export const App = () => {
               selectedTicket={selectedTicket}
               ticketOptions={ticketOptions}
               todayWorklogs={todayWorklogs}
+              personalNotes={todayPersonalNotes}
               issueUrlsByKey={issueUrlsByKey}
               issueTypesByKey={issueTypesByKey}
               todayTrackedHours={todayTrackedHours}
@@ -682,18 +804,21 @@ export const App = () => {
       {addModalDate && (
         <AddTimeModal
           date={addModalDate}
+          dateOptions={addTimeDateOptions}
           ticketOptions={ticketOptions}
           isConfigured={isConfigured}
           isLogging={isLogging}
           logError={logError}
           onClose={() => setAddModalDate(undefined)}
           onLog={handleAddWorklog}
+          onAddPersonalNote={handleAddPersonalNote}
         />
       )}
 
       {editingWorklog && (
         <AddTimeModal
           date={new Date(editingWorklog.started)}
+          dateOptions={addTimeDateOptions}
           ticketOptions={ticketOptions}
           isConfigured={isConfigured}
           isLogging={isLogging}
@@ -703,6 +828,7 @@ export const App = () => {
           onClose={() => setEditingWorklog(undefined)}
           onLog={handleUpdateWorklog}
           onDelete={handleDeleteWorklog}
+          onAddPersonalNote={handleAddPersonalNote}
         />
       )}
     </div>

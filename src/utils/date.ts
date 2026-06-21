@@ -105,6 +105,22 @@ export const formatClock = (seconds: number) => {
   return wholeHours === 0 ? `${minutes}m` : `${wholeHours}h ${String(minutes).padStart(2, "0")}m`;
 };
 
+export type JiraDurationUnit = "h" | "d" | "w";
+
+export const JIRA_DURATION_UNIT_SECONDS: Record<JiraDurationUnit, number> = {
+  h: 3600,
+  d: 8 * 3600,
+  w: 5 * 8 * 3600
+};
+
+export const jiraUnitDurationToSeconds = (amountValue: string | number, unit: JiraDurationUnit) => {
+  const amount = typeof amountValue === "number" ? amountValue : Number(amountValue);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+  return Math.round(amount * JIRA_DURATION_UNIT_SECONDS[unit]);
+};
+
 // Parses Jira-style durations ("2w 4d 6h 45m", "1h 30m", "45m") or a bare
 // number of hours. Jira defaults: 1w = 5d, 1d = 8h. Returns null if unparseable.
 export const parseDurationToSeconds = (text: string): number | null => {
@@ -113,7 +129,7 @@ export const parseDurationToSeconds = (text: string): number | null => {
     return null;
   }
 
-  const unitSeconds: Record<string, number> = { w: 5 * 8 * 3600, d: 8 * 3600, h: 3600, m: 60 };
+  const unitSeconds: Record<string, number> = { ...JIRA_DURATION_UNIT_SECONDS, m: 60 };
   const matches = [...trimmed.matchAll(/(\d+(?:\.\d+)?)\s*(w|d|h|m)/g)];
 
   if (matches.length > 0) {
