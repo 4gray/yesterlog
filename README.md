@@ -1,6 +1,6 @@
 # TimeBro
 
-**A local-first Jira time tracker for people who do not want Friday afternoon to become forensic accounting.** ⏱️
+⏱️ Your manager has bravely decided that every minute is a tiny KPI waiting to be loved. If you are now searching for the perfect time-tracking instrument, TimeBro is your reliable desk buddy for keeping Jira worklogs tidy and making the manager suspiciously happy.
 
 TimeBro turns your Jira work logs into a calm weekly cockpit: what is logged, what is missing, which days are off, and which ticket needs a little attention before the week closes.
 
