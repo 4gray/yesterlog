@@ -42,13 +42,15 @@ export const buildWeekState = (
   const todayKey = toLocalDateKey(today);
   const skippedDates = override.skippedDates;
   const workDates = Array.from({ length: 5 }, (_value, index) => addDays(weekStart, index));
+  const configuredWorkingDayCount = Math.max(settings.workingDays.length, 1);
+  const dailyTargetHours = settings.weeklyTargetHours / configuredWorkingDayCount;
   const activeWorkingDates = workDates
     .filter((date) => {
       const weekday = isoWeekday(date) as WeekdayNumber;
       return settings.workingDays.includes(weekday) && !skippedDates.includes(toLocalDateKey(date));
     })
     .map(toLocalDateKey);
-  const dailyTargetHours = activeWorkingDates.length > 0 ? settings.weeklyTargetHours / activeWorkingDates.length : 0;
+  const weeklyTargetHours = dailyTargetHours * activeWorkingDates.length;
 
   const days = workDates.map((date, index) => {
     const dateKey = toLocalDateKey(date);
@@ -80,10 +82,10 @@ export const buildWeekState = (
     weekStartISO: weekStart.toISOString(),
     weekEndExclusiveISO: weekEndExclusive.toISOString(),
     weekRangeLabel: formatWeekRange(weekStart),
-    weeklyTargetHours: settings.weeklyTargetHours,
+    weeklyTargetHours,
     trackedWeekHours,
-    remainingWeekHours: Math.max(settings.weeklyTargetHours - trackedWeekHours, 0),
-    dailyTargetHours,
+    remainingWeekHours: Math.max(weeklyTargetHours - trackedWeekHours, 0),
+    dailyTargetHours: activeWorkingDates.length > 0 ? dailyTargetHours : 0,
     activeWorkingDates,
     skippedDates,
     days

@@ -11,7 +11,7 @@ describe("week calculations", () => {
     expect(bounds.weekKey).toBe("2026-06-08");
   });
 
-  it("redistributes weekly target across non-skipped working days", () => {
+  it("subtracts skipped working days from the weekly target", () => {
     const state = buildWeekState(
       monday,
       DEFAULT_SETTINGS,
@@ -29,8 +29,32 @@ describe("week calculations", () => {
       "2026-06-11",
       "2026-06-12"
     ]);
-    expect(state.dailyTargetHours).toBe(10);
+    expect(state.weeklyTargetHours).toBe(32);
+    expect(state.remainingWeekHours).toBe(32);
+    expect(state.dailyTargetHours).toBe(8);
+    expect(state.days[0].targetHours).toBe(8);
     expect(state.days[2].targetHours).toBe(0);
+  });
+
+  it("uses the configured daily share for part-time weeks with skipped days", () => {
+    const state = buildWeekState(
+      monday,
+      {
+        ...DEFAULT_SETTINGS,
+        weeklyTargetHours: 30
+      },
+      {
+        weekKey: "2026-06-08",
+        skippedDates: ["2026-06-12"]
+      },
+      undefined,
+      new Date(2026, 5, 9, 9)
+    );
+
+    expect(state.dailyTargetHours).toBe(6);
+    expect(state.weeklyTargetHours).toBe(24);
+    expect(state.remainingWeekHours).toBe(24);
+    expect(state.days[4].targetHours).toBe(0);
   });
 
   it("subtracts synced Jira worklogs from weekly and daily remaining time", () => {

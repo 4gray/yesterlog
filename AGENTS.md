@@ -23,6 +23,7 @@ This project is TimeBro, a local Electron + React desktop app for personal Jira 
 
 ## Development Rules
 
+- When the user explicitly asks for before/after commits, create a checkpoint commit before starting the new work and a final commit after verification.
 - Keep credentials local. Do not add telemetry, backend calls, or credential transmission outside the configured Jira site.
 - Keep Jira API access read-only unless the user explicitly asks for write behavior. The existing Add Time flow is the intentional write surface and only creates Jira work log items.
 - Use regular Atlassian API token auth for the MVP. OAuth and scoped-token gateway support are future architecture paths, not the default setup.
