@@ -2,7 +2,7 @@ import type { AppSettings, SyncResult, WeekOverride } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 

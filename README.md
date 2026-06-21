@@ -95,6 +95,7 @@ npm run build     # Type-check, build renderer, compile Electron files
 npm run dist:mac  # Build macOS DMG and ZIP
 npm run dist:win  # Build Windows NSIS installer and ZIP
 npm run dist:linux # Build Linux AppImage, DEB, and tar.gz
+npm run screenshots # Capture release/blog screenshots with demo data
 npm audit         # Check dependency advisories
 ```
 
@@ -203,6 +204,36 @@ Releases are automated through [`.github/workflows/release.yml`](./.github/workf
 6. upload the generated installers and archives
 
 The workflow uses `gh release create` / `gh release upload` with the built-in `GITHUB_TOKEN`, so no extra release token is needed for normal same-repository releases.
+
+## Release Screenshots
+
+Generate deterministic light/dark screenshots for release notes, blog posts, and app store material:
+
+```bash
+npm run screenshots
+```
+
+On a fresh machine, install the Playwright browser once if the script asks for it:
+
+```bash
+npm run screenshots:install-browser
+```
+
+The script starts the renderer on a free local port, opens demo URLs such as
+`?demo=1&view=week&theme=dark&seed=release&today=2026-06-17`, and writes PNGs to:
+
+```text
+design/release-screenshots/v0.1.0/
+```
+
+It captures `today`, `week`, `tickets`, `reports`, and `settings` in both dark and light themes. The data is in-memory only and does not write fake Jira settings, worklogs, tickets, or favorites into IndexedDB.
+
+Useful overrides:
+
+```bash
+npm run screenshots -- --seed blog-1 --today 2026-06-17 --viewport 1600x1000
+npm run screenshots -- --views week,reports --themes dark --out design/release-screenshots/blog-1
+```
 
 ### One-Command Version Bumps
 

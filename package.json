@@ -22,6 +22,9 @@
     "release:push": "git push && git push --tags",
     "lint": "tsc --noEmit",
     "preview": "vite preview --host 127.0.0.1",
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "screenshots:install-browser": "playwright install chromium",
+    "screenshots:release": "node scripts/capture-screenshots.mjs --seed release --today 2026-06-17",
     "test": "vitest run"
   },
   "dependencies": {
@@ -39,6 +42,7 @@
     "concurrently": "^8.2.2",
     "electron": "^42.4.1",
     "electron-builder": "^26.15.3",
+    "playwright": "^1.61.0",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.35.1",
     "typescript": "^5.5.3",
