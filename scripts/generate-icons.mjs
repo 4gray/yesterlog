@@ -32,6 +32,49 @@ await mkdir(icoPngDir, { recursive: true });
 await renderPng(1024, new URL("../build/icon.png", import.meta.url));
 await renderPng(256, new URL("../src/assets/app-icon.png", import.meta.url));
 await copyFile(source, new URL("../src/assets/app-icon.svg", import.meta.url));
+await copyFile(source, new URL("../src/assets/favicon.svg", import.meta.url));
+
+const webIconSizes = [
+  [16, "favicon-16x16.png"],
+  [32, "favicon-32x32.png"],
+  [48, "favicon-48x48.png"],
+  [180, "apple-touch-icon.png"],
+  [192, "app-icon-192.png"],
+  [512, "app-icon-512.png"],
+  [1024, "app-icon-1024.png"]
+];
+
+for (const [size, filename] of webIconSizes) {
+  await renderPng(size, new URL(filename, rendererAssetsDir));
+}
+
+await writeFile(
+  new URL("../src/assets/site.webmanifest", import.meta.url),
+  `${JSON.stringify(
+    {
+      name: "TimeBro",
+      short_name: "TimeBro",
+      description: "Local weekly Jira time tracking",
+      icons: [
+        {
+          src: "/src/assets/app-icon-192.png",
+          sizes: "192x192",
+          type: "image/png"
+        },
+        {
+          src: "/src/assets/app-icon-512.png",
+          sizes: "512x512",
+          type: "image/png"
+        }
+      ],
+      theme_color: "#1465f2",
+      background_color: "#0736b4",
+      display: "standalone"
+    },
+    null,
+    2
+  )}\n`
+);
 
 const iconsetSizes = [
   [16, "icon_16x16.png"],
@@ -73,8 +116,9 @@ for (const size of icoSizes) {
 
 const icoBuffer = await pngToIco(icoPngPaths);
 await writeFile(new URL("../build/icon.ico", import.meta.url), icoBuffer);
+await writeFile(new URL("../src/assets/favicon.ico", import.meta.url), icoBuffer);
 
 await rm(iconsetDir, { recursive: true, force: true });
 await rm(icoPngDir, { recursive: true, force: true });
 
-console.log("Generated Electron and renderer icons.");
+console.log("Generated Electron, renderer, and favicon icons.");

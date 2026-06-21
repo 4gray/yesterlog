@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./src/assets/app-icon.svg" alt="TimeBro logo" width="144" />
+</p>
+
 # TimeBro
 
 ⏱️ Your manager has bravely decided that every minute is a tiny KPI waiting to be loved. If you are now searching for the perfect time-tracking instrument, TimeBro is your reliable desk buddy for keeping Jira worklogs tidy and making the manager suspiciously happy.
