@@ -66,7 +66,7 @@ const createWindow = async () => {
     return;
   }
 
-  await mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  await mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
 };
 
 ipcMain.handle("jira:test-connection", (_event, settings: AppSettings) => {
