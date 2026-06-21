@@ -1,5 +1,11 @@
 # TimeBro
 
+<p align="center">
+  <img src="./assets/app-icon.svg" alt="TimeBro app icon" width="112" height="112" />
+</p>
+
+Your manager has bravely decided that every minute is a tiny KPI waiting to be loved. If you are now searching for the perfect time-tracking instrument, TimeBro is your reliable desk buddy for keeping Jira worklogs tidy and making the manager suspiciously happy.
+
 TimeBro is a small local desktop app for tracking weekly Jira work log item progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
 
 The app helps answer one practical question: for the selected week, how many Jira work log item hours have I logged, and how much is still missing from my weekly target?
