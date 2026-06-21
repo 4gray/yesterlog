@@ -3,6 +3,7 @@ dist
 dist-electron
 release
 coverage
+design/
 .DS_Store
 *.log
 .env
