@@ -7,6 +7,8 @@ import type {
   JiraConnectionResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  SearchTicketsRequest,
+  SearchTicketsResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -56,6 +58,19 @@ export const nativeApi = {
     }
 
     return bridge.fetchAssignedTickets(request);
+  },
+
+  searchJiraTickets(request: SearchTicketsRequest): Promise<SearchTicketsResult> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      return Promise.resolve({
+        query: request.query.trim(),
+        issues: []
+      });
+    }
+
+    return bridge.searchJiraTickets(request);
   },
 
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult> {

@@ -278,6 +278,34 @@ export const App = () => {
     }
   }, [isConfigured, settings]);
 
+  const handleSearchTickets = useCallback(
+    async (query: string) => {
+      const normalizedQuery = query.trim().toLowerCase();
+
+      if (!isConfigured || normalizedQuery.length < 2) {
+        return [];
+      }
+
+      if (demoScenario) {
+        const byKey = new Map<string, JiraTicket>();
+        for (const ticket of [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed]) {
+          byKey.set(ticket.key, ticket);
+        }
+
+        return [...byKey.values()]
+          .filter((ticket) =>
+            [ticket.key, ticket.summary, ticket.projectName, ticket.statusName]
+              .some((value) => value.toLowerCase().includes(normalizedQuery))
+          )
+          .slice(0, 20);
+      }
+
+      const result = await nativeApi.searchJiraTickets({ settings, query, limit: 20 });
+      return result.issues;
+    },
+    [demoScenario, isConfigured, settings]
+  );
+
   const runSync = useCallback(
     async (
       settingsForSync: AppSettings = settings,
@@ -947,6 +975,7 @@ export const App = () => {
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
               onSelectTicket={setSelectedTicket}
+              onSearchTickets={handleSearchTickets}
             />
           ) : view === "week" ? (
             <WeekView
@@ -1003,6 +1032,7 @@ export const App = () => {
           logError={logError}
           onClose={() => setAddModalDate(undefined)}
           onLog={handleAddWorklog}
+          onSearchTickets={handleSearchTickets}
           onAddPersonalNote={handleAddPersonalNote}
         />
       )}
@@ -1020,6 +1050,7 @@ export const App = () => {
           onClose={() => setEditingWorklog(undefined)}
           onLog={handleUpdateWorklog}
           onDelete={handleDeleteWorklog}
+          onSearchTickets={handleSearchTickets}
           onAddPersonalNote={handleAddPersonalNote}
         />
       )}
@@ -1035,6 +1066,7 @@ export const App = () => {
           editingPersonalNote={editingPersonalNote}
           onClose={() => setEditingPersonalNote(undefined)}
           onLog={handleAddWorklog}
+          onSearchTickets={handleSearchTickets}
           onAddPersonalNote={handleAddPersonalNote}
           onUpdatePersonalNote={handleUpdatePersonalNote}
         />

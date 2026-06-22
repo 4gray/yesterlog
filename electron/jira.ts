@@ -10,6 +10,8 @@ import type {
   JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
+  SearchTicketsRequest,
+  SearchTicketsResult,
   SyncDayBucket,
   SyncRequest,
   SyncResult,
@@ -434,6 +436,11 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
 };
 
 const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent";
+const TICKET_PAGE_SIZE = 100;
+const ASSIGNED_OPEN_TICKET_LIMIT = 500;
+const RECENTLY_CLOSED_TICKET_LIMIT = 50;
+const DEFAULT_SEARCH_TICKET_LIMIT = 20;
+const MAX_SEARCH_TICKET_LIMIT = 50;
 
 const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
   if (key === "new" || key === "indeterminate" || key === "done") {
@@ -443,14 +450,37 @@ const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
 };
 
 const searchTickets = async (settings: AppSettings, jql: string, limit: number) => {
-  const params = new URLSearchParams({
-    jql,
-    maxResults: String(limit),
-    fields: TICKET_FIELDS
-  });
+  if (limit <= 0) {
+    return [];
+  }
 
-  const page = await jiraRequest<JiraTicketSearchResponse>(settings, `/rest/api/3/search/jql?${params.toString()}`);
-  return page.issues ?? [];
+  const issues: JiraTicketIssue[] = [];
+  let nextPageToken: string | undefined;
+  let guard = 0;
+
+  do {
+    const remaining = limit - issues.length;
+    const params = new URLSearchParams({
+      jql,
+      maxResults: String(Math.min(TICKET_PAGE_SIZE, remaining)),
+      fields: TICKET_FIELDS
+    });
+
+    if (nextPageToken) {
+      params.set("nextPageToken", nextPageToken);
+    }
+
+    const page = await jiraRequest<JiraTicketSearchResponse>(settings, `/rest/api/3/search/jql?${params.toString()}`);
+    issues.push(...(page.issues ?? []));
+    nextPageToken = page.nextPageToken;
+    guard += 1;
+
+    if (page.isLast !== false || issues.length >= limit) {
+      break;
+    }
+  } while (nextPageToken && guard < 50);
+
+  return issues.slice(0, limit);
 };
 
 const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => {
@@ -480,12 +510,12 @@ export const fetchAssignedTickets = async (request: TicketsRequest): Promise<Tic
     searchTickets(
       settings,
       "assignee = currentUser() AND statusCategory != Done ORDER BY statusCategory DESC, updated DESC",
-      50
+      ASSIGNED_OPEN_TICKET_LIMIT
     ),
     searchTickets(
       settings,
       "assignee = currentUser() AND statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC",
-      10
+      RECENTLY_CLOSED_TICKET_LIMIT
     )
   ]);
 
@@ -494,6 +524,51 @@ export const fetchAssignedTickets = async (request: TicketsRequest): Promise<Tic
     accountId: currentUser.accountId,
     inProgress: openIssues.map((issue) => toTicket(settings, issue)),
     recentlyClosed: closedIssues.map((issue) => toTicket(settings, issue))
+  };
+};
+
+const escapeJqlString = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+
+const normalizeTicketSearchQuery = (query: string) => query.trim().replace(/\s+/g, " ").slice(0, 160);
+
+const issueKeyFromQuery = (query: string) => {
+  const exactKey = query.match(/^[a-z][a-z0-9]+-\d+$/i)?.[0];
+  if (exactKey) {
+    return exactKey.toUpperCase();
+  }
+
+  return query.match(/\b[a-z][a-z0-9]+-\d+\b/i)?.[0]?.toUpperCase();
+};
+
+const clampTicketSearchLimit = (limit?: number) => {
+  if (typeof limit !== "number" || !Number.isFinite(limit)) {
+    return DEFAULT_SEARCH_TICKET_LIMIT;
+  }
+
+  return Math.max(1, Math.min(Math.round(limit), MAX_SEARCH_TICKET_LIMIT));
+};
+
+export const searchJiraTickets = async (request: SearchTicketsRequest): Promise<SearchTicketsResult> => {
+  const { settings } = request;
+  const query = normalizeTicketSearchQuery(request.query);
+
+  if (query.length < 2) {
+    return { query, issues: [] };
+  }
+
+  const clauses = [`text ~ "${escapeJqlString(query)}"`];
+  const issueKey = issueKeyFromQuery(query);
+
+  if (issueKey) {
+    clauses.unshift(`issuekey = ${issueKey}`);
+  }
+
+  const jql = `(${Array.from(new Set(clauses)).join(" OR ")}) ORDER BY updated DESC`;
+  const issues = await searchTickets(settings, jql, clampTicketSearchLimit(request.limit));
+
+  return {
+    query,
+    issues: issues.map((issue) => toTicket(settings, issue))
   };
 };
 

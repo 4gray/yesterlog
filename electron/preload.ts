@@ -8,6 +8,8 @@ import type {
   JiraConnectionResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  SearchTicketsRequest,
+  SearchTicketsResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -25,6 +27,9 @@ const timeBroApi = {
   },
   fetchAssignedTickets: (request: TicketsRequest): Promise<TicketsResult> => {
     return ipcRenderer.invoke("jira:fetch-tickets", request);
+  },
+  searchJiraTickets: (request: SearchTicketsRequest): Promise<SearchTicketsResult> => {
+    return ipcRenderer.invoke("jira:search-tickets", request);
   },
   addWorklog: (request: AddWorklogRequest): Promise<AddWorklogResult> => {
     return ipcRenderer.invoke("jira:add-worklog", request);

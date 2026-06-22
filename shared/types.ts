@@ -147,6 +147,17 @@ export interface TicketsResult {
   recentlyClosed: JiraTicket[];
 }
 
+export interface SearchTicketsRequest {
+  settings: AppSettings;
+  query: string;
+  limit?: number;
+}
+
+export interface SearchTicketsResult {
+  query: string;
+  issues: JiraTicket[];
+}
+
 export interface AddWorklogRequest {
   settings: AppSettings;
   issueKey: string;

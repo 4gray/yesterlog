@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { Calendar, ChevronDown, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import type { JiraDurationUnit } from "../utils/date";
-import { IssueTypeBadge } from "./IssueTypeBadge";
-import { TicketKeyLink } from "./TicketKeyLink";
+import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
 interface LogPayload {
   issueKey: string;
@@ -26,6 +25,7 @@ interface AddTimeModalProps {
   onClose: () => void;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onDelete?: () => Promise<boolean>;
+  onSearchTickets?: TicketSearchHandler;
   onAddPersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
   onUpdatePersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
 }
@@ -222,6 +222,7 @@ export const AddTimeModal = ({
   onClose,
   onLog,
   onDelete,
+  onSearchTickets,
   onAddPersonalNote,
   onUpdatePersonalNote
 }: AddTimeModalProps) => {
@@ -237,7 +238,7 @@ export const AddTimeModal = ({
   const dateOptionsKey = dateOptions.join("|");
   const [mode, setMode] = useState<"ticket" | "note">(isEditingPersonalNote ? "note" : "ticket");
   const [activeKey, setActiveKey] = useState<string | undefined>(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>();
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
   const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
   const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
@@ -250,18 +251,26 @@ export const AddTimeModal = ({
   const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>(initialPersonalPreset ? "preset" : "custom");
   const [personalCustomAmount, setPersonalCustomAmount] = useState(customHoursAmount(initialPersonalSeconds));
   const [personalCustomUnit, setPersonalCustomUnit] = useState<DurationUnit>("h");
-  const pickerRef = useRef<HTMLDivElement>(null);
 
   const ticketFromOptions = ticketOptions.find((ticket) => ticket.key === activeKey);
-  const activeTicket = ticketFromOptions ?? (editingWorklog && activeKey === editingWorklog.issueKey
-    ? {
-        key: editingWorklog.issueKey,
-        summary: editingWorklog.issueSummary,
-        url: editingWorklog.issueUrl,
-        issueType: editingWorklog.issueType,
-        epic: editingWorklog.epic
-      }
-    : undefined);
+  const activeTicket =
+    ticketFromOptions ??
+    (selectedTicketOverride?.key === activeKey ? selectedTicketOverride : undefined) ??
+    (editingWorklog && activeKey === editingWorklog.issueKey
+      ? {
+          id: editingWorklog.issueId,
+          key: editingWorklog.issueKey,
+          summary: editingWorklog.issueSummary,
+          projectKey: editingWorklog.issueKey.split("-")[0],
+          projectName: editingWorklog.issueKey.split("-")[0],
+          statusName: "Unknown",
+          statusCategory: "unknown" as const,
+          loggedSecondsTotal: 0,
+          issueType: editingWorklog.issueType,
+          epic: editingWorklog.epic,
+          url: editingWorklog.issueUrl ?? ""
+        }
+      : undefined);
   const selectedDate = fromLocalDateKey(dateStr);
   const hasWorkingDate = dateOptions.includes(dateStr);
   const isNoteMode = mode === "note" || isEditingPersonalNote;
@@ -342,7 +351,7 @@ export const AddTimeModal = ({
 
     setMode(editingPersonalNote ? "note" : "ticket");
     setActiveKey(editingPersonalNote ? undefined : editingWorklog?.issueKey ?? ticketOptions[0]?.key);
-    setPickerOpen(false);
+    setSelectedTicketOverride(undefined);
     setDurationSeconds(seconds);
     setTicketDurationMode(hasPreset ? "preset" : "custom");
     setTicketCustomAmount(customHoursAmount(seconds));
@@ -375,19 +384,6 @@ export const AddTimeModal = ({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
-
-  useEffect(() => {
-    if (!pickerOpen) {
-      return;
-    }
-    const onDocClick = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [pickerOpen]);
 
   const applyTicketPreset = (seconds: number) => {
     setTicketDurationMode("preset");
@@ -487,59 +483,20 @@ export const AddTimeModal = ({
           {mode === "ticket" || isEditingWorklog ? (
             <>
               <div className="modal-label">TICKET</div>
-              <div className="modal-picker" ref={pickerRef}>
-                <div className="modal-ticket-row">
-                  {activeTicket ? (
-                    <TicketKeyLink
-                      issueKey={activeTicket.key}
-                      url={activeTicket.url}
-                      issueType={activeTicket.issueType}
-                      epic={activeTicket.epic}
-                      keyClassName="composer-target-key"
-                    />
-                  ) : null}
-                  <button
-                    type="button"
-                    className={`modal-ticket ${isEditingWorklog ? "is-locked" : ""}`}
-                    onClick={() => {
-                      if (!isEditingWorklog) {
-                        setPickerOpen((open) => !open);
-                      }
-                    }}
-                    disabled={!isEditingWorklog && ticketOptions.length === 0}
-                    aria-disabled={isEditingWorklog}
-                    title={isEditingWorklog ? "Ticket cannot be changed for an existing Jira worklog" : undefined}
-                  >
-                    {activeTicket ? (
-                      <span className="modal-ticket-summary">{activeTicket.summary}</span>
-                    ) : (
-                      <span className="modal-ticket-summary" style={{ color: "var(--dim-2)" }}>
-                        {isConfigured ? "No assigned tickets" : "Connect Jira to choose a ticket"}
-                      </span>
-                    )}
-                    {!isEditingWorklog && <ChevronDown size={16} color="#5d636f" />}
-                  </button>
-                </div>
-                {!isEditingWorklog && pickerOpen && ticketOptions.length > 0 && (
-                  <div className="ticket-picker">
-                    {ticketOptions.map((ticket) => (
-                      <button
-                        key={ticket.key}
-                        type="button"
-                        className={`ticket-picker-item ${ticket.key === activeKey ? "active" : ""}`}
-                        onClick={() => {
-                          setActiveKey(ticket.key);
-                          setPickerOpen(false);
-                        }}
-                      >
-                        <span className="composer-target-key">{ticket.key}</span>
-                        <IssueTypeBadge issueType={ticket.issueType} />
-                        <span className="ticket-picker-summary">{ticket.summary}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <TicketPicker
+                variant="modal"
+                activeTicket={activeTicket}
+                ticketOptions={ticketOptions}
+                isConfigured={isConfigured}
+                emptyText="Search Jira to choose a ticket"
+                locked={isEditingWorklog}
+                lockedTitle="Ticket cannot be changed for an existing Jira worklog"
+                searchTickets={onSearchTickets}
+                onSelect={(ticket) => {
+                  setSelectedTicketOverride(ticket);
+                  setActiveKey(ticket.key);
+                }}
+              />
 
               <div className="modal-grid">
                 <div className="modal-col">

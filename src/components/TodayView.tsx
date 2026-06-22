@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, ChevronDown, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
 import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
-import { IssueTypeBadge } from "./IssueTypeBadge";
+import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 import { TicketKeyLink } from "./TicketKeyLink";
 
 interface LogPayload {
@@ -38,6 +38,7 @@ interface TodayViewProps {
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onSelectTicket: (ticket: JiraTicket) => void;
+  onSearchTickets?: TicketSearchHandler;
 }
 
 type ComposerMode = "worklog" | "note";
@@ -71,18 +72,17 @@ export const TodayView = ({
   onAddPersonalNote,
   onEditWorklog,
   onEditPersonalNote,
-  onSelectTicket
+  onSelectTicket,
+  onSearchTickets
 }: TodayViewProps) => {
   const [activeKey, setActiveKey] = useState<string | undefined>(selectedTicket?.key ?? ticketOptions[0]?.key);
   const [composerMode, setComposerMode] = useState<ComposerMode>("worklog");
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(2 * 60 * 60);
   const [durationText, setDurationText] = useState("2h 00m");
   const [dateStr, setDateStr] = useState(toLocalDateKey(date));
   const [timeStr, setTimeStr] = useState(`${pad(date.getHours())}:${pad(date.getMinutes())}`);
   const [worklogComment, setWorklogComment] = useState("");
   const [personalNoteText, setPersonalNoteText] = useState("");
-  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedTicket?.key) {
@@ -95,19 +95,6 @@ export const TodayView = ({
       setActiveKey(ticketOptions[0].key);
     }
   }, [activeKey, ticketOptions]);
-
-  useEffect(() => {
-    if (!pickerOpen) {
-      return;
-    }
-    const onDocClick = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [pickerOpen]);
 
   const activeTicket = useMemo(
     () => ticketOptions.find((ticket) => ticket.key === activeKey) ?? selectedTicket,
@@ -137,7 +124,6 @@ export const TodayView = ({
     setComposerMode("worklog");
     setActiveKey(ticket.key);
     onSelectTicket(ticket);
-    setPickerOpen(false);
   };
 
   const canSubmit =
@@ -228,7 +214,6 @@ export const TodayView = ({
               className={composerMode === "note" ? "active" : ""}
               onClick={() => {
                 setComposerMode("note");
-                setPickerOpen(false);
               }}
             >
               <PenLine size={13} strokeWidth={1.9} />
@@ -239,50 +224,15 @@ export const TodayView = ({
           {composerMode === "worklog" ? (
             <>
               <div className="field-label composer-section compact">LOGGING TO</div>
-              <div className="composer-picker" ref={pickerRef}>
-                <div className="composer-target-row">
-                  {activeTicket ? (
-                    <TicketKeyLink
-                      issueKey={activeTicket.key}
-                      url={activeTicket.url}
-                      issueType={activeTicket.issueType}
-                      epic={activeTicket.epic}
-                      keyClassName="composer-target-key"
-                    />
-                  ) : null}
-                  <button
-                    type="button"
-                    className="composer-target"
-                    onClick={() => setPickerOpen((open) => !open)}
-                    disabled={ticketOptions.length === 0}
-                  >
-                    {activeTicket ? (
-                      <span className="composer-target-title">{activeTicket.summary}</span>
-                    ) : (
-                      <span className="composer-target-title" style={{ color: "var(--dim-2)" }}>
-                        {isConfigured ? "No assigned tickets — pick one in TICKETS" : "Connect Jira to choose a ticket"}
-                      </span>
-                    )}
-                    <ChevronDown size={15} color="#5d636f" />
-                  </button>
-                </div>
-                {pickerOpen && ticketOptions.length > 0 && (
-                  <div className="ticket-picker">
-                    {ticketOptions.map((ticket) => (
-                      <button
-                        key={ticket.key}
-                        type="button"
-                        className={`ticket-picker-item ${ticket.key === activeKey ? "active" : ""}`}
-                        onClick={() => chooseTicket(ticket)}
-                      >
-                        <span className="composer-target-key">{ticket.key}</span>
-                        <IssueTypeBadge issueType={ticket.issueType} />
-                        <span className="ticket-picker-summary">{ticket.summary}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <TicketPicker
+                variant="composer"
+                activeTicket={activeTicket}
+                ticketOptions={ticketOptions}
+                isConfigured={isConfigured}
+                emptyText="Search Jira to choose a ticket"
+                searchTickets={onSearchTickets}
+                onSelect={chooseTicket}
+              />
             </>
           ) : (
             <div className="today-local-target">

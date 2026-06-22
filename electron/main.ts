@@ -1,6 +1,14 @@
 import { app, BrowserWindow, ipcMain, screen, shell } from "electron";
 import path from "node:path";
-import { addWorklog, deleteWorklog, fetchAssignedTickets, testJiraConnection, syncJiraWorklogs, updateWorklog } from "./jira";
+import {
+  addWorklog,
+  deleteWorklog,
+  fetchAssignedTickets,
+  searchJiraTickets,
+  testJiraConnection,
+  syncJiraWorklogs,
+  updateWorklog
+} from "./jira";
 import { scheduleReminder } from "./reminders";
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
 import type {
@@ -8,6 +16,7 @@ import type {
   AppSettings,
   DeleteWorklogRequest,
   ReminderSchedulePayload,
+  SearchTicketsRequest,
   SyncRequest,
   TicketsRequest,
   UpdateWorklogRequest
@@ -91,6 +100,10 @@ ipcMain.handle("jira:sync-worklogs", (_event, request: SyncRequest) => {
 
 ipcMain.handle("jira:fetch-tickets", (_event, request: TicketsRequest) => {
   return fetchAssignedTickets(request);
+});
+
+ipcMain.handle("jira:search-tickets", (_event, request: SearchTicketsRequest) => {
+  return searchJiraTickets(request);
 });
 
 ipcMain.handle("jira:add-worklog", (_event, request: AddWorklogRequest) => {

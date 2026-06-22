@@ -1867,6 +1867,72 @@ a {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
+.ticket-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 2px 7px;
+  padding: 8px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-sunken);
+  color: var(--dim-2);
+}
+
+.ticket-picker-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-strong);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+}
+
+.ticket-picker-search input::placeholder {
+  color: var(--dim-2);
+}
+
+.ticket-picker-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dim);
+}
+
+.ticket-picker-clear:hover {
+  background: var(--line);
+  color: var(--text-strong);
+}
+
+.ticket-picker-group + .ticket-picker-group {
+  margin-top: 5px;
+}
+
+.ticket-picker-label {
+  padding: 8px 10px 5px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--dim-2);
+}
+
+.ticket-picker-note {
+  padding: 9px 10px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.ticket-picker-note.is-error {
+  color: var(--amber);
+}
+
 .ticket-picker-item {
   display: flex;
   align-items: baseline;

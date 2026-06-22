@@ -9,6 +9,8 @@ import type {
   JiraConnectionResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  SearchTicketsRequest,
+  SearchTicketsResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -21,6 +23,7 @@ interface TimeBroNativeApi {
   testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
   syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
   fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
+  searchJiraTickets: (request: SearchTicketsRequest) => Promise<SearchTicketsResult>;
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;
