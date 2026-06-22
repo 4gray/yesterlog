@@ -6,6 +6,7 @@ import type {
   DeleteWorklogResult,
   JiraConnectionResult,
   ReminderSchedulePayload,
+  ReminderScheduleResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -87,11 +88,14 @@ export const nativeApi = {
     return bridge.deleteWorklog(request);
   },
 
-  scheduleReminder(payload: ReminderSchedulePayload) {
+  scheduleReminder(payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> {
     const bridge = getNativeBridge();
 
     if (!bridge) {
-      return Promise.resolve({ scheduled: false });
+      return Promise.resolve({
+        scheduled: false,
+        reason: "unsupported"
+      });
     }
 
     return bridge.scheduleReminder(payload);

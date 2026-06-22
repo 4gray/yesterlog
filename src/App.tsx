@@ -422,13 +422,22 @@ export const App = () => {
       return;
     }
 
-    nativeApi.scheduleReminder({
-      settings,
-      weekKey: weekState.weekKey,
-      skippedDates: weekState.skippedDates,
-      remainingWeekHours: weekState.remainingWeekHours,
-      todayDateKey: todayKey
-    });
+    void nativeApi
+      .scheduleReminder({
+        settings,
+        weekKey: weekState.weekKey,
+        skippedDates: weekState.skippedDates,
+        remainingWeekHours: weekState.remainingWeekHours,
+        todayDateKey: todayKey
+      })
+      .then((result) => {
+        if (result.reason === "unsupported" && result.message) {
+          console.warn(result.message);
+        }
+      })
+      .catch((error) => {
+        console.warn("Unable to schedule reminder.", error);
+      });
   }, [demoScenario, settings, todayKey, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
 
   useEffect(() => {

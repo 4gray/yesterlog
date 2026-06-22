@@ -7,6 +7,7 @@ import type {
   DeleteWorklogResult,
   JiraConnectionResult,
   ReminderSchedulePayload,
+  ReminderScheduleResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -34,7 +35,7 @@ const timeBroApi = {
   deleteWorklog: (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
     return ipcRenderer.invoke("jira:delete-worklog", request);
   },
-  scheduleReminder: (payload: ReminderSchedulePayload): Promise<{ scheduled: boolean; fireAt?: string }> => {
+  scheduleReminder: (payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> => {
     return ipcRenderer.invoke("reminder:schedule", payload);
   }
 };

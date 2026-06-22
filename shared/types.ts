@@ -204,3 +204,18 @@ export interface ReminderSchedulePayload {
   remainingWeekHours: number;
   todayDateKey: string;
 }
+
+export type ReminderScheduleReason =
+  | "scheduled"
+  | "disabled"
+  | "complete"
+  | "unsupported"
+  | "non-current-week"
+  | "no-working-day";
+
+export interface ReminderScheduleResult {
+  scheduled: boolean;
+  fireAt?: string;
+  reason: ReminderScheduleReason;
+  message?: string;
+}

@@ -8,6 +8,7 @@ import type {
   DeleteWorklogResult,
   JiraConnectionResult,
   ReminderSchedulePayload,
+  ReminderScheduleResult,
   SyncRequest,
   SyncResult,
   TicketsRequest,
@@ -23,9 +24,7 @@ interface TimeBroNativeApi {
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;
-  scheduleReminder: (
-    payload: ReminderSchedulePayload
-  ) => Promise<{ scheduled: boolean; fireAt?: string }>;
+  scheduleReminder: (payload: ReminderSchedulePayload) => Promise<ReminderScheduleResult>;
 }
 
 declare global {
