@@ -18,6 +18,7 @@ import type {
   TicketsRequest,
   TicketsResult,
   TicketStatusCategory,
+  TicketSortMode,
   UpdateWorklogRequest,
   UpdateWorklogResult
 } from "../shared/types";
@@ -55,6 +56,7 @@ interface JiraTicketIssue {
     status?: { name?: string; statusCategory?: { key?: string } };
     issuetype?: JiraIssueTypeResponse;
     parent?: JiraParentResponse;
+    created?: string;
   };
 }
 
@@ -435,12 +437,12 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   };
 };
 
-const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent";
+const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created";
 const TICKET_PAGE_SIZE = 100;
 const ASSIGNED_OPEN_TICKET_LIMIT = 500;
 const RECENTLY_CLOSED_TICKET_LIMIT = 50;
 const DEFAULT_SEARCH_TICKET_LIMIT = 20;
-const MAX_SEARCH_TICKET_LIMIT = 50;
+const MAX_SEARCH_TICKET_LIMIT = 100;
 
 const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
   if (key === "new" || key === "indeterminate" || key === "done") {
@@ -496,6 +498,7 @@ const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => 
     statusName: fields.status?.name ?? "Unknown",
     statusCategory: normalizeStatusCategory(fields.status?.statusCategory?.key),
     loggedSecondsTotal,
+    createdAt: fields.created,
     issueType: normalizeIssueType(fields.issuetype),
     epic: normalizeEpic(settings, fields.parent),
     url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`
@@ -548,6 +551,18 @@ const clampTicketSearchLimit = (limit?: number) => {
   return Math.max(1, Math.min(Math.round(limit), MAX_SEARCH_TICKET_LIMIT));
 };
 
+const ticketSearchOrder = (sortMode?: TicketSortMode) => {
+  if (sortMode === "createdAsc") {
+    return "created ASC";
+  }
+
+  if (sortMode === "createdDesc") {
+    return "created DESC";
+  }
+
+  return "created DESC";
+};
+
 export const searchJiraTickets = async (request: SearchTicketsRequest): Promise<SearchTicketsResult> => {
   const { settings } = request;
   const query = normalizeTicketSearchQuery(request.query);
@@ -563,7 +578,9 @@ export const searchJiraTickets = async (request: SearchTicketsRequest): Promise<
     clauses.unshift(`issuekey = ${issueKey}`);
   }
 
-  const jql = `(${Array.from(new Set(clauses)).join(" OR ")}) ORDER BY updated DESC`;
+  const matchJql = `(${Array.from(new Set(clauses)).join(" OR ")})`;
+  const scopeJql = request.assignedOnly ? `assignee = currentUser() AND ${matchJql}` : matchJql;
+  const jql = `${scopeJql} ORDER BY ${ticketSearchOrder(request.sortMode)}`;
   const issues = await searchTickets(settings, jql, clampTicketSearchLimit(request.limit));
 
   return {

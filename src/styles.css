@@ -1284,13 +1284,13 @@ a {
 
 .modal-panel {
   position: relative;
-  width: 540px;
-  max-width: calc(100vw - 40px);
+  width: 680px;
+  max-width: calc(100vw - 48px);
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .modal-head {
@@ -1857,8 +1857,8 @@ a {
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  z-index: 10;
-  max-height: 320px;
+  z-index: 60;
+  max-height: min(420px, calc(100vh - 300px));
   overflow: auto;
   padding: 6px;
   border: 1px solid var(--border);
@@ -1892,6 +1892,89 @@ a {
 
 .ticket-picker-search input::placeholder {
   color: var(--dim-2);
+}
+
+.ticket-picker-search input:focus {
+  box-shadow: none;
+}
+
+.ticket-picker-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 2px 7px;
+}
+
+.ticket-picker-tools-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  color: var(--dim-2);
+  white-space: nowrap;
+}
+
+.ticket-picker-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.ticket-picker-sort button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ticket-picker-sort button.active {
+  background: rgba(79, 124, 255, 0.12);
+  color: var(--blue-soft);
+}
+
+.ticket-picker-sort button:hover {
+  color: var(--text-strong);
+}
+
+.ticket-picker-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ticket-picker-filter.active {
+  border-color: rgba(79, 124, 255, 0.38);
+  background: rgba(79, 124, 255, 0.12);
+  color: var(--blue-soft);
+}
+
+.ticket-picker-filter:hover {
+  color: var(--text-strong);
 }
 
 .ticket-picker-clear {

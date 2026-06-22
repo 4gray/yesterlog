@@ -120,6 +120,7 @@ export interface JiraTicket {
   statusName: string;
   statusCategory: TicketStatusCategory;
   loggedSecondsTotal: number;
+  createdAt?: string;
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
   url: string;
@@ -147,10 +148,14 @@ export interface TicketsResult {
   recentlyClosed: JiraTicket[];
 }
 
+export type TicketSortMode = "createdAsc" | "createdDesc";
+
 export interface SearchTicketsRequest {
   settings: AppSettings;
   query: string;
   limit?: number;
+  sortMode?: TicketSortMode;
+  assignedOnly?: boolean;
 }
 
 export interface SearchTicketsResult {

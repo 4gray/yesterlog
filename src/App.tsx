@@ -7,6 +7,7 @@ import type {
   JiraWorklog,
   PersonalNote,
   SyncResult,
+  TicketSortMode,
   TicketsResult,
   WeekOverride
 } from "../shared/types";
@@ -76,6 +77,38 @@ const formatSyncTime = (syncResult?: SyncResult) => {
 
 const sortPersonalNotes = (notes: PersonalNote[]) =>
   [...notes].sort((a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime());
+
+const getTicketCreatedTime = (ticket: JiraTicket) => {
+  if (!ticket.createdAt) {
+    return undefined;
+  }
+
+  const time = Date.parse(ticket.createdAt);
+  return Number.isFinite(time) ? time : undefined;
+};
+
+const compareTicketsByCreated = (sortMode: TicketSortMode) => {
+  return (left: JiraTicket, right: JiraTicket) => {
+    const leftTime = getTicketCreatedTime(left);
+    const rightTime = getTicketCreatedTime(right);
+
+    if (leftTime === undefined && rightTime === undefined) {
+      return left.key.localeCompare(right.key);
+    }
+
+    if (leftTime === undefined) {
+      return 1;
+    }
+
+    if (rightTime === undefined) {
+      return -1;
+    }
+
+    return sortMode === "createdAsc"
+      ? leftTime - rightTime || left.key.localeCompare(right.key)
+      : rightTime - leftTime || left.key.localeCompare(right.key);
+  };
+};
 
 const updateVisiblePersonalNotes = (
   current: PersonalNote[],
@@ -279,7 +312,7 @@ export const App = () => {
   }, [isConfigured, settings]);
 
   const handleSearchTickets = useCallback(
-    async (query: string) => {
+    async (query: string, sortMode: TicketSortMode = "createdDesc", limit = 20, assignedOnly = false) => {
       const normalizedQuery = query.trim().toLowerCase();
 
       if (!isConfigured || normalizedQuery.length < 2) {
@@ -287,20 +320,24 @@ export const App = () => {
       }
 
       if (demoScenario) {
+        const demoTickets = assignedOnly
+          ? demoScenario.tickets.inProgress
+          : [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed];
         const byKey = new Map<string, JiraTicket>();
-        for (const ticket of [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed]) {
+        for (const ticket of demoTickets) {
           byKey.set(ticket.key, ticket);
         }
 
-        return [...byKey.values()]
+        const matches = [...byKey.values()]
           .filter((ticket) =>
             [ticket.key, ticket.summary, ticket.projectName, ticket.statusName]
               .some((value) => value.toLowerCase().includes(normalizedQuery))
-          )
-          .slice(0, 20);
+          );
+
+        return [...matches].sort(compareTicketsByCreated(sortMode)).slice(0, limit);
       }
 
-      const result = await nativeApi.searchJiraTickets({ settings, query, limit: 20 });
+      const result = await nativeApi.searchJiraTickets({ settings, query, limit, sortMode, assignedOnly });
       return result.issues;
     },
     [demoScenario, isConfigured, settings]

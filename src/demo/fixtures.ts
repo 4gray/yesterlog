@@ -82,6 +82,7 @@ const ticket = ({
   statusName,
   statusCategory,
   loggedSecondsTotal,
+  createdAt,
   issueType
 }: Omit<JiraTicket, "projectKey" | "url">): JiraTicket => ({
   id,
@@ -92,6 +93,7 @@ const ticket = ({
   statusName,
   statusCategory,
   loggedSecondsTotal,
+  createdAt,
   issueType,
   url: ticketUrl(key)
 });
@@ -215,6 +217,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "In Progress",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(18, 30),
+      createdAt: "2026-06-03T09:12:00.000Z",
       issueType: ISSUE_TYPES.story
     }),
     ticket({
@@ -225,6 +228,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "In Review",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(6, 45),
+      createdAt: "2026-06-21T15:20:00.000Z",
       issueType: ISSUE_TYPES.subtask
     }),
     ticket({
@@ -235,6 +239,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "Design QA",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(11, 15),
+      createdAt: "2026-06-12T10:00:00.000Z",
       issueType: ISSUE_TYPES.task
     }),
     ticket({
@@ -245,6 +250,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "Blocked",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(9),
+      createdAt: "2026-06-18T07:45:00.000Z",
       issueType: ISSUE_TYPES.bug
     }),
     ticket({
@@ -255,7 +261,140 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "Ready",
       statusCategory: "new",
       loggedSecondsTotal: 0,
+      createdAt: "2026-06-20T12:30:00.000Z",
       issueType: ISSUE_TYPES.epic
+    }),
+    ticket({
+      id: "demo-512",
+      key: "FTDM-512",
+      summary: "Normalize Jira ticket picker filters",
+      projectName: "Feature Team Data Management",
+      statusName: "Selected for Development",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-22T08:20:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-506",
+      key: "FTDM-506",
+      summary: "Backfill created date in ticket summaries",
+      projectName: "Feature Team Data Management",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-19T09:05:00.000Z",
+      issueType: ISSUE_TYPES.story
+    }),
+    ticket({
+      id: "demo-044",
+      key: "QA-44",
+      summary: "Audit Add Time dropdown scroll behavior",
+      projectName: "Quality Assurance",
+      statusName: "Ready",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-17T13:40:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-215",
+      key: "MOB-215",
+      summary: "Check compact picker layout on narrow screens",
+      projectName: "Mobile Experience",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-16T11:25:00.000Z",
+      issueType: ISSUE_TYPES.bug
+    }),
+    ticket({
+      id: "demo-118",
+      key: "OPS-118",
+      summary: "Document Jira API pagination limits",
+      projectName: "Operations",
+      statusName: "Selected for Development",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-15T16:10:00.000Z",
+      issueType: ISSUE_TYPES.story
+    }),
+    ticket({
+      id: "demo-094",
+      key: "WEB-94",
+      summary: "Refresh demo ticket search fixtures",
+      projectName: "Web Experience",
+      statusName: "Ready",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-14T10:05:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-063",
+      key: "DOC-63",
+      summary: "Clarify created-date sorting copy",
+      projectName: "Documentation",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-13T08:50:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-336",
+      key: "UX-336",
+      summary: "Review picker control labels",
+      projectName: "User Experience",
+      statusName: "Design QA",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-11T14:35:00.000Z",
+      issueType: ISSUE_TYPES.story
+    }),
+    ticket({
+      id: "demo-028",
+      key: "QA-28",
+      summary: "Replay keyboard selection after sorting",
+      projectName: "Quality Assurance",
+      statusName: "Ready",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-10T10:20:00.000Z",
+      issueType: ISSUE_TYPES.subtask
+    }),
+    ticket({
+      id: "demo-071",
+      key: "OPS-71",
+      summary: "Trace assigned-only Jira search scope",
+      projectName: "Operations",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-09T12:15:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-052",
+      key: "WEB-52",
+      summary: "Polish ticket row truncation",
+      projectName: "Web Experience",
+      statusName: "Ready",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-08T09:30:00.000Z",
+      issueType: ISSUE_TYPES.task
+    }),
+    ticket({
+      id: "demo-017",
+      key: "INT-17",
+      summary: "Prepare integration test notes",
+      projectName: "Integrations",
+      statusName: "Selected for Development",
+      statusCategory: "new",
+      loggedSecondsTotal: 0,
+      createdAt: "2026-06-06T15:45:00.000Z",
+      issueType: ISSUE_TYPES.story
     })
   ];
 
@@ -268,6 +407,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "Done",
       statusCategory: "done",
       loggedSecondsTotal: seconds(5, 30),
+      createdAt: "2026-05-29T11:15:00.000Z",
       issueType: ISSUE_TYPES.task
     }),
     ticket({
@@ -278,6 +418,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       statusName: "Done",
       statusCategory: "done",
       loggedSecondsTotal: seconds(3, 30),
+      createdAt: "2026-05-24T14:05:00.000Z",
       issueType: ISSUE_TYPES.story
     })
   ];

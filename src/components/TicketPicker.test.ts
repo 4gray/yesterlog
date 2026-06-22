@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JiraTicket } from "../../shared/types";
-import { buildTicketPickerGroups } from "./TicketPicker";
+import { buildTicketPickerGroups, limitTicketPickerGroups } from "./TicketPicker";
 
 const assignedTicket: JiraTicket = {
   id: "1001",
@@ -11,6 +11,7 @@ const assignedTicket: JiraTicket = {
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
+  createdAt: "2026-06-10T09:00:00.000Z",
   issueType: { name: "Task", hierarchyLevel: 0 },
   url: "https://elevait.atlassian.net/browse/FTDM-397"
 };
@@ -24,6 +25,7 @@ const searchedTicket: JiraTicket = {
   statusName: "To Do",
   statusCategory: "new",
   loggedSecondsTotal: 0,
+  createdAt: "2026-06-18T09:00:00.000Z",
   issueType: { name: "Sub-task", subtask: true, hierarchyLevel: -1 },
   url: "https://elevait.atlassian.net/browse/OPS-77"
 };
@@ -63,6 +65,91 @@ describe("buildTicketPickerGroups", () => {
         label: "ASSIGNED / FAVORITES",
         tickets: [assignedTicket]
       }
+    ]);
+  });
+
+  it("can sort each picker group by newest created ticket first", () => {
+    const newestAssignedTicket: JiraTicket = {
+      ...assignedTicket,
+      id: "1003",
+      key: "FTDM-401",
+      summary: "Polish Add Time modal keyboard flow",
+      createdAt: "2026-06-21T09:00:00.000Z"
+    };
+    const olderSearchTicket: JiraTicket = {
+      ...searchedTicket,
+      id: "1004",
+      key: "OPS-12",
+      createdAt: "2026-06-01T09:00:00.000Z"
+    };
+
+    const groups = buildTicketPickerGroups({
+      ticketOptions: [assignedTicket, newestAssignedTicket],
+      searchResults: [searchedTicket, olderSearchTicket],
+      searchQuery: "ops",
+      sortMode: "createdDesc"
+    });
+
+    expect(groups.map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
+      ["OPS-77", "OPS-12"],
+      ["FTDM-401", "FTDM-397"]
+    ]);
+  });
+
+  it("can sort each picker group by oldest created ticket first", () => {
+    const newestAssignedTicket: JiraTicket = {
+      ...assignedTicket,
+      id: "1003",
+      key: "FTDM-401",
+      summary: "Polish Add Time modal keyboard flow",
+      createdAt: "2026-06-21T09:00:00.000Z"
+    };
+    const olderSearchTicket: JiraTicket = {
+      ...searchedTicket,
+      id: "1004",
+      key: "OPS-12",
+      createdAt: "2026-06-01T09:00:00.000Z"
+    };
+
+    const groups = buildTicketPickerGroups({
+      ticketOptions: [newestAssignedTicket, assignedTicket],
+      searchResults: [searchedTicket, olderSearchTicket],
+      searchQuery: "ops",
+      sortMode: "createdAsc"
+    });
+
+    expect(groups.map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
+      ["OPS-12", "OPS-77"],
+      ["FTDM-397", "FTDM-401"]
+    ]);
+  });
+
+  it("limits visible tickets across groups for lazy reveal", () => {
+    const groups = buildTicketPickerGroups({
+      ticketOptions: [
+        assignedTicket,
+        {
+          ...assignedTicket,
+          id: "1003",
+          key: "FTDM-401",
+          summary: "Polish Add Time modal keyboard flow"
+        }
+      ],
+      searchResults: [
+        searchedTicket,
+        {
+          ...searchedTicket,
+          id: "1004",
+          key: "OPS-12",
+          createdAt: "2026-06-01T09:00:00.000Z"
+        }
+      ],
+      searchQuery: "ops"
+    });
+
+    expect(limitTicketPickerGroups(groups, 3).map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
+      ["OPS-77", "OPS-12"],
+      ["FTDM-397"]
     ]);
   });
 });
