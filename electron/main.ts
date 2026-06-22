@@ -34,6 +34,7 @@ const createWindow = async () => {
     title: "TimeBro",
     backgroundColor: "#fdfdfb",
     icon: getWindowIconPath(),
+    autoHideMenuBar: process.platform === "linux",
     show: false,
     titleBarStyle: "hiddenInset",
     webPreferences: {
@@ -43,6 +44,10 @@ const createWindow = async () => {
       sandbox: false
     }
   });
+
+  if (process.platform === "linux") {
+    mainWindow.setMenu(null);
+  }
 
   trackWindowState(mainWindow, userDataPath);
 
