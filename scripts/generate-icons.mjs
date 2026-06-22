@@ -12,6 +12,7 @@ const source = new URL("../assets/app-icon.svg", import.meta.url);
 const sourcePath = fileURLToPath(source);
 const buildDir = new URL("../build/", import.meta.url);
 const rendererAssetsDir = new URL("../src/assets/", import.meta.url);
+const linuxIconsDir = new URL("../build/icons/", import.meta.url);
 const iconsetDir = new URL("../build/icon.iconset/", import.meta.url);
 const icoPngDir = new URL("../build/ico-png/", import.meta.url);
 
@@ -26,6 +27,8 @@ const renderPng = async (size, outputUrl) => {
 
 await mkdir(buildDir, { recursive: true });
 await mkdir(rendererAssetsDir, { recursive: true });
+await rm(linuxIconsDir, { recursive: true, force: true });
+await mkdir(linuxIconsDir, { recursive: true });
 await mkdir(iconsetDir, { recursive: true });
 await mkdir(icoPngDir, { recursive: true });
 
@@ -46,6 +49,12 @@ const webIconSizes = [
 
 for (const [size, filename] of webIconSizes) {
   await renderPng(size, new URL(filename, rendererAssetsDir));
+}
+
+const linuxIconSizes = [16, 24, 32, 48, 64, 128, 256, 512, 1024];
+
+for (const size of linuxIconSizes) {
+  await renderPng(size, new URL(`${size}x${size}.png`, linuxIconsDir));
 }
 
 await writeFile(
