@@ -1,11 +1,12 @@
-import { Calendar, ChevronsLeft, LineChart, Settings, Sun, Tag } from "lucide-react";
+import { Calendar, ChevronsLeft, GitPullRequest, LineChart, Settings, Sun, Tag } from "lucide-react";
 
-export type AppView = "today" | "week" | "tickets" | "reports" | "settings";
+export type AppView = "today" | "week" | "review" | "tickets" | "reports" | "settings";
 export type ThemeMode = "light" | "dark";
 
 const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
   { id: "today", label: "TODAY", Icon: Sun },
   { id: "week", label: "WEEK", Icon: Calendar },
+  { id: "review", label: "REVIEW", Icon: GitPullRequest },
   { id: "tickets", label: "TICKETS", Icon: Tag },
   { id: "reports", label: "REPORTS", Icon: LineChart }
 ];
@@ -17,6 +18,7 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   syncLabel: string;
   syncState: "synced" | "stale" | "syncing";
+  showReview: boolean;
 }
 
 export const Sidebar = ({
@@ -25,12 +27,15 @@ export const Sidebar = ({
   onViewChange,
   onToggleCollapse,
   syncLabel,
-  syncState
+  syncState,
+  showReview
 }: SidebarProps) => {
+  const visibleNav = NAV.filter((item) => item.id !== "review" || showReview);
+
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
       <nav className="sb-nav">
-        {NAV.map(({ id, label, Icon }) => (
+        {visibleNav.map(({ id, label, Icon }) => (
           <button
             key={id}
             type="button"

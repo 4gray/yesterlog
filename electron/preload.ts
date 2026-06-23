@@ -4,6 +4,9 @@ import type {
   AddWorklogResult,
   AppSettings,
   AppUpdateInfo,
+  BitbucketConnectionResult,
+  BitbucketReviewSyncRequest,
+  BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
@@ -24,8 +27,14 @@ const timeBroApi = {
   testJiraConnection: (settings: AppSettings): Promise<JiraConnectionResult> => {
     return ipcRenderer.invoke("jira:test-connection", settings);
   },
+  testBitbucketConnection: (settings: AppSettings): Promise<BitbucketConnectionResult> => {
+    return ipcRenderer.invoke("bitbucket:test-connection", settings);
+  },
   syncJiraWorklogs: (request: SyncRequest): Promise<SyncResult> => {
     return ipcRenderer.invoke("jira:sync-worklogs", request);
+  },
+  syncBitbucketReviews: (request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> => {
+    return ipcRenderer.invoke("bitbucket:sync-reviews", request);
   },
   fetchAssignedTickets: (request: TicketsRequest): Promise<TicketsResult> => {
     return ipcRenderer.invoke("jira:fetch-tickets", request);

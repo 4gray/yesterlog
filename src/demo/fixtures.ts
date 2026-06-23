@@ -1,5 +1,7 @@
 import type {
   AppSettings,
+  BitbucketReviewSession,
+  BitbucketReviewSyncResult,
   JiraIssueSummary,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -18,6 +20,7 @@ export interface DemoScenario {
   settings: AppSettings;
   weekOverride: WeekOverride;
   syncResult: SyncResult;
+  bitbucketReviewResult: BitbucketReviewSyncResult;
   tickets: TicketsResult;
   favoriteKeys: string[];
   selectedTicket?: JiraTicket;
@@ -141,6 +144,96 @@ const worklog = ({
   comment
 });
 
+const reviewSession = ({
+  workspace,
+  repositorySlug,
+  repositoryName,
+  pullRequestId,
+  title,
+  issueKey,
+  dateKey,
+  time,
+  duration,
+  label,
+  comments,
+  author = "Nadia Chen",
+  isOwnPullRequest = false,
+  confidence = "high"
+}: {
+  workspace: string;
+  repositorySlug: string;
+  repositoryName: string;
+  pullRequestId: number;
+  title: string;
+  issueKey: string;
+  dateKey: string;
+  time: string;
+  duration: number;
+  label: BitbucketReviewSession["reviewStateLabel"];
+  comments: number;
+  author?: string;
+  isOwnPullRequest?: boolean;
+  confidence?: BitbucketReviewSession["confidence"];
+}): BitbucketReviewSession => {
+  const started = new Date(localStartISO(dateKey, time));
+  const ended = new Date(started.getTime() + duration * 1000);
+
+  return {
+    id: `${workspace}/${repositorySlug}#${pullRequestId}:${dateKey}`,
+    workspace,
+    repositorySlug,
+    repositoryName,
+    pullRequestId,
+    pullRequestTitle: title,
+    pullRequestUrl: `https://bitbucket.org/${workspace}/${repositorySlug}/pull-requests/${pullRequestId}`,
+    pullRequestState: "OPEN",
+    pullRequestAuthorAccountId: isOwnPullRequest ? "demo-bitbucket-account" : `demo-author-${author.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    pullRequestAuthorDisplayName: isOwnPullRequest ? "Demo Reviewer" : author,
+    isPullRequestAuthor: isOwnPullRequest,
+    sourceBranch: `feature/${issueKey.toLowerCase()}-review`,
+    destinationBranch: "main",
+    jiraIssueKey: issueKey,
+    dateKey,
+    startedISO: started.toISOString(),
+    endedISO: ended.toISOString(),
+    estimatedSeconds: duration,
+    reviewStateLabel: label,
+    commentCount: comments,
+    activityCount: Math.max(comments, 1) + (label === "COMMENTED" ? 0 : 1),
+    confidence,
+    events: [
+      {
+        id: `comment:${pullRequestId}:1`,
+        type: comments > 0 ? "comment" : "approved",
+        occurredAt: new Date(started.getTime() + 5 * 60 * 1000).toISOString()
+      }
+    ],
+    status: "unlogged"
+  };
+};
+
+const buildBitbucketReviewResult = ({
+  weekStart,
+  today,
+  sessions
+}: {
+  weekStart: Date;
+  today: Date;
+  sessions: BitbucketReviewSession[];
+}): BitbucketReviewSyncResult => ({
+  weekKey: toLocalDateKey(weekStart),
+  weekStartISO: weekStart.toISOString(),
+  weekEndExclusiveISO: addDays(weekStart, 7).toISOString(),
+  syncedAt: today.toISOString(),
+  accountId: "demo-bitbucket-account",
+  displayName: "Demo Reviewer",
+  workspace: "timebro-demo",
+  repositoryCount: new Set(sessions.map((session) => session.repositorySlug)).size,
+  pullRequestCount: new Set(sessions.map((session) => `${session.repositorySlug}#${session.pullRequestId}`)).size,
+  sessionCount: sessions.length,
+  sessions
+});
+
 const buildSyncResult = ({
   weekStart,
   today,
@@ -219,6 +312,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
   const mondayKey = toLocalDateKey(weekStart);
   const tuesdayKey = toLocalDateKey(addDays(weekStart, 1));
   const todayKey = toLocalDateKey(today);
+  const thursdayKey = toLocalDateKey(addDays(weekStart, 3));
   const fridayKey = toLocalDateKey(addDays(weekStart, 4));
 
   const inProgress = [
@@ -523,6 +617,95 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     })
   ];
 
+  const reviewSessions = [
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 214,
+      title: "Active interrupt handling for poller",
+      issueKey: "FTDM-328",
+      dateKey: mondayKey,
+      time: "09:40",
+      duration: seconds(0, 45),
+      label: "APPROVED",
+      comments: 9,
+      author: "Mira Novak"
+    }),
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 221,
+      title: "Add documents dialog empty states",
+      issueKey: "FTDM-363",
+      dateKey: tuesdayKey,
+      time: "11:00",
+      duration: seconds(1),
+      label: "CHANGES",
+      comments: 12,
+      author: "Jules Patel"
+    }),
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "auth",
+      repositoryName: "auth",
+      pullRequestId: 219,
+      title: "Bump keycloak-admin-client",
+      issueKey: "FTDM-391",
+      dateKey: tuesdayKey,
+      time: "16:10",
+      duration: seconds(0, 20),
+      label: "COMMENTED",
+      comments: 3,
+      isOwnPullRequest: true,
+      confidence: "medium"
+    }),
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "explorer-core",
+      repositoryName: "explorer-core",
+      pullRequestId: 226,
+      title: "Interrupt-safe queue draining",
+      issueKey: "FTDM-410",
+      dateKey: todayKey,
+      time: "10:15",
+      duration: seconds(1, 5),
+      label: "CHANGES",
+      comments: 14,
+      author: "Lina Park"
+    }),
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "explorer-core",
+      repositoryName: "explorer-core",
+      pullRequestId: 230,
+      title: "Scaffold monorepo domains",
+      issueKey: "FTDM-393",
+      dateKey: thursdayKey,
+      time: "15:20",
+      duration: seconds(0, 30),
+      label: "COMMENTED",
+      comments: 5,
+      author: "Mateo Silva",
+      confidence: "medium"
+    }),
+    reviewSession({
+      workspace: "timebro-demo",
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 231,
+      title: "Edge cases in poller interrupts",
+      issueKey: "FTDM-377",
+      dateKey: thursdayKey,
+      time: "13:00",
+      duration: seconds(0, 25),
+      label: "APPROVED",
+      comments: 6,
+      isOwnPullRequest: true
+    })
+  ];
+
   return {
     today,
     weekStart,
@@ -530,6 +713,11 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       jiraBaseUrl: DEMO_JIRA_BASE_URL,
       jiraEmail: "demo.user@example.test",
       jiraApiToken: "demo-token-not-real",
+      bitbucketEmail: "demo.user@example.test",
+      bitbucketApiToken: "demo-bitbucket-token-not-real",
+      bitbucketWorkspace: "timebro-demo",
+      bitbucketRepositories: "explorer-web, explorer-core, auth",
+      bitbucketReviewBucketIssueKey: "FTDM-999",
       weeklyTargetHours: 40,
       workingDays: [1, 2, 3, 4, 5],
       reminderTime: "16:30",
@@ -540,6 +728,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       skippedDates: [fridayKey]
     },
     syncResult: buildSyncResult({ weekStart, today, logs, ticketsByKey }),
+    bitbucketReviewResult: buildBitbucketReviewResult({ weekStart, today, sessions: reviewSessions }),
     tickets: {
       fetchedAt: today.toISOString(),
       accountId: ACCOUNT_ID,

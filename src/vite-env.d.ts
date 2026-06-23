@@ -5,6 +5,9 @@ import type {
   AddWorklogResult,
   AppSettings,
   AppUpdateInfo,
+  BitbucketConnectionResult,
+  BitbucketReviewSyncRequest,
+  BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
@@ -23,7 +26,9 @@ import type {
 
 interface TimeBroNativeApi {
   testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
+  testBitbucketConnection: (settings: AppSettings) => Promise<BitbucketConnectionResult>;
   syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
+  syncBitbucketReviews: (request: BitbucketReviewSyncRequest) => Promise<BitbucketReviewSyncResult>;
   fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
   searchJiraTickets: (request: SearchTicketsRequest) => Promise<SearchTicketsResult>;
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;

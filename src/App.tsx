@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   AppUpdateInfo,
+  BitbucketReviewSession,
+  BitbucketReviewSyncResult,
+  BitbucketReviewTargetMode,
   JiraConnectionResult,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -16,6 +19,7 @@ import { GITHUB_RELEASES_URL } from "../shared/releases";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
+import { ReviewView } from "./components/ReviewView";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
 import { SnackbarStack, type SnackbarKind, type SnackbarNotification } from "./components/SnackbarStack";
@@ -26,14 +30,24 @@ import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekCsv, parsePersonalNotesCsv } from "./domain/personalNotesCsv";
+import {
+  buildReviewWorklogComment,
+  getBitbucketRepositorySlugs,
+  getReviewTargetIssueKey,
+  isBitbucketConfigured,
+  markReviewSessionsLogged,
+  mergeReviewSessionStates
+} from "./domain/bitbucketReview";
 import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import {
   getFavoriteKeys,
+  getBitbucketReviewResult,
   getPersonalNotes,
   getSettings,
   getSyncResult,
   getWeekOverride,
+  saveBitbucketReviewResult,
   saveFavoriteKeys,
   savePersonalNotes,
   saveSettings,
@@ -192,6 +206,7 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | undefined>(() =>
     demoScenario ? createDemoUpdateInfo() : undefined
   );
@@ -203,8 +218,14 @@ export const App = () => {
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => demoScenario?.favoriteKeys ?? []);
   const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>(() => demoScenario?.selectedTicket);
   const [isLogging, setIsLogging] = useState(false);
+  const [isLoggingReview, setIsLoggingReview] = useState(false);
   const [isDeletingWorklog, setIsDeletingWorklog] = useState(false);
   const [logError, setLogError] = useState<string | undefined>();
+  const [bitbucketReviewResult, setBitbucketReviewResult] = useState<BitbucketReviewSyncResult | undefined>(
+    () => demoScenario?.bitbucketReviewResult
+  );
+  const [isSyncingReviews, setIsSyncingReviews] = useState(false);
+  const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const [snackbars, setSnackbars] = useState<SnackbarNotification[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
@@ -240,8 +261,11 @@ export const App = () => {
   );
 
   const visibleSyncResult = syncResult?.weekKey === weekState.weekKey ? syncResult : undefined;
+  const visibleBitbucketReviewResult =
+    bitbucketReviewResult?.weekKey === weekState.weekKey ? bitbucketReviewResult : undefined;
 
   const isConfigured = isJiraConfigured(settings);
+  const isBitbucketReady = isBitbucketConfigured(settings);
 
   const hoursByKey = useMemo(() => {
     const map: Record<string, number> = {};
@@ -266,8 +290,17 @@ export const App = () => {
         }
       }
     }
+
+    for (const ticket of [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])]) {
+      map[ticket.key] = ticket.url;
+    }
+
+    if (selectedTicket) {
+      map[selectedTicket.key] = selectedTicket.url;
+    }
+
     return map;
-  }, [visibleSyncResult]);
+  }, [selectedTicket, tickets, visibleSyncResult]);
 
   const issueTypesByKey = useMemo(() => {
     const map: Record<string, JiraIssueTypeInfo> = {};
@@ -576,7 +609,58 @@ export const App = () => {
     [demoScenario, settings, showError, showSuccess, weekState.weekEndExclusiveISO, weekState.weekKey, weekState.weekStartISO]
   );
 
-  const handleSync = useCallback(() => runSync(), [runSync]);
+  const runReviewSync = useCallback(
+    async (settingsForSync: AppSettings = settings): Promise<BitbucketReviewSyncResult | undefined> => {
+      if (demoScenario) {
+        setBitbucketReviewResult(demoScenario.bitbucketReviewResult);
+        showSuccess("Demo Bitbucket reviews refreshed from seeded fixtures.");
+        return demoScenario.bitbucketReviewResult;
+      }
+
+      if (!isBitbucketConfigured(settingsForSync)) {
+        showError("Connect Bitbucket in Settings before syncing reviews.");
+        return undefined;
+      }
+
+      setIsSyncingReviews(true);
+
+      try {
+        const result = await nativeApi.syncBitbucketReviews({
+          settings: settingsForSync,
+          weekKey: weekState.weekKey,
+          weekStartISO: weekState.weekStartISO,
+          weekEndExclusiveISO: weekState.weekEndExclusiveISO
+        });
+        const merged = mergeReviewSessionStates(result, bitbucketReviewResult);
+        await saveBitbucketReviewResult(merged);
+        setBitbucketReviewResult(merged);
+        showSuccess(`Synced ${merged.sessionCount} Bitbucket review sessions.`);
+        return merged;
+      } catch (error) {
+        showError(error instanceof Error ? error.message : "Unable to sync Bitbucket review sessions.");
+        return undefined;
+      } finally {
+        setIsSyncingReviews(false);
+      }
+    },
+    [
+      bitbucketReviewResult,
+      demoScenario,
+      settings,
+      showError,
+      showSuccess,
+      weekState.weekEndExclusiveISO,
+      weekState.weekKey,
+      weekState.weekStartISO
+    ]
+  );
+
+  const handleSync = useCallback(async () => {
+    await runSync();
+    if (isBitbucketConfigured(settings)) {
+      await runReviewSync(settings);
+    }
+  }, [runReviewSync, runSync, settings]);
 
   useEffect(() => {
     if (demoScenario) {
@@ -595,12 +679,20 @@ export const App = () => {
 
     const loadInitialState = async () => {
       const weekKey = toLocalDateKey(weekStart);
-      const [storedSettings, storedOverride, storedSyncResult, storedFavorites, storedPersonalNotes] = await Promise.all([
+      const [
+        storedSettings,
+        storedOverride,
+        storedSyncResult,
+        storedFavorites,
+        storedPersonalNotes,
+        storedBitbucketReviewResult
+      ] = await Promise.all([
         getSettings(),
         getWeekOverride(weekKey),
         getSyncResult(weekKey),
         getFavoriteKeys(),
-        getPersonalNotes(weekKey)
+        getPersonalNotes(weekKey),
+        getBitbucketReviewResult(weekKey)
       ]);
 
       if (!isMounted) {
@@ -613,6 +705,7 @@ export const App = () => {
       setSyncResult(storedSyncResult);
       setFavoriteKeys(storedFavorites);
       setPersonalNotes(storedPersonalNotes);
+      setBitbucketReviewResult(storedBitbucketReviewResult);
       skipInitialWeekReloadRef.current = true;
       setIsBooting(false);
     };
@@ -642,10 +735,11 @@ export const App = () => {
     const weekKey = toLocalDateKey(weekStart);
 
     const loadWeek = async () => {
-      const [storedOverride, storedSyncResult, storedPersonalNotes] = await Promise.all([
+      const [storedOverride, storedSyncResult, storedPersonalNotes, storedBitbucketReviewResult] = await Promise.all([
         getWeekOverride(weekKey),
         getSyncResult(weekKey),
-        getPersonalNotes(weekKey)
+        getPersonalNotes(weekKey),
+        getBitbucketReviewResult(weekKey)
       ]);
 
       if (!isMounted) {
@@ -655,6 +749,7 @@ export const App = () => {
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
       setPersonalNotes(storedPersonalNotes);
+      setBitbucketReviewResult(storedBitbucketReviewResult);
     };
 
     loadWeek().catch((error) => {
@@ -678,8 +773,13 @@ export const App = () => {
       return;
     }
 
-    void runSync();
-  }, [demoScenario, isBooting, isConfigured, runSync]);
+    void (async () => {
+      await runSync();
+      if (isBitbucketReady) {
+        await runReviewSync();
+      }
+    })();
+  }, [demoScenario, isBitbucketReady, isBooting, isConfigured, runReviewSync, runSync]);
 
   useEffect(() => {
     if (demoScenario) {
@@ -710,6 +810,12 @@ export const App = () => {
     }
     void loadTickets();
   }, [demoScenario, isBooting, loadTickets]);
+
+  useEffect(() => {
+    if (view === "review" && !isBitbucketReady) {
+      setView("week");
+    }
+  }, [isBitbucketReady, view]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -798,6 +904,11 @@ export const App = () => {
       ...settingsDraft,
       jiraBaseUrl: normalizeJiraSiteInput(settingsDraft.jiraBaseUrl),
       jiraEmail: settingsDraft.jiraEmail.trim(),
+      bitbucketEmail: settingsDraft.bitbucketEmail.trim(),
+      bitbucketApiToken: settingsDraft.bitbucketApiToken.trim(),
+      bitbucketWorkspace: settingsDraft.bitbucketWorkspace.trim(),
+      bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", "),
+      bitbucketReviewBucketIssueKey: settingsDraft.bitbucketReviewBucketIssueKey.trim().toUpperCase(),
       weeklyTargetHours: Math.max(Number(settingsDraft.weeklyTargetHours) || 40, 1),
       workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : [1, 2, 3, 4, 5]
     };
@@ -948,6 +1059,34 @@ export const App = () => {
     }
   };
 
+  const handleTestBitbucketConnection = async () => {
+    setIsTestingBitbucket(true);
+
+    try {
+      const cleanedSettings: AppSettings = {
+        ...settingsDraft,
+        bitbucketEmail: settingsDraft.bitbucketEmail.trim(),
+        bitbucketApiToken: settingsDraft.bitbucketApiToken.trim(),
+        bitbucketWorkspace: settingsDraft.bitbucketWorkspace.trim(),
+        bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", ")
+      };
+
+      if (demoScenario) {
+        showSuccess("Connected to Bitbucket as Demo Reviewer; found Explorer Web.");
+        return;
+      }
+
+      const result = await nativeApi.testBitbucketConnection(cleanedSettings);
+      if (result.ok) {
+        showSuccess(result.message);
+      } else {
+        showError(result.message);
+      }
+    } finally {
+      setIsTestingBitbucket(false);
+    }
+  };
+
   const handleAddWorklog = async (payload: {
     issueKey: string;
     ticket: JiraTicket;
@@ -990,6 +1129,124 @@ export const App = () => {
       return false;
     } finally {
       setIsLogging(false);
+    }
+  };
+
+  const handleLogReviewSessions = async (
+    sessionIds: string[],
+    targetMode: BitbucketReviewTargetMode,
+    durationOverrides: Record<string, number> = {}
+  ): Promise<boolean> => {
+    const sourceResult = visibleBitbucketReviewResult;
+    if (!sourceResult || sessionIds.length === 0) {
+      showInfo("No review sessions selected.");
+      return false;
+    }
+
+    const sessionsById = new Map(sourceResult.sessions.map((session) => [session.id, session]));
+    const sessionsToLog = sessionIds
+      .map((sessionId) => sessionsById.get(sessionId))
+      .filter((session): session is BitbucketReviewSession => Boolean(session && session.status !== "logged"));
+
+    if (sessionsToLog.length === 0) {
+      showInfo("Selected review sessions are already logged.");
+      return false;
+    }
+
+    setIsLoggingReview(true);
+    setLogError(undefined);
+
+    const loggedSessions: Array<{
+      sessionId: string;
+      logged: {
+        issueKey: string;
+        worklogId: string;
+        loggedAt: string;
+        targetMode: BitbucketReviewTargetMode;
+      };
+    }> = [];
+    let failure: string | undefined;
+
+    try {
+      if (demoScenario) {
+        const demoLogged = sessionsToLog.flatMap((session, index) => {
+          const issueKey = getReviewTargetIssueKey(session, settings, targetMode);
+          return issueKey
+            ? [
+                {
+                  sessionId: session.id,
+                  logged: {
+                    issueKey,
+                    worklogId: `demo-review-wl-${index + 1}`,
+                    loggedAt: new Date().toISOString(),
+                    targetMode
+                  }
+                }
+              ]
+            : [];
+        });
+        const updated = markReviewSessionsLogged(sourceResult, demoLogged);
+        setBitbucketReviewResult(updated);
+        showSuccess(`Demo logged ${demoLogged.length} review sessions.`);
+        return demoLogged.length > 0;
+      }
+
+      for (const session of sessionsToLog) {
+        const issueKey = getReviewTargetIssueKey(session, settings, targetMode);
+        const timeSpentSeconds = durationOverrides[session.id] && durationOverrides[session.id] > 0
+          ? durationOverrides[session.id]
+          : session.estimatedSeconds;
+
+        if (!issueKey) {
+          continue;
+        }
+
+        try {
+          const result = await nativeApi.addWorklog({
+            settings,
+            issueKey,
+            timeSpentSeconds,
+            startedISO: session.startedISO,
+            comment: buildReviewWorklogComment(session)
+          });
+          loggedSessions.push({
+            sessionId: session.id,
+            logged: {
+              issueKey,
+              worklogId: result.worklogId,
+              loggedAt: new Date().toISOString(),
+              targetMode
+            }
+          });
+        } catch (error) {
+          failure = error instanceof Error ? error.message : `Unable to log review session for PR #${session.pullRequestId}.`;
+          break;
+        }
+      }
+
+      if (loggedSessions.length > 0) {
+        const updated = markReviewSessionsLogged(sourceResult, loggedSessions);
+        await saveBitbucketReviewResult(updated);
+        setBitbucketReviewResult(updated);
+        showSuccess(`Logged ${loggedSessions.length} review ${loggedSessions.length === 1 ? "session" : "sessions"} to Jira.`);
+        await runSync(settings, { queueAfterCurrent: true });
+        await loadTickets();
+      }
+
+      if (failure) {
+        setLogError(failure);
+        showError(failure);
+        return false;
+      }
+
+      if (loggedSessions.length === 0) {
+        showError("No selected review sessions have a Jira target.");
+        return false;
+      }
+
+      return true;
+    } finally {
+      setIsLoggingReview(false);
     }
   };
 
@@ -1210,8 +1467,8 @@ export const App = () => {
     }
   };
 
-  const syncState = isSyncing ? "syncing" : syncResult ? "synced" : "stale";
-  const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
+  const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
+  const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);
 
   const openAddTime = (date?: Date) => {
     setEditingWorklog(undefined);
@@ -1310,6 +1567,7 @@ export const App = () => {
           onToggleCollapse={() => setSidebarCollapsed((current) => !current)}
           syncLabel={syncLabel}
           syncState={syncState}
+          showReview={isBitbucketReady}
         />
 
         <main className="main-area">
@@ -1345,7 +1603,7 @@ export const App = () => {
               weekState={weekState}
               syncResult={syncResult}
               currentDate={currentDate}
-              isSyncing={isSyncing}
+              isSyncing={isSyncing || isSyncingReviews}
               isConfigured={isConfigured}
               dockTickets={dockTickets}
               activeTicketCount={tickets?.inProgress.length ?? 0}
@@ -1359,6 +1617,27 @@ export const App = () => {
               onEditPersonalNote={openEditPersonalNote}
               onToggleSkipped={handleToggleSkipped}
               onDockLog={handleAddWorklog}
+            />
+          ) : view === "review" ? (
+            <ReviewView
+              weekKey={weekState.weekKey}
+              weekStartISO={weekState.weekStartISO}
+              settings={settings}
+              result={visibleBitbucketReviewResult}
+              issueUrlsByKey={issueUrlsByKey}
+              issueTypesByKey={issueTypesByKey}
+              isConfigured={isBitbucketReady}
+              isSyncing={isSyncingReviews}
+              isLogging={isLoggingReview}
+              targetMode={reviewTargetMode}
+              onTargetModeChange={setReviewTargetMode}
+              onSync={() => {
+                void runReviewSync();
+              }}
+              onLogSessions={handleLogReviewSessions}
+              onPreviousWeek={goToPreviousWeek}
+              onCurrentWeek={goToCurrentWeek}
+              onNextWeek={goToNextWeek}
             />
           ) : view === "tickets" ? (
             <TicketsView
@@ -1386,7 +1665,9 @@ export const App = () => {
               onDraftChange={setSettingsDraft}
               onSave={handleSaveSettings}
               onTestConnection={handleTestConnection}
+              onTestBitbucketConnection={handleTestBitbucketConnection}
               isTesting={isTesting}
+              isTestingBitbucket={isTestingBitbucket}
               effectiveTheme={effectiveTheme}
               onSelectTheme={selectTheme}
               updateInfo={updateInfo}

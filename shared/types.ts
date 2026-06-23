@@ -4,6 +4,11 @@ export interface AppSettings {
   jiraBaseUrl: string;
   jiraEmail: string;
   jiraApiToken: string;
+  bitbucketEmail: string;
+  bitbucketApiToken: string;
+  bitbucketWorkspace: string;
+  bitbucketRepositories: string;
+  bitbucketReviewBucketIssueKey: string;
   weeklyTargetHours: number;
   workingDays: WeekdayNumber[];
   reminderTime: string;
@@ -109,6 +114,73 @@ export interface JiraConnectionResult {
   displayName?: string;
 }
 
+export interface BitbucketConnectionResult {
+  ok: boolean;
+  message: string;
+  accountId?: string;
+  displayName?: string;
+  workspace?: string;
+}
+
+export type BitbucketReviewTargetMode = "reviewed-ticket" | "review-bucket";
+export type BitbucketReviewConfidence = "high" | "medium" | "low";
+export type BitbucketReviewSessionStatus = "unlogged" | "logged";
+
+export interface BitbucketReviewEvent {
+  id: string;
+  type: "comment" | "approved" | "changes_requested" | "updated";
+  occurredAt: string;
+}
+
+export interface BitbucketLoggedReview {
+  issueKey: string;
+  worklogId: string;
+  loggedAt: string;
+  targetMode: BitbucketReviewTargetMode;
+}
+
+export interface BitbucketReviewSession {
+  id: string;
+  workspace: string;
+  repositorySlug: string;
+  repositoryName: string;
+  pullRequestId: number;
+  pullRequestTitle: string;
+  pullRequestUrl: string;
+  pullRequestState: string;
+  pullRequestAuthorAccountId?: string;
+  pullRequestAuthorDisplayName?: string;
+  isPullRequestAuthor?: boolean;
+  sourceBranch?: string;
+  destinationBranch?: string;
+  jiraIssueKey?: string;
+  dateKey: string;
+  startedISO: string;
+  endedISO: string;
+  estimatedSeconds: number;
+  reviewStateLabel: "APPROVED" | "CHANGES" | "COMMENTED" | "UPDATED";
+  commentCount: number;
+  activityCount: number;
+  confidence: BitbucketReviewConfidence;
+  events: BitbucketReviewEvent[];
+  status: BitbucketReviewSessionStatus;
+  logged?: BitbucketLoggedReview;
+}
+
+export interface BitbucketReviewSyncResult {
+  weekKey: string;
+  weekStartISO: string;
+  weekEndExclusiveISO: string;
+  syncedAt: string;
+  accountId?: string;
+  displayName?: string;
+  workspace: string;
+  repositoryCount: number;
+  pullRequestCount: number;
+  sessionCount: number;
+  sessions: BitbucketReviewSession[];
+}
+
 export type TicketStatusCategory = "new" | "indeterminate" | "done" | "unknown";
 
 export interface JiraTicket {
@@ -211,6 +283,13 @@ export interface DeleteWorklogResult {
 }
 
 export interface SyncRequest {
+  settings: AppSettings;
+  weekStartISO: string;
+  weekEndExclusiveISO: string;
+  weekKey: string;
+}
+
+export interface BitbucketReviewSyncRequest {
   settings: AppSettings;
   weekStartISO: string;
   weekEndExclusiveISO: string;
