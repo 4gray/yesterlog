@@ -3290,48 +3290,24 @@ a {
   color: var(--text-bright);
 }
 
-.review-duration-editor {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--bg-sunken);
-}
-
-.review-duration-editor-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--dim-2);
-}
-
-.review-duration-editor-total {
-  margin-top: 5px;
-  color: var(--text-strong);
-  font-size: 13px;
-}
-
 .review-duration-editor-controls {
-  display: inline-flex;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
 }
 
 .review-duration-editor-controls button,
 .review-duration-unit-toggle button,
 .review-duration-apply {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease, opacity 150ms ease;
@@ -3354,14 +3330,15 @@ a {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
   min-width: 0;
 }
 
 .review-duration-custom input {
-  width: 82px;
-  min-height: 36px;
-  padding: 0 10px;
+  width: 70px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--bg);
@@ -3378,12 +3355,18 @@ a {
 
 .review-duration-unit-toggle {
   display: inline-grid;
-  grid-template-columns: repeat(2, 38px);
-  gap: 6px;
+  grid-template-columns: repeat(2, 34px);
+  gap: 5px;
 }
 
 .review-duration-apply {
   color: var(--blue);
+}
+
+.review-row-duration-editor {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
 }
 
 .review-dialog-list {
@@ -3393,8 +3376,8 @@ a {
 
 .review-dialog-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(260px, 320px);
+  gap: 14px;
   align-items: center;
   padding: 12px 14px;
   border: 1px solid var(--line);
@@ -5010,22 +4993,13 @@ input:focus {
     justify-items: start;
   }
 
-  .review-duration-editor {
-    grid-template-columns: 1fr;
-  }
-
   .review-duration-editor-controls {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .review-duration-editor-controls button,
   .review-duration-apply {
-    padding: 0 8px;
-  }
-
-  .review-duration-custom {
-    flex-wrap: wrap;
+    padding: 0 6px;
   }
 
   .settings-panel {

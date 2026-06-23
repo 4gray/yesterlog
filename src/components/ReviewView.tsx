@@ -84,9 +84,10 @@ const ownershipFilterCopy: Record<ReviewOwnershipFilter, string> = {
 };
 
 const reviewDurationPresets = [
-  { label: "30m", seconds: 30 * 60 },
+  { label: "0.5h", seconds: 30 * 60 },
   { label: "1h", seconds: 60 * 60 },
-  { label: "2h", seconds: 2 * 60 * 60 }
+  { label: "2h", seconds: 2 * 60 * 60 },
+  { label: "3h", seconds: 3 * 60 * 60 }
 ];
 
 const targetModeCopy: Record<BitbucketReviewTargetMode, string> = {
@@ -198,76 +199,31 @@ interface ReviewPreviewListProps {
   issueUrlsByKey: Record<string, string>;
   issueTypesByKey: Record<string, JiraIssueTypeInfo>;
   emptyText: string;
+  onApplySessionSeconds: (sessionId: string, seconds: number) => void;
 }
 
-const ReviewPreviewList = ({ items, issueUrlsByKey, issueTypesByKey, emptyText }: ReviewPreviewListProps) => {
-  if (items.length === 0) {
-    return <div className="review-dialog-empty">{emptyText}</div>;
-  }
-
-  return (
-    <div className="review-dialog-list">
-      {items.map(({ session, targetIssueKey }) => (
-        <div className="review-dialog-item" key={session.id}>
-          <div className="review-dialog-item-main">
-            <span className="review-dialog-pr">PR #{session.pullRequestId}</span>
-            <strong>{session.pullRequestTitle}</strong>
-            <span>
-              {session.repositoryName} · {getSessionAuthorLabel(session)}
-            </span>
-          </div>
-          <div className="review-dialog-item-meta">
-            <strong>{formatClock(session.estimatedSeconds)}</strong>
-            {targetIssueKey ? (
-              <TicketKeyLink
-                issueKey={targetIssueKey}
-                url={issueUrlsByKey[targetIssueKey]}
-                issueType={issueTypesByKey[targetIssueKey]}
-                keyClassName="review-issue-key"
-              />
-            ) : (
-              <span className="review-missing-target">NO JIRA TARGET</span>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-interface ReviewBulkDurationEditorProps {
-  items: ReviewSessionTargetPreview[];
-  onApplySeconds: (seconds: number) => void;
+interface ReviewSessionDurationEditorProps {
+  sessionId: string;
+  seconds: number;
+  onApplySeconds: (sessionId: string, seconds: number) => void;
 }
 
-const ReviewBulkDurationEditor = ({ items, onApplySeconds }: ReviewBulkDurationEditorProps) => {
+const ReviewSessionDurationEditor = ({ sessionId, seconds, onApplySeconds }: ReviewSessionDurationEditorProps) => {
   const [customOpen, setCustomOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState("1");
   const [customUnit, setCustomUnit] = useState<ReviewDurationUnit>("h");
-  const itemSeconds = items.map((item) => item.session.estimatedSeconds);
-  const totalSeconds = itemSeconds.reduce((sum, seconds) => sum + seconds, 0);
-  const commonSeconds =
-    itemSeconds.length > 0 && itemSeconds.every((seconds) => seconds === itemSeconds[0]) ? itemSeconds[0] : undefined;
   const customSeconds = reviewCustomDurationToSeconds(customAmount, customUnit);
-  const canApplyCustom = customSeconds > 0 && items.length > 0;
+  const canApplyCustom = customSeconds > 0;
 
   return (
-    <div className="review-duration-editor">
-      <div>
-        <div className="review-duration-editor-label">SET ALL REVIEW TIME</div>
-        <div className="review-duration-editor-total">
-          {formatClock(totalSeconds)} across {items.length} {items.length === 1 ? "session" : "sessions"}
-        </div>
-      </div>
-
+    <div className="review-row-duration-editor">
       <div className="review-duration-editor-controls">
         {reviewDurationPresets.map((preset) => (
           <button
             type="button"
             key={preset.label}
-            className={commonSeconds === preset.seconds ? "active" : ""}
-            onClick={() => onApplySeconds(preset.seconds)}
-            disabled={items.length === 0}
+            className={seconds === preset.seconds ? "active" : ""}
+            onClick={() => onApplySeconds(sessionId, preset.seconds)}
           >
             {preset.label}
           </button>
@@ -301,11 +257,62 @@ const ReviewBulkDurationEditor = ({ items, onApplySeconds }: ReviewBulkDurationE
               </button>
             ))}
           </div>
-          <button type="button" className="review-duration-apply" onClick={() => onApplySeconds(customSeconds)} disabled={!canApplyCustom}>
+          <button
+            type="button"
+            className="review-duration-apply"
+            onClick={() => onApplySeconds(sessionId, customSeconds)}
+            disabled={!canApplyCustom}
+          >
             APPLY
           </button>
         </div>
       ) : null}
+    </div>
+  );
+};
+
+const ReviewPreviewList = ({
+  items,
+  issueUrlsByKey,
+  issueTypesByKey,
+  emptyText,
+  onApplySessionSeconds
+}: ReviewPreviewListProps) => {
+  if (items.length === 0) {
+    return <div className="review-dialog-empty">{emptyText}</div>;
+  }
+
+  return (
+    <div className="review-dialog-list">
+      {items.map(({ session, targetIssueKey }) => (
+        <div className="review-dialog-item" key={session.id}>
+          <div className="review-dialog-item-main">
+            <span className="review-dialog-pr">PR #{session.pullRequestId}</span>
+            <strong>{session.pullRequestTitle}</strong>
+            <span>
+              {session.repositoryName} · {getSessionAuthorLabel(session)}
+            </span>
+          </div>
+          <div className="review-dialog-item-meta">
+            <strong>{formatClock(session.estimatedSeconds)}</strong>
+            {targetIssueKey ? (
+              <TicketKeyLink
+                issueKey={targetIssueKey}
+                url={issueUrlsByKey[targetIssueKey]}
+                issueType={issueTypesByKey[targetIssueKey]}
+                keyClassName="review-issue-key"
+              />
+            ) : (
+              <span className="review-missing-target">NO JIRA TARGET</span>
+            )}
+          </div>
+          <ReviewSessionDurationEditor
+            sessionId={session.id}
+            seconds={session.estimatedSeconds}
+            onApplySeconds={onApplySessionSeconds}
+          />
+        </div>
+      ))}
     </div>
   );
 };
@@ -386,17 +393,16 @@ export const ReviewView = ({
     );
   };
 
-  const applyDurationToPreview = (items: ReviewSessionTargetPreview[], seconds: number) => {
-    if (items.length === 0 || seconds <= 0) {
+  const applySessionDuration = (sessionId: string, seconds: number) => {
+    if (seconds <= 0) {
       return;
     }
 
     setDurationOverrides((current) => {
-      const next = { ...current };
-      for (const item of items) {
-        next[item.session.id] = seconds;
-      }
-      return next;
+      return {
+        ...current,
+        [sessionId]: seconds
+      };
     });
   };
 
@@ -672,12 +678,12 @@ export const ReviewView = ({
             TimeBro will create Jira worklogs for the selected Bitbucket review sessions using the current target mode:
             <strong> {targetModeCopy[targetMode]}</strong>.
           </p>
-          <ReviewBulkDurationEditor items={logPreview} onApplySeconds={(seconds) => applyDurationToPreview(logPreview, seconds)} />
           <ReviewPreviewList
             items={logPreview}
             issueUrlsByKey={issueUrlsByKey}
             issueTypesByKey={issueTypesByKey}
             emptyText="No selected review sessions."
+            onApplySessionSeconds={applySessionDuration}
           />
         </ReviewDialogFrame>
       ) : null}
@@ -703,12 +709,12 @@ export const ReviewView = ({
             Future review logging will use <strong>{targetModeCopy[dialog.mode]}</strong>. The preview below shows where the
             currently selected sessions will go; if nothing is selected, it shows all visible unlogged sessions.
           </p>
-          <ReviewBulkDurationEditor items={targetPreview} onApplySeconds={(seconds) => applyDurationToPreview(targetPreview, seconds)} />
           <ReviewPreviewList
             items={targetPreview}
             issueUrlsByKey={issueUrlsByKey}
             issueTypesByKey={issueTypesByKey}
             emptyText="No visible unlogged review sessions."
+            onApplySessionSeconds={applySessionDuration}
           />
         </ReviewDialogFrame>
       ) : null}

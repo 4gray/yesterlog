@@ -25,7 +25,8 @@ Add an optional Bitbucket Cloud integration that unlocks a Review screen for PR 
 - [x] Fix Review empty-state selection loop that caused React maximum update depth warnings.
 - [x] Add confirmation dialogs for review logging and target-mode changes.
 - [x] Show review estimate explanation, PR author, and author/reviewer filter.
-- [x] Add bulk duration editing to review confirmation dialogs.
+- [x] Replace bulk review duration editor with per-PR duration controls in confirmation dialogs.
+- [x] Guard Bitbucket review sync against stale Electron preload bridges.
 - [x] Add focused tests and run verification.
 
 ## Verification
@@ -36,4 +37,5 @@ Add an optional Bitbucket Cloud integration that unlocks a Review screen for PR 
 - Rendered QA rechecked Settings after adding the scoped Bitbucket token guide.
 - Review selection loop fix verified with `npm run test`, `npm run build`, and rendered Review sync QA with clean console.
 - Review confirmation dialogs, estimate info, PR author display, and ownership filter verified in rendered demo QA with clean console.
-- Review duration overrides verified in both confirmation dialogs with presets and custom minutes; overrides carry into log preview.
+- Per-PR duration controls verified in both confirmation dialogs with presets and custom minutes; desktop and mobile-width rendered QA are clean.
+- Bitbucket sync bridge guard verified with unit tests, production build, and built Electron preload/main artifact inspection.

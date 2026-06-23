@@ -24,6 +24,20 @@ import type {
 import { GITHUB_RELEASES_URL, getSafeReleaseUrl } from "../../shared/releases";
 
 const getNativeBridge = () => window.timeBro ?? window.jiraWeekTracker;
+type NativeBridge = NonNullable<ReturnType<typeof getNativeBridge>>;
+type NativeBridgeMethod = keyof NativeBridge;
+
+const getNativeBridgeWithMethod = <Method extends NativeBridgeMethod>(method: Method) => {
+  const bridges = [window.timeBro, window.jiraWeekTracker];
+  return bridges.find((bridge): bridge is NativeBridge & Required<Pick<NativeBridge, Method>> => {
+    if (!bridge) {
+      return false;
+    }
+
+    return typeof bridge[method] === "function";
+  });
+};
+
 const rendererPreviewVersion = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const nativeApi = {
@@ -75,10 +89,17 @@ export const nativeApi = {
   },
 
   syncBitbucketReviews(request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> {
-    const bridge = getNativeBridge();
+    const bridge = getNativeBridgeWithMethod("syncBitbucketReviews");
 
     if (!bridge) {
-      return Promise.reject(new Error("Open the Electron app to sync Bitbucket review sessions."));
+      const hasStaleBridge = Boolean(getNativeBridge());
+      return Promise.reject(
+        new Error(
+          hasStaleBridge
+            ? "Restart TimeBro to finish enabling Bitbucket review sync. The current window is using an older native bridge."
+            : "Open the Electron app to sync Bitbucket review sessions."
+        )
+      );
     }
 
     return bridge.syncBitbucketReviews(request);
