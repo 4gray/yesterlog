@@ -11,7 +11,7 @@ export interface DemoConfig {
 
 const DEFAULT_SEED = "release";
 const DEFAULT_TODAY_KEY = "2026-06-17";
-const VIEWS: AppView[] = ["today", "week", "review", "tickets", "reports", "settings"];
+const VIEWS: AppView[] = ["today", "week", "month", "review", "tickets", "reports", "settings"];
 const THEMES: ThemeMode[] = ["light", "dark"];
 
 const isAppView = (value: string | null): value is AppView => Boolean(value && VIEWS.includes(value as AppView));

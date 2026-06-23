@@ -25,6 +25,7 @@ import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
 import { SnackbarStack, type SnackbarKind, type SnackbarNotification } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
+import { MonthView } from "./components/MonthView";
 import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeView";
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
@@ -40,6 +41,7 @@ import {
 } from "./domain/bitbucketReview";
 import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
+import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
 import {
   getFavoriteKeys,
   getBitbucketReviewResult,
@@ -195,6 +197,8 @@ export const App = () => {
   const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [weekStart, setWeekStart] = useState(() => demoScenario?.weekStart ?? getWeekBounds(currentDate).weekStart);
+  const [monthAnchor, setMonthAnchor] = useState(() => getMonthAnchor(currentDate));
+  const [monthState, setMonthState] = useState<MonthState | undefined>();
   const [weekOverride, setWeekOverride] = useState<WeekOverride>(() => ({
     ...(demoScenario?.weekOverride ?? {
       weekKey: toLocalDateKey(getWeekBounds(currentDate).weekStart),
@@ -762,6 +766,65 @@ export const App = () => {
     };
   }, [demoScenario, isBooting, showError, weekStart]);
 
+  // Build the month grid by aggregating every Monday-week that overlaps the
+  // anchored month. The visible week reuses the in-memory weekState (freshest,
+  // includes unsaved demo notes); the rest load from local storage.
+  useEffect(() => {
+    if (view !== "month" || isBooting) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMonth = async () => {
+      const weekStarts = getMonthWeekStarts(monthAnchor);
+      const weekStates = await Promise.all(
+        weekStarts.map(async (start) => {
+          const weekKey = toLocalDateKey(start);
+          if (weekKey === weekState.weekKey) {
+            return weekState;
+          }
+
+          if (demoScenario) {
+            const isDemoWeek = weekKey === toLocalDateKey(demoScenario.weekStart);
+            return buildWeekState(
+              start,
+              settings,
+              isDemoWeek ? demoScenario.weekOverride : { weekKey, skippedDates: [] },
+              isDemoWeek ? demoScenario.syncResult : undefined,
+              [],
+              currentDate
+            );
+          }
+
+          const [storedOverride, storedSyncResult, storedPersonalNotes] = await Promise.all([
+            getWeekOverride(weekKey),
+            getSyncResult(weekKey),
+            getPersonalNotes(weekKey)
+          ]);
+          return buildWeekState(start, settings, storedOverride, storedSyncResult, storedPersonalNotes, currentDate);
+        })
+      );
+
+      if (!isMounted) {
+        return;
+      }
+
+      setMonthState(buildMonthState(monthAnchor, currentDate, settings, weekStates));
+    };
+
+    loadMonth().catch((error) => {
+      console.error(error);
+      if (isMounted) {
+        showError("Unable to load the selected month.");
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentDate, demoScenario, isBooting, monthAnchor, settings, showError, view, weekState]);
+
   useEffect(() => {
     if (demoScenario || isBooting || startupSyncCheckedRef.current) {
       return;
@@ -865,9 +928,29 @@ export const App = () => {
     setWeekStart((current) => addDays(current, 7));
   };
 
+  const goToPreviousMonth = () => {
+    setMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+  };
+
+  const goToCurrentMonth = () => {
+    setMonthAnchor(getMonthAnchor(currentDate));
+  };
+
+  const openWeekFromMonth = (date: Date) => {
+    goToWeek(date);
+    setView("week");
+  };
+
   const handleViewChange = (nextView: AppView) => {
     if (nextView === "today" || nextView === "tickets") {
       goToCurrentWeek();
+    }
+    if (nextView === "month") {
+      setMonthAnchor(getMonthAnchor(currentDate));
     }
     setView(nextView);
   };
@@ -1618,6 +1701,20 @@ export const App = () => {
               onToggleSkipped={handleToggleSkipped}
               onDockLog={handleAddWorklog}
             />
+          ) : view === "month" ? (
+            monthState ? (
+              <MonthView
+                monthState={monthState}
+                onSelectWeek={openWeekFromMonth}
+                onPreviousMonth={goToPreviousMonth}
+                onCurrentMonth={goToCurrentMonth}
+                onNextMonth={goToNextMonth}
+              />
+            ) : (
+              <div className="view" style={{ display: "grid", placeItems: "center" }}>
+                <span className="sync-label">LOADING…</span>
+              </div>
+            )
           ) : view === "review" ? (
             <ReviewView
               weekKey={weekState.weekKey}
