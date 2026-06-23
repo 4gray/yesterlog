@@ -8,6 +8,11 @@ const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
   jiraEmail: "dev@example.com",
   jiraApiToken: "jira-token-123",
+  bitbucketEmail: "dev@example.com",
+  bitbucketApiToken: "bb-token-123",
+  bitbucketWorkspace: "team",
+  bitbucketRepositories: "explorer-web, explorer-core",
+  bitbucketReviewBucketIssueKey: "TEAM-77",
   weeklyTargetHours: 40,
   workingDays: [1, 2, 3, 4, 5],
   reminderTime: "17:00",
@@ -30,7 +35,9 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       onDraftChange={() => undefined}
       onSave={() => undefined}
       onTestConnection={() => undefined}
+      onTestBitbucketConnection={() => undefined}
       isTesting={false}
+      isTestingBitbucket={false}
       effectiveTheme="dark"
       onSelectTheme={() => undefined}
       updateInfo={updateInfo}
@@ -54,6 +61,22 @@ describe("SettingsView", () => {
     expect(markup).toContain('type="password"');
     expect(markup).toContain('aria-label="Show Jira API token"');
     expect(markup).toContain("jira-token-123");
+  });
+
+  it("renders optional Bitbucket review settings and required scope copy", () => {
+    const markup = renderSettings();
+
+    expect(markup).toContain("Bitbucket Cloud review");
+    expect(markup).toContain("Choose Create API token with scopes");
+    expect(markup).toContain("Select Bitbucket Cloud as the app.");
+    expect(markup).toContain("read:user:bitbucket");
+    expect(markup).toContain("read:workspace:bitbucket");
+    expect(markup).toContain("read:repository:bitbucket");
+    expect(markup).toContain("read:pullrequest:bitbucket");
+    expect(markup).toContain("No Write, Admin, or Delete scopes are needed for Review.");
+    expect(markup).toContain("Show Bitbucket API token");
+    expect(markup).toContain("explorer-web, explorer-core");
+    expect(markup).toContain("Test Bitbucket");
   });
 
   it("renders current and latest app versions", () => {

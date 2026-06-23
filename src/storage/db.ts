@@ -1,12 +1,18 @@
-import type { AppSettings, PersonalNote, SyncResult, WeekOverride } from "../../shared/types";
+import type { AppSettings, BitbucketReviewSyncResult, PersonalNote, SyncResult, WeekOverride } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 
-type StoreName = "settings" | "weekOverrides" | "syncResults" | "favorites" | "personalNotes";
+type StoreName =
+  | "settings"
+  | "weekOverrides"
+  | "syncResults"
+  | "favorites"
+  | "personalNotes"
+  | "bitbucketReviewResults";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -39,6 +45,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("personalNotes")) {
         db.createObjectStore("personalNotes", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("bitbucketReviewResults")) {
+        db.createObjectStore("bitbucketReviewResults", { keyPath: "weekKey" });
       }
     };
 
@@ -103,6 +113,14 @@ export const getSyncResult = (weekKey: string) => {
 
 export const saveSyncResult = (result: SyncResult) => {
   return writeStore("syncResults", result);
+};
+
+export const getBitbucketReviewResult = (weekKey: string) => {
+  return readStore<BitbucketReviewSyncResult>("bitbucketReviewResults", weekKey);
+};
+
+export const saveBitbucketReviewResult = (result: BitbucketReviewSyncResult) => {
+  return writeStore("bitbucketReviewResults", result);
 };
 
 export const getFavoriteKeys = async (): Promise<string[]> => {

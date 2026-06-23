@@ -3,6 +3,9 @@ import type {
   AddWorklogResult,
   AppSettings,
   AppUpdateInfo,
+  BitbucketConnectionResult,
+  BitbucketReviewSyncRequest,
+  BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
@@ -39,6 +42,28 @@ export const nativeApi = {
     return bridge.testJiraConnection(settings);
   },
 
+  testBitbucketConnection(settings: AppSettings): Promise<BitbucketConnectionResult> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      const configured = Boolean(
+        settings.bitbucketEmail.trim() &&
+          settings.bitbucketApiToken.trim() &&
+          settings.bitbucketWorkspace.trim() &&
+          settings.bitbucketRepositories.trim()
+      );
+
+      return Promise.resolve({
+        ok: configured,
+        message: configured
+          ? "Renderer preview cannot reach Bitbucket; open the Electron app to verify the token."
+          : "Add your Bitbucket settings before testing."
+      });
+    }
+
+    return bridge.testBitbucketConnection(settings);
+  },
+
   syncJiraWorklogs(request: SyncRequest): Promise<SyncResult> {
     const bridge = getNativeBridge();
 
@@ -47,6 +72,16 @@ export const nativeApi = {
     }
 
     return bridge.syncJiraWorklogs(request);
+  },
+
+  syncBitbucketReviews(request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      return Promise.reject(new Error("Open the Electron app to sync Bitbucket review sessions."));
+    }
+
+    return bridge.syncBitbucketReviews(request);
   },
 
   fetchAssignedTickets(request: TicketsRequest): Promise<TicketsResult> {

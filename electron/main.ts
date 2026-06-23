@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, screen, shell } from "electron";
 import path from "node:path";
+import { syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
 import {
   addWorklog,
   deleteWorklog,
@@ -16,6 +17,7 @@ import { getSafeReleaseUrl } from "../shared/releases";
 import type {
   AddWorklogRequest,
   AppSettings,
+  BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -119,6 +121,14 @@ ipcMain.handle("jira:update-worklog", (_event, request: UpdateWorklogRequest) =>
 
 ipcMain.handle("jira:delete-worklog", (_event, request: DeleteWorklogRequest) => {
   return deleteWorklog(request);
+});
+
+ipcMain.handle("bitbucket:test-connection", (_event, settings: AppSettings) => {
+  return testBitbucketConnection(settings);
+});
+
+ipcMain.handle("bitbucket:sync-reviews", (_event, request: BitbucketReviewSyncRequest) => {
+  return syncBitbucketReviewSessions(request);
 });
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {

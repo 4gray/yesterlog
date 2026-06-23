@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  GitPullRequest,
   KeyRound,
   LockKeyhole,
   Loader2,
@@ -27,7 +28,9 @@ interface SettingsViewProps {
   onDraftChange: (settings: AppSettings) => void;
   onSave: () => void;
   onTestConnection: () => void;
+  onTestBitbucketConnection: () => void;
   isTesting: boolean;
+  isTestingBitbucket: boolean;
   effectiveTheme: ThemeMode;
   onSelectTheme: (theme: ThemeMode) => void;
   updateInfo?: AppUpdateInfo;
@@ -49,6 +52,14 @@ const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
 ];
 
 const API_TOKEN_URL = "https://id.atlassian.com/manage-profile/security/api-tokens";
+const BITBUCKET_SCOPES_URL = "https://support.atlassian.com/bitbucket-cloud/docs/api-token-permissions/";
+
+const BITBUCKET_REQUIRED_SCOPES = [
+  { area: "User", level: "Read", apiScope: "read:user:bitbucket" },
+  { area: "Workspace", level: "Read", apiScope: "read:workspace:bitbucket" },
+  { area: "Repository", level: "Read", apiScope: "read:repository:bitbucket" },
+  { area: "Pull request", level: "Read", apiScope: "read:pullrequest:bitbucket" }
+];
 
 const formatReleaseVersion = (version?: string) => {
   const trimmed = version?.trim();
@@ -91,7 +102,9 @@ export const SettingsView = ({
   onDraftChange,
   onSave,
   onTestConnection,
+  onTestBitbucketConnection,
   isTesting,
+  isTestingBitbucket,
   effectiveTheme,
   onSelectTheme,
   updateInfo,
@@ -104,6 +117,7 @@ export const SettingsView = ({
   isImportingPersonalNotes
 }: SettingsViewProps) => {
   const [showJiraApiToken, setShowJiraApiToken] = useState(false);
+  const [showBitbucketApiToken, setShowBitbucketApiToken] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
@@ -227,6 +241,143 @@ export const SettingsView = ({
             </button>
           </div>
 
+        </form>
+
+        <form className="settings-panel" onSubmit={(event) => event.preventDefault()}>
+          <div className="section-title">
+            <GitPullRequest size={16} />
+            <span>Bitbucket Cloud review</span>
+          </div>
+
+          <div className="auth-primer">
+            <div className="auth-primer-icon">
+              <GitPullRequest size={18} />
+            </div>
+            <div>
+              <strong>Optional review ledger</strong>
+              <p>
+                Add a scoped Bitbucket token to surface PR review sessions. TimeBro only reads Bitbucket activity and
+                never writes back to Bitbucket.
+              </p>
+            </div>
+          </div>
+
+          <label>
+            <span>Bitbucket email</span>
+            <input
+              type="email"
+              placeholder="you@company.com"
+              value={draft.bitbucketEmail}
+              onChange={(event) => updateField("bitbucketEmail", event.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>Bitbucket API token</span>
+            <div className="settings-token">
+              <input
+                type={showBitbucketApiToken ? "text" : "password"}
+                placeholder="Paste a scoped Bitbucket token"
+                value={draft.bitbucketApiToken}
+                onChange={(event) => updateField("bitbucketApiToken", event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={() => setShowBitbucketApiToken((visible) => !visible)}
+                aria-label={showBitbucketApiToken ? "Hide Bitbucket API token" : "Show Bitbucket API token"}
+                aria-pressed={showBitbucketApiToken}
+                title={showBitbucketApiToken ? "Hide token" : "Show token"}
+              >
+                {showBitbucketApiToken ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
+            <small className="field-hint-text">
+              Choose Create API token with scopes, select Bitbucket Cloud, then grant only the read scopes below.
+            </small>
+          </label>
+
+          <div className="scope-guide">
+            <div className="scope-guide-title">Bitbucket token setup</div>
+            <ol>
+              <li>Open Create API token.</li>
+              <li>Choose Create API token with scopes.</li>
+              <li>Select Bitbucket Cloud as the app.</li>
+              <li>Optionally restrict the token to your Bitbucket workspace.</li>
+              <li>Select these permissions only:</li>
+            </ol>
+            <div className="scope-list" aria-label="Required Bitbucket API token scopes">
+              {BITBUCKET_REQUIRED_SCOPES.map((scope) => (
+                <div className="scope-row" key={scope.apiScope}>
+                  <span>{scope.area}</span>
+                  <strong>{scope.level}</strong>
+                  <code>{scope.apiScope}</code>
+                </div>
+              ))}
+            </div>
+            <p>No Write, Admin, or Delete scopes are needed for Review.</p>
+          </div>
+
+          <label>
+            <span>Workspace</span>
+            <input
+              type="text"
+              placeholder="workspace-slug"
+              value={draft.bitbucketWorkspace}
+              onChange={(event) => updateField("bitbucketWorkspace", event.target.value)}
+              spellCheck={false}
+            />
+          </label>
+
+          <label>
+            <span>Repositories</span>
+            <input
+              type="text"
+              placeholder="explorer-web, explorer-core"
+              value={draft.bitbucketRepositories}
+              onChange={(event) => updateField("bitbucketRepositories", event.target.value)}
+              spellCheck={false}
+            />
+            <small className="field-hint-text">Comma or newline separated repository slugs.</small>
+          </label>
+
+          <label>
+            <span>Review bucket issue</span>
+            <input
+              type="text"
+              placeholder="TEAM-123 (optional)"
+              value={draft.bitbucketReviewBucketIssueKey}
+              onChange={(event) => updateField("bitbucketReviewBucketIssueKey", event.target.value)}
+              spellCheck={false}
+            />
+            <small className="field-hint-text">Used only when Review logs to a shared code-review Jira ticket.</small>
+          </label>
+
+          <div className="privacy-promise">
+            <LockKeyhole size={17} />
+            <p>Bitbucket credentials stay in IndexedDB and are sent only to api.bitbucket.org during test or review sync.</p>
+          </div>
+
+          <div className="inline-actions">
+            <a className="secondary-button" href={API_TOKEN_URL} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} />
+              Create API token
+            </a>
+            <a className="secondary-button" href={BITBUCKET_SCOPES_URL} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} />
+              View scopes
+            </a>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onTestBitbucketConnection}
+              disabled={isTestingBitbucket}
+            >
+              {isTestingBitbucket ? <Loader2 className="spin" size={16} /> : <TestTube2 size={16} />}
+              Test Bitbucket
+            </button>
+          </div>
         </form>
 
         <div className="settings-panel">
