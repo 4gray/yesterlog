@@ -192,8 +192,10 @@ export const TicketPickerItem = ({
     className={`ticket-picker-item ${ticket.key === activeTicketKey ? "active" : ""}`}
     onClick={() => onSelect(ticket)}
   >
-    <span className="composer-target-key">{ticket.key}</span>
-    <IssueTypeBadge issueType={ticket.issueType} />
+    <span className="ticket-picker-key-stack">
+      <span className="composer-target-key">{ticket.key}</span>
+      <IssueTypeBadge issueType={ticket.issueType} />
+    </span>
     <span className="ticket-picker-copy">
       <span className="ticket-picker-summary" title={ticket.summary}>
         {ticket.summary}

@@ -2156,6 +2156,27 @@ a {
   background: var(--line);
 }
 
+.ticket-picker-key-stack {
+  flex: 0 0 74px;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
+}
+
+.ticket-picker-key-stack .composer-target-key {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-picker-key-stack .issue-type-badge {
+  max-width: 100%;
+}
+
 .ticket-picker-copy {
   flex: 1;
   min-width: 0;

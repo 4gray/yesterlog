@@ -191,6 +191,26 @@ describe("buildTicketPickerGroups", () => {
     expect(markup).toContain("Assignee: Sam Rivera");
   });
 
+  it("stacks the issue type under the ticket key", () => {
+    const markup = renderToStaticMarkup(
+      createElement(TicketPickerItem, {
+        ticket: searchedTicket,
+        showAssignee: true,
+        onSelect: () => undefined
+      })
+    );
+
+    const keyStackIndex = markup.indexOf('class="ticket-picker-key-stack"');
+    const keyIndex = markup.indexOf(">OPS-77<", keyStackIndex);
+    const issueTypeIndex = markup.indexOf(">SUB<", keyIndex);
+    const copyIndex = markup.indexOf('class="ticket-picker-copy"', issueTypeIndex);
+
+    expect(keyStackIndex).toBeGreaterThan(-1);
+    expect(keyIndex).toBeGreaterThan(keyStackIndex);
+    expect(issueTypeIndex).toBeGreaterThan(keyIndex);
+    expect(copyIndex).toBeGreaterThan(issueTypeIndex);
+  });
+
   it("keeps assigned-only ticket rows compact", () => {
     const markup = renderToStaticMarkup(
       createElement(TicketPickerItem, {
