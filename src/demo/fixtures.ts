@@ -25,6 +25,17 @@ export interface DemoScenario {
 
 const DEMO_JIRA_BASE_URL = "https://timebro-demo.example.test";
 const ACCOUNT_ID = "demo-account-001";
+const DEMO_ASSIGNEES: Record<string, string> = {
+  DOC: "Mina Park",
+  FTDM: "Demo Timekeeper",
+  INT: "Noah Klein",
+  MOB: "Iris Chen",
+  OPS: "Sam Rivera",
+  PAY: "Anika Shah",
+  QA: "Leo Martins",
+  UX: "Rae Morgan",
+  WEB: "Jon Bell"
+};
 
 const ISSUE_TYPES: Record<string, JiraIssueTypeInfo> = {
   epic: { name: "Epic", hierarchyLevel: 1 },
@@ -83,6 +94,7 @@ const ticket = ({
   statusCategory,
   loggedSecondsTotal,
   createdAt,
+  assigneeDisplayName,
   issueType
 }: Omit<JiraTicket, "projectKey" | "url">): JiraTicket => ({
   id,
@@ -94,6 +106,7 @@ const ticket = ({
   statusCategory,
   loggedSecondsTotal,
   createdAt,
+  assigneeDisplayName: assigneeDisplayName ?? DEMO_ASSIGNEES[key.split("-")[0]],
   issueType,
   url: ticketUrl(key)
 });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { JiraTicket } from "../../shared/types";
-import { buildTicketPickerGroups, limitTicketPickerGroups } from "./TicketPicker";
+import { buildTicketPickerGroups, limitTicketPickerGroups, TicketPickerItem } from "./TicketPicker";
 
 const assignedTicket: JiraTicket = {
   id: "1001",
@@ -12,6 +14,7 @@ const assignedTicket: JiraTicket = {
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   createdAt: "2026-06-10T09:00:00.000Z",
+  assigneeDisplayName: "Demo Timekeeper",
   issueType: { name: "Task", hierarchyLevel: 0 },
   url: "https://elevait.atlassian.net/browse/FTDM-397"
 };
@@ -26,6 +29,7 @@ const searchedTicket: JiraTicket = {
   statusCategory: "new",
   loggedSecondsTotal: 0,
   createdAt: "2026-06-18T09:00:00.000Z",
+  assigneeDisplayName: "Sam Rivera",
   issueType: { name: "Sub-task", subtask: true, hierarchyLevel: -1 },
   url: "https://elevait.atlassian.net/browse/OPS-77"
 };
@@ -172,5 +176,31 @@ describe("buildTicketPickerGroups", () => {
       ["OPS-77", "OPS-12"],
       ["FTDM-397"]
     ]);
+  });
+
+  it("renders assignee metadata when broad ticket browsing is active", () => {
+    const markup = renderToStaticMarkup(
+      createElement(TicketPickerItem, {
+        ticket: searchedTicket,
+        showAssignee: true,
+        onSelect: () => undefined
+      })
+    );
+
+    expect(markup).toContain("Pair on incident review notes");
+    expect(markup).toContain("Assignee: Sam Rivera");
+  });
+
+  it("keeps assigned-only ticket rows compact", () => {
+    const markup = renderToStaticMarkup(
+      createElement(TicketPickerItem, {
+        ticket: assignedTicket,
+        showAssignee: false,
+        onSelect: () => undefined
+      })
+    );
+
+    expect(markup).toContain("Restructure the access domain in nx monorepo");
+    expect(markup).not.toContain("Assignee:");
   });
 });

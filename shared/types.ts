@@ -121,6 +121,7 @@ export interface JiraTicket {
   statusCategory: TicketStatusCategory;
   loggedSecondsTotal: number;
   createdAt?: string;
+  assigneeDisplayName?: string;
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
   url: string;

@@ -57,6 +57,7 @@ interface JiraTicketIssue {
     issuetype?: JiraIssueTypeResponse;
     parent?: JiraParentResponse;
     created?: string;
+    assignee?: { displayName?: string } | null;
   };
 }
 
@@ -437,7 +438,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   };
 };
 
-const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created";
+const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created,assignee";
 const TICKET_PAGE_SIZE = 100;
 const ASSIGNED_OPEN_TICKET_LIMIT = 500;
 const RECENTLY_CLOSED_TICKET_LIMIT = 50;
@@ -510,6 +511,7 @@ const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => 
     statusCategory: normalizeStatusCategory(fields.status?.statusCategory?.key),
     loggedSecondsTotal,
     createdAt: fields.created,
+    assigneeDisplayName: fields.assignee?.displayName?.trim() || undefined,
     issueType: normalizeIssueType(fields.issuetype),
     epic: normalizeEpic(settings, fields.parent),
     url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`

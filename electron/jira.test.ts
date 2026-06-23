@@ -97,7 +97,7 @@ describe("searchJiraTickets", () => {
     expect(requestedUrl.searchParams.get("jql")).toBe("created <= now() ORDER BY created ASC");
   });
 
-  it("requests and normalizes Jira issue status fields", async () => {
+  it("requests and normalizes Jira issue status and assignee fields", async () => {
     const fetchMock = vi.fn(async () =>
       jiraSearchResponse([
         {
@@ -109,7 +109,8 @@ describe("searchJiraTickets", () => {
             status: {
               name: "Refused",
               statusCategory: { key: "completed" }
-            }
+            },
+            assignee: { displayName: "Sam Rivera" }
           }
         }
       ])
@@ -124,10 +125,12 @@ describe("searchJiraTickets", () => {
 
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
     expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("status");
+    expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("assignee");
     expect(result.issues[0]).toMatchObject({
       key: "OPS-77",
       statusName: "Refused",
-      statusCategory: "done"
+      statusCategory: "done",
+      assigneeDisplayName: "Sam Rivera"
     });
   });
 });

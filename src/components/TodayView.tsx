@@ -7,6 +7,7 @@ import { TicketKeyLink } from "./TicketKeyLink";
 
 interface LogPayload {
   issueKey: string;
+  ticket: JiraTicket;
   timeSpentSeconds: number;
   startedISO: string;
   comment?: string;
@@ -154,6 +155,7 @@ export const TodayView = ({
     }
     const ok = await onLog({
       issueKey: activeTicket.key,
+      ticket: activeTicket,
       timeSpentSeconds: durationSeconds,
       startedISO,
       comment: worklogComment.trim() || undefined

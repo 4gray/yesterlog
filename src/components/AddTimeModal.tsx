@@ -7,6 +7,7 @@ import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
 interface LogPayload {
   issueKey: string;
+  ticket: JiraTicket;
   timeSpentSeconds: number;
   startedISO: string;
   comment?: string;
@@ -314,6 +315,7 @@ export const AddTimeModal = ({
     }
     const ok = await onLog({
       issueKey: activeTicket.key,
+      ticket: activeTicket,
       timeSpentSeconds: durationSeconds,
       startedISO,
       comment: note.trim() || undefined

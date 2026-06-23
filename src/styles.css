@@ -2156,14 +2156,30 @@ a {
   background: var(--line);
 }
 
+.ticket-picker-copy {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
 .ticket-picker-summary {
   font-size: 13px;
   color: var(--text-strong);
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-picker-assignee {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--dim);
 }
 
 .ticket-picker-item .ticket-status-badge {

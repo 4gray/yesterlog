@@ -171,6 +171,39 @@ export const buildTicketPickerGroups = ({
   return groups;
 };
 
+export const getTicketAssigneeLabel = (ticket: JiraTicket) =>
+  `Assignee: ${ticket.assigneeDisplayName?.trim() || "Unassigned"}`;
+
+interface TicketPickerItemProps {
+  ticket: JiraTicket;
+  activeTicketKey?: string;
+  showAssignee: boolean;
+  onSelect: (ticket: JiraTicket) => void;
+}
+
+export const TicketPickerItem = ({
+  ticket,
+  activeTicketKey,
+  showAssignee,
+  onSelect
+}: TicketPickerItemProps) => (
+  <button
+    type="button"
+    className={`ticket-picker-item ${ticket.key === activeTicketKey ? "active" : ""}`}
+    onClick={() => onSelect(ticket)}
+  >
+    <span className="composer-target-key">{ticket.key}</span>
+    <IssueTypeBadge issueType={ticket.issueType} />
+    <span className="ticket-picker-copy">
+      <span className="ticket-picker-summary" title={ticket.summary}>
+        {ticket.summary}
+      </span>
+      {showAssignee && <span className="ticket-picker-assignee">{getTicketAssigneeLabel(ticket)}</span>}
+    </span>
+    <TicketStatusBadge statusName={ticket.statusName} statusCategory={ticket.statusCategory} />
+  </button>
+);
+
 interface TicketPickerProps {
   variant: "composer" | "modal";
   activeTicket?: JiraTicket;
@@ -478,17 +511,13 @@ export const TicketPicker = ({
                 <div className="ticket-picker-group" key={group.id}>
                   {group.label && <div className="ticket-picker-label">{group.label}</div>}
                   {group.tickets.map((ticket) => (
-                    <button
+                    <TicketPickerItem
                       key={`${group.id}-${ticket.key}`}
-                      type="button"
-                      className={`ticket-picker-item ${ticket.key === activeTicket?.key ? "active" : ""}`}
-                      onClick={() => chooseTicket(ticket)}
-                    >
-                      <span className="composer-target-key">{ticket.key}</span>
-                      <IssueTypeBadge issueType={ticket.issueType} />
-                      <span className="ticket-picker-summary">{ticket.summary}</span>
-                      <TicketStatusBadge statusName={ticket.statusName} statusCategory={ticket.statusCategory} />
-                    </button>
+                      ticket={ticket}
+                      activeTicketKey={activeTicket?.key}
+                      showAssignee={!assignedOnly}
+                      onSelect={chooseTicket}
+                    />
                   ))}
                 </div>
               ))

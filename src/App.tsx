@@ -26,6 +26,7 @@ import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekCsv, parsePersonalNotesCsv } from "./domain/personalNotesCsv";
+import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import {
   getFavoriteKeys,
@@ -473,9 +474,10 @@ export const App = () => {
       }
 
       if (demoScenario) {
+        const allDemoTickets = [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed];
         const demoTickets = assignedOnly
-          ? demoScenario.tickets.inProgress
-          : [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed];
+          ? allDemoTickets.filter((ticket) => ticket.assigneeDisplayName === demoScenario.syncResult.displayName)
+          : allDemoTickets;
         const byKey = new Map<string, JiraTicket>();
         for (const ticket of demoTickets) {
           byKey.set(ticket.key, ticket);
@@ -937,6 +939,7 @@ export const App = () => {
 
   const handleAddWorklog = async (payload: {
     issueKey: string;
+    ticket: JiraTicket;
     timeSpentSeconds: number;
     startedISO: string;
     comment?: string;
@@ -950,9 +953,23 @@ export const App = () => {
         return true;
       }
 
-      const result = await nativeApi.addWorklog({ settings, ...payload });
+      const { ticket, ...worklogPayload } = payload;
+      const result = await nativeApi.addWorklog({ settings, ...worklogPayload });
       showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
-      await runSync(settings, { queueAfterCurrent: true });
+      const syncedResult = await runSync(settings, { queueAfterCurrent: true });
+      const mergedSyncResult = mergeCreatedWorklogIntoSyncResult(syncedResult ?? syncResult, {
+        ticket,
+        worklogId: result.worklogId,
+        startedISO: payload.startedISO,
+        timeSpentSeconds: result.timeSpentSeconds,
+        comment: payload.comment,
+        syncedAtISO: new Date().toISOString()
+      });
+
+      if (mergedSyncResult && mergedSyncResult !== syncedResult && mergedSyncResult !== syncResult) {
+        await saveSyncResult(mergedSyncResult);
+        setSyncResult(mergedSyncResult);
+      }
       await loadTickets();
       return true;
     } catch (error) {
