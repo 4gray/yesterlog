@@ -319,6 +319,17 @@ export const App = () => {
     return [...map.values()];
   }, [favoriteKeys, selectedTicket, tickets]);
 
+  // Active-work dock: in-progress tickets first, then recently closed (dimmed).
+  const dockTickets = useMemo(() => {
+    const byKey = new Map<string, JiraTicket>();
+    for (const ticket of [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])]) {
+      if (!byKey.has(ticket.key)) {
+        byKey.set(ticket.key, ticket);
+      }
+    }
+    return [...byKey.values()];
+  }, [tickets]);
+
   const addTimeDateOptions = weekState.activeWorkingDates;
 
   const touchedNotLogged = useMemo(() => {
@@ -1332,6 +1343,9 @@ export const App = () => {
               currentDate={currentDate}
               isSyncing={isSyncing}
               isConfigured={isConfigured}
+              dockTickets={dockTickets}
+              activeTicketCount={tickets?.inProgress.length ?? 0}
+              isLogging={isLogging}
               onSync={handleSync}
               onPreviousWeek={goToPreviousWeek}
               onCurrentWeek={goToCurrentWeek}
@@ -1340,6 +1354,7 @@ export const App = () => {
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
               onToggleSkipped={handleToggleSkipped}
+              onDockLog={handleAddWorklog}
             />
           ) : view === "tickets" ? (
             <TicketsView

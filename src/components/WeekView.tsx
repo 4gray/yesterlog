@@ -1,15 +1,41 @@
-import { Loader2, MessageSquare, Pencil, PenLine, Plus, RotateCw } from "lucide-react";
-import type { DayTrackingSummary, JiraWorklog, PersonalNote, SyncResult, WeekState } from "../../shared/types";
+import { useCallback, useMemo, useState } from "react";
+import { Ban, Loader2, MessageSquare, Pencil, PenLine, Plus, RotateCw } from "lucide-react";
+import type {
+  DayTrackingSummary,
+  JiraTicket,
+  JiraWorklog,
+  PersonalNote,
+  SyncResult,
+  WeekState
+} from "../../shared/types";
 import {
   formatDuration,
   formatHours,
   formatWeekRangeCompact,
   fromLocalDateKey,
   getIsoWeekNumber,
+  SHORT_WEEKDAY_LABELS,
   toLocalDateKey
 } from "../utils/date";
+import { ActiveWorkDock } from "./ActiveWorkDock";
+import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
+import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
 import { TicketKeyLink } from "./TicketKeyLink";
+import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
 import { WeekNavigator } from "./WeekNavigator";
+
+const DOCK_OPEN_STORAGE_KEY = "timebro-active-dock";
+const DOCK_INITIAL_SHOWN = 6;
+const DOCK_PAGE_SIZE = 4;
+const LANE_HOURS = [0.5, 1, 2, 4] as const;
+
+export interface DockLogPayload {
+  issueKey: string;
+  ticket: JiraTicket;
+  timeSpentSeconds: number;
+  startedISO: string;
+  comment?: string;
+}
 
 interface WeekViewProps {
   weekState: WeekState;
@@ -17,6 +43,9 @@ interface WeekViewProps {
   currentDate?: Date;
   isSyncing: boolean;
   isConfigured: boolean;
+  dockTickets?: JiraTicket[];
+  activeTicketCount?: number;
+  isLogging?: boolean;
   onSync: () => void;
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
@@ -25,7 +54,17 @@ interface WeekViewProps {
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
+  onDockLog?: (payload: DockLogPayload) => Promise<boolean>;
 }
+
+const readDockOpen = () => {
+  try {
+    const stored = localStorage.getItem(DOCK_OPEN_STORAGE_KEY);
+    return stored == null ? true : stored === "1";
+  } catch {
+    return true;
+  }
+};
 
 const PALETTE = [
   { seg: "#5b8cff", text: "#8fb0ff" },
@@ -95,7 +134,10 @@ const DayColumn = ({
           : "is-empty";
 
   return (
-    <div className={`day-col ${day.isToday ? "is-today" : ""} ${isFuture ? "is-future" : ""} ${day.isSkipped ? "is-skipped" : ""}`}>
+    <div
+      data-drop-day={day.dateKey}
+      className={`day-col ${day.isToday ? "is-today" : ""} ${isFuture ? "is-future" : ""} ${day.isSkipped ? "is-skipped" : ""}`}
+    >
       <div className="day-col-head">
         <div>
           <div className="day-name">{day.isToday ? "TODAY" : day.weekdayName.slice(0, 3).toUpperCase()}</div>
@@ -301,6 +343,9 @@ export const WeekView = ({
   currentDate,
   isSyncing,
   isConfigured,
+  dockTickets = [],
+  activeTicketCount,
+  isLogging = false,
   onSync,
   onPreviousWeek,
   onCurrentWeek,
@@ -308,12 +353,14 @@ export const WeekView = ({
   onAddTime,
   onEditWorklog,
   onEditPersonalNote,
-  onToggleSkipped
+  onToggleSkipped,
+  onDockLog
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
   const rangeLabel = formatWeekRangeCompact(weekStart);
-  const todayKey = toLocalDateKey(currentDate ?? new Date());
+  const now = currentDate ?? new Date();
+  const todayKey = toLocalDateKey(now);
   const pct =
     weekState.weeklyTargetHours > 0
       ? Math.min((weekState.trackedWeekHours / weekState.weeklyTargetHours) * 100, 100)
@@ -321,6 +368,93 @@ export const WeekView = ({
   const dashOffset = RING_CIRCUMFERENCE * (1 - pct / 100);
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
+
+  const [dockOpen, setDockOpen] = useState(readDockOpen);
+  const [dockShown, setDockShown] = useState(DOCK_INITIAL_SHOWN);
+  const [quickLog, setQuickLog] = useState<QuickLogContext | null>(null);
+
+  const dockColorMap = useMemo(() => buildDockColorMap(dockTickets), [dockTickets]);
+  const dropDayMeta = useMemo(() => {
+    const map = new Map<string, { droppable: boolean; label: string; shortLabel: string }>();
+    for (const day of weekState.days) {
+      const date = fromLocalDateKey(day.dateKey);
+      const weekdayShort = day.weekdayName.slice(0, 3).toUpperCase();
+      const monthShort = date.toLocaleString(undefined, { month: "short" }).toUpperCase();
+      map.set(day.dateKey, {
+        droppable: day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey <= todayKey,
+        label: `${weekdayShort} · ${date.getDate()} ${monthShort}`,
+        shortLabel: `${weekdayShort} ${date.getDate()}`
+      });
+    }
+    return map;
+  }, [todayKey, weekState.days]);
+
+  const isDroppable = useCallback((dateKey: string) => dropDayMeta.get(dateKey)?.droppable ?? false, [dropDayMeta]);
+
+  const handleDrop = useCallback(
+    ({ ticket, dateKey, hours }: DropTarget) => {
+      const meta = dropDayMeta.get(dateKey);
+      setQuickLog({
+        ticketKey: ticket.key,
+        ticketSummary: ticket.summary,
+        dateKey,
+        dayLabel: meta?.label ?? dateKey,
+        hours: hours || 1,
+        comment: ""
+      });
+    },
+    [dropDayMeta]
+  );
+
+  const { dragging, hoverDay, hoverHours, hoverRect, isHoverBlocked, ghostRef, beginGrab } = useActiveWorkDrag({
+    isDroppable,
+    onDrop: handleDrop
+  });
+
+  const toggleDock = useCallback(() => {
+    setDockOpen((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(DOCK_OPEN_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const loadMoreDock = useCallback(
+    () => setDockShown((current) => Math.min(dockTickets.length, current + DOCK_PAGE_SIZE)),
+    [dockTickets.length]
+  );
+
+  const quickLogTicket = quickLog ? dockTickets.find((ticket) => ticket.key === quickLog.ticketKey) : undefined;
+  const quickLogColor = quickLog
+    ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
+    : DOCK_PALETTE[0];
+
+  const confirmQuickLog = useCallback(async () => {
+    if (!quickLog || !quickLogTicket || !onDockLog) {
+      return;
+    }
+    const started = fromLocalDateKey(quickLog.dateKey);
+    started.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    const success = await onDockLog({
+      issueKey: quickLogTicket.key,
+      ticket: quickLogTicket,
+      timeSpentSeconds: Math.round(quickLog.hours * 3600),
+      startedISO: started.toISOString(),
+      comment: quickLog.comment.trim() || undefined
+    });
+    if (success) {
+      setQuickLog(null);
+    }
+  }, [now, onDockLog, quickLog, quickLogTicket]);
+
+  const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
+  const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
+  const showLanes = Boolean(dragging && hoverDay && hoverRect && !isHoverBlocked);
+  const showBlocked = Boolean(dragging && hoverDay && hoverRect && isHoverBlocked);
 
   return (
     <div className="view">
@@ -408,6 +542,88 @@ export const WeekView = ({
           );
         })}
       </div>
+
+      {dockTickets.length > 0 && onDockLog && (
+        <ActiveWorkDock
+          tickets={dockTickets}
+          activeCount={activeTicketCount ?? dockTickets.length}
+          open={dockOpen}
+          shownCount={dockShown}
+          draggingKey={dragging?.key ?? null}
+          now={now}
+          onToggleOpen={toggleDock}
+          onLoadMore={loadMoreDock}
+          onGrabCard={beginGrab}
+        />
+      )}
+
+      {dragging && (
+        <>
+          <div
+            ref={ghostRef}
+            className="dock-ghost"
+            style={{ transform: "translate(-9999px, -9999px)" }}
+            aria-hidden="true"
+          >
+            <div className="dock-ghost-top">
+              <span className="dock-card-dot" style={{ background: ghostColor.seg }} />
+              <span className="dock-ghost-key" style={{ color: ghostColor.text }}>
+                {dragging.key}
+              </span>
+            </div>
+            <div className="dock-ghost-title">{dragging.summary}</div>
+          </div>
+
+          {showLanes && hoverRect && (
+            <div
+              className="drop-lanes"
+              style={{ left: hoverRect.left, top: hoverRect.top, width: hoverRect.width, height: hoverRect.height }}
+            >
+              {LANE_HOURS.map((value) => (
+                <div
+                  key={value}
+                  data-drop-day={hoverDay ?? ""}
+                  data-drop-hours={value}
+                  className={`drop-lane ${hoverHours === value ? "is-active" : ""}`}
+                >
+                  {value === 0.5 ? "0.5" : value}
+                  <span className="drop-lane-unit">h</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showBlocked && hoverRect && (
+            <div
+              className="drop-blocked"
+              style={{ left: hoverRect.left, top: hoverRect.top, width: hoverRect.width, height: hoverRect.height }}
+            >
+              <div>
+                <Ban size={20} strokeWidth={1.8} />
+                <div className="drop-blocked-label">Can’t log to {hoverMeta?.shortLabel ?? "this day"} — future day</div>
+              </div>
+            </div>
+          )}
+
+          {hoverRect && (
+            <div className="drop-tag" style={{ left: hoverRect.left + 8, top: hoverRect.top + 8 }}>
+              {hoverMeta?.shortLabel}
+            </div>
+          )}
+        </>
+      )}
+
+      {quickLog && (
+        <QuickLogSheet
+          context={quickLog}
+          color={quickLogColor}
+          isLogging={isLogging}
+          onChangeHours={(hours) => setQuickLog((current) => (current ? { ...current, hours } : current))}
+          onChangeComment={(comment) => setQuickLog((current) => (current ? { ...current, comment } : current))}
+          onCancel={() => setQuickLog(null)}
+          onConfirm={confirmQuickLog}
+        />
+      )}
     </div>
   );
 };
