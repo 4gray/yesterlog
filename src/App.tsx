@@ -46,6 +46,7 @@ import {
 } from "./domain/bitbucketReview";
 import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
+import { isRecentUpdateInfo, readCachedUpdateInfo, writeCachedUpdateInfo } from "./domain/updateCache";
 import { buildDefaultRecurringEvents, getRecurringCandidates, indexOccurrences } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
 import {
@@ -73,8 +74,8 @@ const isJiraConfigured = (settings: AppSettings) =>
 
 const THEME_STORAGE_KEY = "timebro-theme";
 const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
-const UPDATE_INFO_CACHE_KEY = "timebro-update-info";
-const AUTO_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+// The version this build is running; baked from package.json at build time.
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 const MAX_SNACKBARS = 4;
 
 type SnackbarOptions = Pick<SnackbarNotification, "actionLabel" | "actions" | "onAction" | "autoDismiss">;
@@ -192,39 +193,6 @@ const groupPersonalNotesByWeek = (notes: PersonalNote[]) => {
 };
 
 const formatPersonalNoteCount = (count: number) => `${count} personal ${count === 1 ? "note" : "notes"}`;
-
-const isRecentUpdateInfo = (info: AppUpdateInfo, now = Date.now()) => {
-  const checkedAt = Date.parse(info.checkedAt);
-  return Number.isFinite(checkedAt) && now - checkedAt < AUTO_UPDATE_CHECK_INTERVAL_MS;
-};
-
-const readCachedUpdateInfo = () => {
-  try {
-    const raw = localStorage.getItem(UPDATE_INFO_CACHE_KEY);
-    if (!raw) {
-      return undefined;
-    }
-
-    const parsed = JSON.parse(raw) as AppUpdateInfo;
-    return parsed.currentVersion && parsed.releasePageUrl && parsed.checkedAt && !parsed.error
-      ? parsed
-      : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-const writeCachedUpdateInfo = (info: AppUpdateInfo) => {
-  if (info.error) {
-    return;
-  }
-
-  try {
-    localStorage.setItem(UPDATE_INFO_CACHE_KEY, JSON.stringify(info));
-  } catch {
-    /* Ignore storage failures; update checking still works without a cache. */
-  }
-};
 
 const createDemoUpdateInfo = (updateAvailable = false): AppUpdateInfo => {
   const latestVersion = updateAvailable ? "1.3.0" : "1.0.0";
@@ -581,7 +549,7 @@ export const App = () => {
       }
 
       if (!options.force) {
-        const cachedUpdateInfo = readCachedUpdateInfo();
+        const cachedUpdateInfo = readCachedUpdateInfo(APP_VERSION);
         if (cachedUpdateInfo && isRecentUpdateInfo(cachedUpdateInfo)) {
           setUpdateInfo(cachedUpdateInfo);
           if (cachedUpdateInfo.updateAvailable) {
