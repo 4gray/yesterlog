@@ -12,6 +12,7 @@ import { isJiraConfigured } from "./app/appHelpers";
 import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
+import { useAppShellState } from "./app/useAppShellState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -35,7 +36,7 @@ import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
-import { Sidebar, type AppView } from "./components/Sidebar";
+import { Sidebar } from "./components/Sidebar";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
 
 // The version this build is running; baked from package.json at build time.
@@ -43,7 +44,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
-  const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
+  const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view, isDemo });
   const { settings, setSettings, settingsDraft, setSettingsDraft } = useAppSettingsState({ demoScenario });
   const { weekStart, setWeekStart, monthAnchor, setMonthAnchor, weekOverride, setWeekOverride } = useAppCalendarState({
     currentDate,
@@ -54,7 +55,6 @@ export const App = () => {
   const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
     isDemo
   });
-  const [isBooting, setIsBooting] = useState(() => !isDemo);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
