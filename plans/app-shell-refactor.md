@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Start with low-risk pure helpers from `App.tsx`, add focused unit tests, and keep the end-to-end release gate green before extracting hooks or view composition.
+Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Keep Jira sync and worklog write paths in `App.tsx` until their dependencies are mapped.
 
 ## Phases
 
@@ -16,8 +16,9 @@ Start with low-risk pure helpers from `App.tsx`, add focused unit tests, and kee
 4. Done: extract `useThemeMode` from `App.tsx` with storage, system preference, and demo-mode coverage.
 5. Done: extract `useLiveDate` from `App.tsx` with fake-timer coverage for ticking, demo freeze, and cleanup.
 6. Done: extract `useReleaseUpdates` from `App.tsx` with demo, cache, native success/error, and open-action coverage.
-7. Next: split larger data/action orchestration only after mapping storage, Jira sync, and ticket dependencies.
-8. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+7. Done: extract `useTickets` from `App.tsx` with loading, search, favorite, and derived-list coverage.
+8. Next: map Jira sync and worklog dependencies before extracting write-adjacent hooks.
+9. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -50,3 +51,9 @@ Phase 5:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo update release notes dialog and overflow
+
+Phase 6:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo tickets view, favorite toggle, and desktop/mobile overflow

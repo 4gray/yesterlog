@@ -12,13 +12,10 @@ import type {
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
-  TicketSortMode,
-  TicketsResult,
   WeekdayNumber,
   WeekOverride
 } from "../shared/types";
 import {
-  compareTicketsByCreated,
   formatPersonalNoteCount,
   formatSyncTime,
   groupPersonalNotesByWeek,
@@ -32,6 +29,7 @@ import { useLiveDate } from "./app/useLiveDate";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
+import { useTickets } from "./app/useTickets";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import type { RecurringEventDraft } from "./components/SettingsView";
@@ -71,7 +69,6 @@ import {
   getSyncResult,
   getWeekOverride,
   saveBitbucketReviewResult,
-  saveFavoriteKeys,
   savePersonalNotes,
   saveRecurringEvents,
   saveRecurringOccurrences,
@@ -111,11 +108,6 @@ export const App = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
   const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
-  const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
-  const [ticketsLoading, setTicketsLoading] = useState(false);
-  const [ticketsError, setTicketsError] = useState<string | undefined>();
-  const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => demoScenario?.favoriteKeys ?? []);
-  const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>(() => demoScenario?.selectedTicket);
   const [isLogging, setIsLogging] = useState(false);
   const [isLoggingReview, setIsLoggingReview] = useState(false);
   const [isDeletingWorklog, setIsDeletingWorklog] = useState(false);
@@ -154,6 +146,25 @@ export const App = () => {
     showSnackbar,
     showSuccess,
     showError
+  });
+  const {
+    tickets,
+    ticketsLoading,
+    ticketsError,
+    favoriteKeys,
+    setFavoriteKeys,
+    selectedTicket,
+    setSelectedTicket,
+    ticketOptions,
+    dockTickets,
+    activeTicketCount,
+    loadTickets,
+    searchTickets,
+    toggleFavorite
+  } = useTickets({
+    settings,
+    isBooting,
+    demoScenario
   });
 
   const weekState = useMemo(
@@ -245,110 +256,12 @@ export const App = () => {
   const todayPersonalNotes = todaySummary?.personalNotes ?? [];
   const todayTrackedHours = todaySummary?.trackedHours ?? (todayBucket?.trackedSeconds ?? 0) / 3600;
 
-  const ticketOptions = useMemo(() => {
-    const map = new Map<string, JiraTicket>();
-    const all = [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])];
-    if (selectedTicket) {
-      map.set(selectedTicket.key, selectedTicket);
-    }
-    for (const key of favoriteKeys) {
-      const ticket = all.find((candidate) => candidate.key === key);
-      if (ticket) {
-        map.set(key, ticket);
-      }
-    }
-    for (const ticket of tickets?.inProgress ?? []) {
-      map.set(ticket.key, ticket);
-    }
-    return [...map.values()];
-  }, [favoriteKeys, selectedTicket, tickets]);
-
-  // Active-work dock: in-progress tickets first, then recently closed (dimmed).
-  const dockTickets = useMemo(() => {
-    const byKey = new Map<string, JiraTicket>();
-    for (const ticket of [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])]) {
-      if (!byKey.has(ticket.key)) {
-        byKey.set(ticket.key, ticket);
-      }
-    }
-    return [...byKey.values()];
-  }, [tickets]);
-
   const addTimeDateOptions = weekState.activeWorkingDates;
 
   const touchedNotLogged = useMemo(() => {
     const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
     return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
   }, [tickets, todayWorklogs]);
-
-  const loadTickets = useCallback(async () => {
-    if (!isConfigured) {
-      setTickets(undefined);
-      setTicketsError(undefined);
-      return;
-    }
-
-    setTicketsLoading(true);
-    setTicketsError(undefined);
-
-    try {
-      const result = await nativeApi.fetchAssignedTickets({ settings });
-      setTickets(result);
-    } catch (error) {
-      setTicketsError(error instanceof Error ? error.message : "Unable to load tickets.");
-    } finally {
-      setTicketsLoading(false);
-    }
-  }, [isConfigured, settings]);
-
-  const handleSearchTickets = useCallback(
-    async (
-      query: string,
-      sortMode: TicketSortMode = "createdDesc",
-      limit = 20,
-      assignedOnly = false,
-      allowEmptyQuery = false
-    ) => {
-      const normalizedQuery = query.trim().toLowerCase();
-      const canBrowseWithoutQuery = allowEmptyQuery && normalizedQuery.length === 0;
-
-      if (!isConfigured || (normalizedQuery.length < 2 && !canBrowseWithoutQuery)) {
-        return [];
-      }
-
-      if (demoScenario) {
-        const allDemoTickets = [...demoScenario.tickets.inProgress, ...demoScenario.tickets.recentlyClosed];
-        const demoTickets = assignedOnly
-          ? allDemoTickets.filter((ticket) => ticket.assigneeDisplayName === demoScenario.syncResult.displayName)
-          : allDemoTickets;
-        const byKey = new Map<string, JiraTicket>();
-        for (const ticket of demoTickets) {
-          byKey.set(ticket.key, ticket);
-        }
-
-        const matches = canBrowseWithoutQuery
-          ? [...byKey.values()]
-          : [...byKey.values()].filter((ticket) =>
-              [ticket.key, ticket.summary, ticket.projectName, ticket.statusName].some((value) =>
-                value.toLowerCase().includes(normalizedQuery)
-              )
-            );
-
-        return [...matches].sort(compareTicketsByCreated(sortMode)).slice(0, limit);
-      }
-
-      const result = await nativeApi.searchJiraTickets({
-        settings,
-        query,
-        limit,
-        sortMode,
-        assignedOnly,
-        allowEmptyQuery
-      });
-      return result.issues;
-    },
-    [demoScenario, isConfigured, settings]
-  );
 
   const runSync = useCallback(
     async (
@@ -701,13 +614,6 @@ export const App = () => {
   }, [demoScenario, settings, todayKey, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
 
   useEffect(() => {
-    if (isBooting || demoScenario) {
-      return;
-    }
-    void loadTickets();
-  }, [demoScenario, isBooting, loadTickets]);
-
-  useEffect(() => {
     if (view === "review" && !isBitbucketReady) {
       setView("week");
     }
@@ -754,16 +660,6 @@ export const App = () => {
       setMonthAnchor(getMonthAnchor(currentDate));
     }
     setView(nextView);
-  };
-
-  const handleToggleFavorite = (key: string) => {
-    setFavoriteKeys((current) => {
-      const next = current.includes(key) ? current.filter((candidate) => candidate !== key) : [...current, key];
-      if (!demoScenario) {
-        void saveFavoriteKeys(next);
-      }
-      return next;
-    });
   };
 
   const handleLogTicket = (ticket: JiraTicket) => {
@@ -900,12 +796,7 @@ export const App = () => {
       setSettingsDraft(cleanedSettings);
       showSuccess(result.message);
       setWelcomeConnected(true);
-      setTicketsLoading(true);
-      setTicketsError(undefined);
-      nativeApi.fetchAssignedTickets({ settings: cleanedSettings })
-        .then(setTickets)
-        .catch((error) => setTicketsError(error instanceof Error ? error.message : "Unable to load tickets."))
-        .finally(() => setTicketsLoading(false));
+      void loadTickets(cleanedSettings);
     } else {
       showError(result.message);
     }
@@ -1697,7 +1588,7 @@ export const App = () => {
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
               onSelectTicket={setSelectedTicket}
-              onSearchTickets={handleSearchTickets}
+              onSearchTickets={searchTickets}
             />
           ) : view === "week" ? (
             <WeekView
@@ -1707,7 +1598,7 @@ export const App = () => {
               isSyncing={isSyncing || isSyncingReviews}
               isConfigured={isConfigured}
               dockTickets={dockTickets}
-              activeTicketCount={tickets?.inProgress.length ?? 0}
+              activeTicketCount={activeTicketCount}
               isLogging={isLogging}
               onSync={handleSync}
               onPreviousWeek={goToPreviousWeek}
@@ -1767,7 +1658,7 @@ export const App = () => {
               isConfigured={isConfigured}
               isLoading={ticketsLoading}
               error={ticketsError}
-              onToggleFavorite={handleToggleFavorite}
+              onToggleFavorite={toggleFavorite}
               onLog={handleLogTicket}
             />
           ) : view === "reports" ? (
@@ -1819,7 +1710,7 @@ export const App = () => {
           logError={logError}
           onClose={() => setAddModalDate(undefined)}
           onLog={handleAddWorklog}
-          onSearchTickets={handleSearchTickets}
+          onSearchTickets={searchTickets}
           onAddPersonalNote={handleAddPersonalNote}
           getRecurringCandidates={recurringCandidatesForDate}
           onLogRecurring={handleConfirmRecurring}
@@ -1839,7 +1730,7 @@ export const App = () => {
           onClose={() => setEditingWorklog(undefined)}
           onLog={handleUpdateWorklog}
           onDelete={handleDeleteWorklog}
-          onSearchTickets={handleSearchTickets}
+          onSearchTickets={searchTickets}
           onAddPersonalNote={handleAddPersonalNote}
         />
       )}
@@ -1856,7 +1747,7 @@ export const App = () => {
           onClose={() => setEditingPersonalNote(undefined)}
           onLog={handleAddWorklog}
           onDelete={handleDeletePersonalNote}
-          onSearchTickets={handleSearchTickets}
+          onSearchTickets={searchTickets}
           onAddPersonalNote={handleAddPersonalNote}
           onUpdatePersonalNote={handleUpdatePersonalNote}
         />
