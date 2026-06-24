@@ -34,6 +34,7 @@ import { useSettingsActions } from "./app/useSettingsActions";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
+import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
@@ -49,12 +50,10 @@ import { WelcomeView } from "./components/WelcomeView";
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
-import { buildWeekCsv } from "./domain/personalNotesCsv";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
-import { saveWeekOverride } from "./storage/db";
 import { toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
@@ -351,6 +350,13 @@ export const App = () => {
       await runReviewSync(settings);
     }
   }, [runReviewSync, runSync, settings]);
+  const { handleToggleSkipped, handleExportWeekCsv } = useWeekActions({
+    weekState,
+    weekOverride,
+    setWeekOverride,
+    isDemo: Boolean(demoScenario),
+    showSuccess
+  });
 
   useAppLifecycleEffects({
     isDemo: Boolean(demoScenario),
@@ -365,31 +371,6 @@ export const App = () => {
     runSync,
     runReviewSync
   });
-
-  const handleToggleSkipped = async (dateKey: string) => {
-    const skippedDates = weekOverride.skippedDates.includes(dateKey)
-      ? weekOverride.skippedDates.filter((candidate) => candidate !== dateKey)
-      : [...weekOverride.skippedDates, dateKey].sort();
-    const nextOverride = { weekKey: weekState.weekKey, skippedDates };
-
-    setWeekOverride(nextOverride);
-    if (!demoScenario) {
-      await saveWeekOverride(nextOverride);
-    }
-  };
-
-  const handleExportWeekCsv = () => {
-    const blob = new Blob([buildWeekCsv(weekState)], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `timebro-week-${weekState.weekKey}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    showSuccess(`Exported ${weekState.weekRangeLabel} CSV.`);
-  };
 
   const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);
