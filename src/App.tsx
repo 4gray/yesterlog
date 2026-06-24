@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
-  JiraTicket,
   JiraWorklog,
   PersonalNote,
   RecurringEvent,
@@ -19,6 +18,7 @@ import {
   formatSyncTime,
   isJiraConfigured
 } from "./app/appHelpers";
+import { useAppNavigation } from "./app/useAppNavigation";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useLiveDate } from "./app/useLiveDate";
@@ -55,7 +55,7 @@ import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
 import { saveWeekOverride } from "./storage/db";
-import { addDays, toLocalDateKey } from "./utils/date";
+import { toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -147,6 +147,25 @@ export const App = () => {
 
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
+  const {
+    goToPreviousWeek,
+    goToCurrentWeek,
+    goToNextWeek,
+    goToPreviousMonth,
+    goToCurrentMonth,
+    goToNextMonth,
+    openWeekFromMonth,
+    handleViewChange,
+    handleLogTicket
+  } = useAppNavigation({
+    currentDate,
+    isBitbucketReady,
+    view,
+    setView,
+    setWeekStart,
+    setMonthAnchor,
+    setSelectedTicket
+  });
   const monthState = useMonthState({
     isMonthView: view === "month",
     isBooting,
@@ -375,60 +394,6 @@ export const App = () => {
         console.warn("Unable to schedule reminder.", error);
       });
   }, [demoScenario, settings, todayKey, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
-
-  useEffect(() => {
-    if (view === "review" && !isBitbucketReady) {
-      setView("week");
-    }
-  }, [isBitbucketReady, view]);
-
-  const goToWeek = (date: Date) => {
-    setWeekStart(getWeekBounds(date).weekStart);
-  };
-
-  const goToPreviousWeek = () => {
-    setWeekStart((current) => addDays(current, -7));
-  };
-
-  const goToCurrentWeek = () => {
-    goToWeek(currentDate);
-  };
-
-  const goToNextWeek = () => {
-    setWeekStart((current) => addDays(current, 7));
-  };
-
-  const goToPreviousMonth = () => {
-    setMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setMonthAnchor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
-  };
-
-  const goToCurrentMonth = () => {
-    setMonthAnchor(getMonthAnchor(currentDate));
-  };
-
-  const openWeekFromMonth = (date: Date) => {
-    goToWeek(date);
-    setView("week");
-  };
-
-  const handleViewChange = (nextView: AppView) => {
-    if (nextView === "today" || nextView === "tickets") {
-      goToCurrentWeek();
-    }
-    if (nextView === "month") {
-      setMonthAnchor(getMonthAnchor(currentDate));
-    }
-    setView(nextView);
-  };
-
-  const handleLogTicket = (ticket: JiraTicket) => {
-    setSelectedTicket(ticket);
-    setView("today");
-  };
 
   const handleToggleSkipped = async (dateKey: string) => {
     const skippedDates = weekOverride.skippedDates.includes(dateKey)

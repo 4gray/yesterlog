@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, and Add Time date/shortcut decisions live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, Add Time date/shortcut decisions, and app navigation handlers live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -29,7 +29,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 17. Done: extract settings save, Jira test, Bitbucket test, and welcome-connect actions into `useSettingsActions` with normalization, demo, native, and failure coverage.
 18. Done: extract initial and selected-week IndexedDB loading into `useWeekStorage` with bootstrap, recurring seed, week reload, demo idle, StrictMode, and error coverage.
 19. Done: extract Add Time modal date selection and tracking-shortcut guard helpers with focused coverage.
-20. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around navigation helpers if those areas need changes.
+20. Done: extract app navigation handlers and review fallback into a focused hook with coverage.
+21. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -152,3 +153,11 @@ Phase 18:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Add Time open button, tracking shortcut, desktop/mobile modal overflow, and console health
+
+Phase 19:
+
+- Passed: `npm run test -- src/app/useAppNavigation.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo month-to-week navigation, tickets-to-today logging, mobile overflow, and console health
