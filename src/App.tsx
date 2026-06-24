@@ -10,7 +10,6 @@ import type {
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
-  WeekdayNumber,
   WeekOverride
 } from "../shared/types";
 import {
@@ -24,13 +23,13 @@ import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
 import { usePersonalNotes } from "./app/usePersonalNotes";
+import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
-import type { RecurringEventDraft } from "./components/SettingsView";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { ReviewView } from "./components/ReviewView";
@@ -51,7 +50,7 @@ import {
   mergeReviewSessionStates
 } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
-import { buildDefaultRecurringEvents, getRecurringCandidates, indexOccurrences } from "./domain/recurring";
+import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
 import {
   getFavoriteKeys,
@@ -64,11 +63,10 @@ import {
   getWeekOverride,
   saveBitbucketReviewResult,
   saveRecurringEvents,
-  saveRecurringOccurrences,
   saveSettings,
   saveWeekOverride
 } from "./storage/db";
-import { addDays, formatClock, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
+import { addDays, fromLocalDateKey, toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -238,6 +236,24 @@ export const App = () => {
     setIsLogging,
     setLogError,
     showInfo,
+    showSuccess,
+    showError
+  });
+  const {
+    handleSaveRecurringEvent,
+    handleDeleteRecurringEvent,
+    handleToggleRecurringEvent,
+    handleConfirmRecurring,
+    handleSkipRecurring,
+    handleDeleteRecurringOccurrence,
+    recurringCandidatesForDate
+  } = useRecurringActions({
+    recurringEvents,
+    setRecurringEvents,
+    recurringOccurrences,
+    setRecurringOccurrences,
+    visibleWeekKey: weekState.weekKey,
+    isDemo: Boolean(demoScenario),
     showSuccess,
     showError
   });
@@ -731,193 +747,6 @@ export const App = () => {
       setIsTestingBitbucket(false);
     }
   };
-
-  const persistRecurringEvents = async (next: RecurringEvent[]) => {
-    setRecurringEvents(next);
-    if (!demoScenario) {
-      await saveRecurringEvents(next);
-    }
-  };
-
-  const handleSaveRecurringEvent = async (draft: RecurringEventDraft) => {
-    const title = draft.title.trim();
-    if (!title || draft.daysOfWeek.length === 0) {
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const next = draft.id
-      ? recurringEvents.map((event) =>
-          event.id === draft.id
-            ? {
-                ...event,
-                title,
-                daysOfWeek: [...draft.daysOfWeek],
-                localTime: draft.localTime,
-                durationMinutes: draft.durationMinutes,
-                defaultNote: draft.defaultNote,
-                updatedAt: now
-              }
-            : event
-        )
-      : [
-          ...recurringEvents,
-          {
-            id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            title,
-            daysOfWeek: [...draft.daysOfWeek],
-            localTime: draft.localTime,
-            durationMinutes: draft.durationMinutes,
-            defaultNote: draft.defaultNote,
-            active: true,
-            createdAt: now,
-            updatedAt: now
-          }
-        ];
-
-    try {
-      await persistRecurringEvents(next);
-      showSuccess(draft.id ? "Updated recurring event." : "Added recurring event.");
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to save the recurring event.");
-    }
-  };
-
-  const handleDeleteRecurringEvent = async (id: string) => {
-    const next = recurringEvents.filter((event) => event.id !== id);
-    try {
-      await persistRecurringEvents(next);
-      showSuccess("Removed recurring event.");
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to remove the recurring event.");
-    }
-  };
-
-  const handleToggleRecurringEvent = async (id: string) => {
-    const now = new Date().toISOString();
-    const next = recurringEvents.map((event) =>
-      event.id === id ? { ...event, active: !event.active, updatedAt: now } : event
-    );
-    try {
-      await persistRecurringEvents(next);
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to update the recurring event.");
-    }
-  };
-
-  // Confirm/skip writes the per-day resolution; the dateKey always belongs to a
-  // single week, so we scope the occurrence to that week (like personal notes).
-  const upsertRecurringOccurrence = async (occurrence: RecurringOccurrence) => {
-    const replace = (list: RecurringOccurrence[]) => [
-      ...list.filter(
-        (item) => !(item.eventId === occurrence.eventId && item.dateKey === occurrence.dateKey)
-      ),
-      occurrence
-    ];
-
-    if (demoScenario) {
-      setRecurringOccurrences((current) => replace(current));
-      return true;
-    }
-
-    try {
-      const current =
-        occurrence.weekKey === weekState.weekKey
-          ? recurringOccurrences
-          : await getRecurringOccurrences(occurrence.weekKey);
-      const next = replace(current);
-      await saveRecurringOccurrences(occurrence.weekKey, next);
-      if (occurrence.weekKey === weekState.weekKey) {
-        setRecurringOccurrences(next);
-      }
-      return true;
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to save the recurring entry locally.");
-      return false;
-    }
-  };
-
-  const handleConfirmRecurring = async (payload: {
-    eventId: string;
-    dateKey: string;
-    timeSpentSeconds: number;
-    note?: string;
-  }) => {
-    const event = recurringEvents.find((candidate) => candidate.id === payload.eventId);
-    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(payload.dateKey)).weekStart);
-    const existing = recurringOccurrences.find(
-      (item) => item.eventId === payload.eventId && item.dateKey === payload.dateKey
-    );
-    const now = new Date().toISOString();
-    const ok = await upsertRecurringOccurrence({
-      eventId: payload.eventId,
-      weekKey,
-      dateKey: payload.dateKey,
-      status: "confirmed",
-      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
-      note: payload.note?.trim() || undefined,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now
-    });
-    if (ok) {
-      showSuccess(`Logged ${formatClock(payload.timeSpentSeconds)} to ${event?.title ?? "recurring event"} locally.`);
-    }
-    return ok;
-  };
-
-  const handleSkipRecurring = async (eventId: string, dateKey: string) => {
-    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(dateKey)).weekStart);
-    const existing = recurringOccurrences.find(
-      (item) => item.eventId === eventId && item.dateKey === dateKey
-    );
-    const now = new Date().toISOString();
-    return upsertRecurringOccurrence({
-      eventId,
-      weekKey,
-      dateKey,
-      status: "skipped",
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now
-    });
-  };
-
-  // Removes a logged/skipped occurrence record entirely so the day reverts to a
-  // pending suggestion — the forgiving "undo" for an accidental confirm.
-  const handleDeleteRecurringOccurrence = async (eventId: string, dateKey: string) => {
-    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(dateKey)).weekStart);
-    const event = recurringEvents.find((candidate) => candidate.id === eventId);
-    const remove = (list: RecurringOccurrence[]) =>
-      list.filter((item) => !(item.eventId === eventId && item.dateKey === dateKey));
-
-    if (demoScenario) {
-      setRecurringOccurrences((current) => remove(current));
-      showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
-      return true;
-    }
-
-    try {
-      const current =
-        weekKey === weekState.weekKey ? recurringOccurrences : await getRecurringOccurrences(weekKey);
-      const next = remove(current);
-      await saveRecurringOccurrences(weekKey, next);
-      if (weekKey === weekState.weekKey) {
-        setRecurringOccurrences(next);
-      }
-      showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
-      return true;
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to remove the recurring entry locally.");
-      return false;
-    }
-  };
-
-  const recurringCandidatesForDate = useCallback(
-    (dateKey: string) => {
-      const weekday = isoWeekday(fromLocalDateKey(dateKey)) as WeekdayNumber;
-      return getRecurringCandidates(recurringEvents, indexOccurrences(recurringOccurrences), dateKey, weekday);
-    },
-    [recurringEvents, recurringOccurrences]
-  );
 
   const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);

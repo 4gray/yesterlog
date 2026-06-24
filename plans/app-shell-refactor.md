@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Jira sync, Jira worklog writes, Bitbucket review logging, and local-note actions now have hook-level coverage; recurring modal state is the last app-shell behavior extraction before the styles split.
+Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Jira sync, Jira worklog writes, Bitbucket review logging, local-note actions, and recurring actions now have hook-level coverage; the remaining large-file work is the styles split.
 
 ## Phases
 
@@ -22,8 +22,8 @@ Continue with narrow hooks from `App.tsx` only when their behavior can be covere
 10. Done: extract `useJiraWorklogs` from `App.tsx` with add/update/delete, optimistic merge, ticket refresh, edit modal state, and demo/error coverage.
 11. Done: extract `useBitbucketReviewLogging` from `App.tsx` with demo, Jira target, review-bucket, persistence, no-target, and partial-failure coverage.
 12. Done: extract local-note action/import state into `usePersonalNotes` with storage, demo, move-between-weeks, import, and error coverage.
-13. Next: extract recurring modal action state before splitting styles.
-14. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+13. Done: extract recurring modal/action state into `useRecurringActions` with event definition, confirm, skip, delete, candidate, demo, storage, and error coverage.
+14. Next: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -92,3 +92,9 @@ Phase 11:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo local-note save, edit-modal hydration, and desktop/mobile overflow
+
+Phase 12:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo recurring quick-log, edit-form hydration, and desktop/mobile overflow
