@@ -35,6 +35,7 @@ import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { ReviewView } from "./components/ReviewView";
+import { LoadingView } from "./components/LoadingView";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { SnackbarStack } from "./components/SnackbarStack";
@@ -408,9 +409,7 @@ export const App = () => {
 
         <main className="main-area">
           {isBooting ? (
-            <div className="view" style={{ display: "grid", placeItems: "center" }}>
-              <span className="sync-label">LOADING…</span>
-            </div>
+            <LoadingView />
           ) : view === "today" ? (
             <TodayView
               date={currentDate}
@@ -467,9 +466,7 @@ export const App = () => {
                 onNextMonth={goToNextMonth}
               />
             ) : (
-              <div className="view" style={{ display: "grid", placeItems: "center" }}>
-                <span className="sync-label">LOADING…</span>
-              </div>
+              <LoadingView />
             )
           ) : view === "review" ? (
             <ReviewView
