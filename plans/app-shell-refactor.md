@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -47,7 +47,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 35. Done: extract welcome shell rendering into an app-level component with coverage.
 36. Done: extract demo scenario/current date bootstrap into a focused hook with coverage.
 37. Done: extract calendar anchor state into a focused hook with coverage.
-38. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+38. Done: extract active/draft settings state into a focused hook with coverage.
+39. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -314,3 +315,11 @@ Phase 37:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Week and Month calendar state, with no horizontal overflow and no console errors
+
+Phase 38:
+
+- Passed: `npm run test -- src/app/useAppSettingsState.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Settings state, with no horizontal overflow and no console errors

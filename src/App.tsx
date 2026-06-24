@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type {
-  AppSettings,
   BitbucketReviewTargetMode,
   JiraWorklog,
   PersonalNote,
@@ -13,6 +12,7 @@ import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAppCalendarState } from "./app/useAppCalendarState";
+import { useAppSettingsState } from "./app/useAppSettingsState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -38,7 +38,6 @@ import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
-import { DEFAULT_SETTINGS } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 
 // The version this build is running; baked from package.json at build time.
@@ -47,8 +46,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
   const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
-  const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
-  const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
+  const { settings, setSettings, settingsDraft, setSettingsDraft } = useAppSettingsState({ demoScenario });
   const { weekStart, setWeekStart, monthAnchor, setMonthAnchor, weekOverride, setWeekOverride } = useAppCalendarState({
     currentDate,
     demoScenario
