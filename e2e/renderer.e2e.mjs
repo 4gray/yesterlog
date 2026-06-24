@@ -58,8 +58,10 @@ const waitForServer = async (baseUrl, child) => {
 const startRenderer = async () => {
   const port = await getFreePort();
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+  const useProcessGroup = process.platform !== "win32";
   const child = spawn(npmCommand, ["run", "dev:renderer", "--", "--port", String(port), "--strictPort"], {
     cwd: process.cwd(),
+    detached: useProcessGroup,
     env: { ...process.env, BROWSER: "none" },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -84,14 +86,33 @@ const startRenderer = async () => {
       if (child.exitCode !== null) {
         return;
       }
-      child.kill("SIGTERM");
-      await new Promise((resolve) => {
-        const timer = setTimeout(resolve, 2500);
+
+      const kill = (signal) => {
+        try {
+          if (useProcessGroup) {
+            process.kill(-child.pid, signal);
+          } else {
+            child.kill(signal);
+          }
+        } catch (error) {
+          if (error?.code !== "ESRCH") {
+            throw error;
+          }
+        }
+      };
+
+      kill("SIGTERM");
+      const exited = await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), 2500);
         child.once("exit", () => {
           clearTimeout(timer);
-          resolve();
+          resolve(true);
         });
       });
+
+      if (!exited && child.exitCode === null) {
+        kill("SIGKILL");
+      }
     }
   };
 };
