@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
@@ -18,6 +18,7 @@ import {
   formatSyncTime,
   isJiraConfigured
 } from "./app/appHelpers";
+import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
@@ -34,7 +35,6 @@ import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
 import { useWeekStorage } from "./app/useWeekStorage";
-import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
@@ -92,7 +92,6 @@ export const App = () => {
     initialTheme: demoConfig?.theme,
     persist: !demoScenario
   });
-  const startupSyncCheckedRef = useRef(false);
   const {
     updateInfo,
     isCheckingUpdates,
@@ -353,47 +352,19 @@ export const App = () => {
     }
   }, [runReviewSync, runSync, settings]);
 
-  useEffect(() => {
-    if (demoScenario || isBooting || startupSyncCheckedRef.current) {
-      return;
-    }
-
-    startupSyncCheckedRef.current = true;
-
-    if (!isConfigured) {
-      return;
-    }
-
-    void (async () => {
-      await runSync();
-      if (isBitbucketReady) {
-        await runReviewSync();
-      }
-    })();
-  }, [demoScenario, isBitbucketReady, isBooting, isConfigured, runReviewSync, runSync]);
-
-  useEffect(() => {
-    if (demoScenario) {
-      return;
-    }
-
-    void nativeApi
-      .scheduleReminder({
-        settings,
-        weekKey: weekState.weekKey,
-        skippedDates: weekState.skippedDates,
-        remainingWeekHours: weekState.remainingWeekHours,
-        todayDateKey: todayKey
-      })
-      .then((result) => {
-        if (result.reason === "unsupported" && result.message) {
-          console.warn(result.message);
-        }
-      })
-      .catch((error) => {
-        console.warn("Unable to schedule reminder.", error);
-      });
-  }, [demoScenario, settings, todayKey, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
+  useAppLifecycleEffects({
+    isDemo: Boolean(demoScenario),
+    isBooting,
+    isConfigured,
+    isBitbucketReady,
+    settings,
+    weekKey: weekState.weekKey,
+    skippedDates: weekState.skippedDates,
+    remainingWeekHours: weekState.remainingWeekHours,
+    todayDateKey: todayKey,
+    runSync,
+    runReviewSync
+  });
 
   const handleToggleSkipped = async (dateKey: string) => {
     const skippedDates = weekOverride.skippedDates.includes(dateKey)
