@@ -3,8 +3,6 @@ import type {
   BitbucketReviewTargetMode,
   JiraWorklog,
   PersonalNote,
-  RecurringEvent,
-  RecurringOccurrence,
   SyncResult
 } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
@@ -12,6 +10,7 @@ import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAppCalendarState } from "./app/useAppCalendarState";
+import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
@@ -38,7 +37,6 @@ import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
-import { buildDefaultRecurringEvents } from "./domain/recurring";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -53,10 +51,9 @@ export const App = () => {
   });
   const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
   const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
-  const [recurringEvents, setRecurringEvents] = useState<RecurringEvent[]>(() =>
-    demoScenario ? buildDefaultRecurringEvents() : []
-  );
-  const [recurringOccurrences, setRecurringOccurrences] = useState<RecurringOccurrence[]>([]);
+  const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
+    isDemo
+  });
   const [isBooting, setIsBooting] = useState(() => !isDemo);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
