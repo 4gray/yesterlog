@@ -30,6 +30,7 @@ import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
+import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
@@ -46,7 +47,7 @@ import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
-import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
+import { DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
 import { toLocalDateKey } from "./utils/date";
@@ -124,20 +125,16 @@ export const App = () => {
     demoScenario
   });
 
-  const weekState = useMemo(
-    () =>
-      buildWeekState(
-        weekStart,
-        settings,
-        weekOverride,
-        syncResult,
-        personalNotes,
-        currentDate,
-        recurringEvents,
-        recurringOccurrences
-      ),
-    [currentDate, personalNotes, recurringEvents, recurringOccurrences, settings, syncResult, weekOverride, weekStart]
-  );
+  const weekState = useWeekState({
+    weekStart,
+    settings,
+    weekOverride,
+    syncResult,
+    personalNotes,
+    currentDate,
+    recurringEvents,
+    recurringOccurrences
+  });
 
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
