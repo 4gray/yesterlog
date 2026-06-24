@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Jira sync, Jira worklog writes, and Bitbucket review logging now have hook-level coverage; the next extraction should target local-note or recurring modal action state before splitting styles.
+Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Jira sync, Jira worklog writes, Bitbucket review logging, and local-note actions now have hook-level coverage; recurring modal state is the last app-shell behavior extraction before the styles split.
 
 ## Phases
 
@@ -21,8 +21,9 @@ Continue with narrow hooks from `App.tsx` only when their behavior can be covere
 9. Done: extract `useJiraSync` from `App.tsx` with queueing, persistence, demo, success, and error coverage.
 10. Done: extract `useJiraWorklogs` from `App.tsx` with add/update/delete, optimistic merge, ticket refresh, edit modal state, and demo/error coverage.
 11. Done: extract `useBitbucketReviewLogging` from `App.tsx` with demo, Jira target, review-bucket, persistence, no-target, and partial-failure coverage.
-12. Next: extract local-note or recurring modal action state before splitting styles.
-13. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+12. Done: extract local-note action/import state into `usePersonalNotes` with storage, demo, move-between-weeks, import, and error coverage.
+13. Next: extract recurring modal action state before splitting styles.
+14. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -85,3 +86,9 @@ Phase 10:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo review logging modal, logged-state update, and desktop/mobile overflow
+
+Phase 11:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo local-note save, edit-modal hydration, and desktop/mobile overflow

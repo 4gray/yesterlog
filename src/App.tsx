@@ -14,20 +14,16 @@ import type {
   WeekOverride
 } from "../shared/types";
 import {
-  formatPersonalNoteCount,
   formatSyncTime,
-  groupPersonalNotesByWeek,
   isJiraConfigured,
-  mergeImportedPersonalNotes,
-  normalizeJiraSiteInput,
-  sortPersonalNotes,
-  updateVisiblePersonalNotes
+  normalizeJiraSiteInput
 } from "./app/appHelpers";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useLiveDate } from "./app/useLiveDate";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
+import { usePersonalNotes } from "./app/usePersonalNotes";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
@@ -48,7 +44,7 @@ import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeVie
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
-import { buildWeekCsv, parsePersonalNotesCsv } from "./domain/personalNotesCsv";
+import { buildWeekCsv } from "./domain/personalNotesCsv";
 import {
   getBitbucketRepositorySlugs,
   isBitbucketConfigured,
@@ -67,13 +63,12 @@ import {
   getSyncResult,
   getWeekOverride,
   saveBitbucketReviewResult,
-  savePersonalNotes,
   saveRecurringEvents,
   saveRecurringOccurrences,
   saveSettings,
   saveWeekOverride
 } from "./storage/db";
-import { addDays, formatClock, formatDuration, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
+import { addDays, formatClock, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -103,7 +98,6 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
-  const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
   const [bitbucketReviewResult, setBitbucketReviewResult] = useState<BitbucketReviewSyncResult | undefined>(
     () => demoScenario?.bitbucketReviewResult
   );
@@ -113,7 +107,6 @@ export const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
-  const [editingPersonalNote, setEditingPersonalNote] = useState<PersonalNote | undefined>();
   const [welcomeConnected, setWelcomeConnected] = useState(false);
   const { effectiveTheme, selectTheme } = useThemeMode({
     initialTheme: demoConfig?.theme,
@@ -226,6 +219,25 @@ export const App = () => {
     loadTickets,
     onSyncResult: setSyncResult,
     onClearEditingWorklog: clearEditingWorklog,
+    showSuccess,
+    showError
+  });
+  const {
+    editingPersonalNote,
+    setEditingPersonalNote,
+    isImportingPersonalNotes,
+    handleImportPersonalNotes,
+    handleAddPersonalNote,
+    handleUpdatePersonalNote,
+    handleDeletePersonalNote
+  } = usePersonalNotes({
+    personalNotes,
+    setPersonalNotes,
+    visibleWeekKey: weekState.weekKey,
+    isDemo: Boolean(demoScenario),
+    setIsLogging,
+    setLogError,
+    showInfo,
     showSuccess,
     showError
   });
@@ -635,69 +647,6 @@ export const App = () => {
     showSuccess(`Exported ${weekState.weekRangeLabel} CSV.`);
   };
 
-  const handleImportPersonalNotes = async (file: File) => {
-    setIsImportingPersonalNotes(true);
-
-    try {
-      const importResult = parsePersonalNotesCsv(await file.text());
-
-      if (importResult.notes.length === 0) {
-        showError("No personal notes found. Import reads LOCAL-NOTE rows from exported weekly CSV files.");
-        return;
-      }
-
-      const notesByWeek = groupPersonalNotesByWeek(importResult.notes);
-
-      if (demoScenario) {
-        const visibleImportedNotes = notesByWeek.get(weekState.weekKey) ?? [];
-        if (visibleImportedNotes.length === 0) {
-          showInfo("The CSV has no personal notes for this demo week.");
-          return;
-        }
-
-        const merged = mergeImportedPersonalNotes(personalNotes, visibleImportedNotes);
-        setPersonalNotes(merged.notes);
-        if (merged.addedCount > 0) {
-          showSuccess(`Imported ${formatPersonalNoteCount(merged.addedCount)} into this demo week.`);
-        } else {
-          showInfo("No new personal notes imported; this demo week already has matching notes.");
-        }
-        return;
-      }
-
-      let addedCount = 0;
-      let visibleWeekNotes: PersonalNote[] | undefined;
-
-      for (const [weekKey, importedWeekNotes] of notesByWeek) {
-        const storedWeekNotes = weekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(weekKey);
-        const merged = mergeImportedPersonalNotes(storedWeekNotes, importedWeekNotes);
-        addedCount += merged.addedCount;
-
-        if (merged.addedCount > 0) {
-          await savePersonalNotes(weekKey, merged.notes);
-        }
-
-        if (weekKey === weekState.weekKey) {
-          visibleWeekNotes = merged.notes;
-        }
-      }
-
-      if (visibleWeekNotes) {
-        setPersonalNotes(visibleWeekNotes);
-      }
-
-      if (addedCount > 0) {
-        showSuccess(`Imported ${formatPersonalNoteCount(addedCount)} from ${file.name}.`);
-      } else {
-        showInfo("No new personal notes imported; stored notes already match that CSV.");
-      }
-    } catch (error) {
-      showError(error instanceof Error ? error.message : "Unable to import personal notes from that CSV.");
-    } finally {
-      setIsImportingPersonalNotes(false);
-    }
-  };
-
   const handleWelcomeConnect = async (payload: WelcomeConnectPayload): Promise<JiraConnectionResult> => {
     const cleanedSettings: AppSettings = {
       ...settingsDraft,
@@ -780,178 +729,6 @@ export const App = () => {
       }
     } finally {
       setIsTestingBitbucket(false);
-    }
-  };
-
-  const handleAddPersonalNote = async (payload: {
-    title?: string;
-    text: string;
-    timeSpentSeconds: number;
-    startedISO: string;
-  }) => {
-    const started = new Date(payload.startedISO);
-    const noteWeekKey = toLocalDateKey(getWeekBounds(started).weekStart);
-    const now = new Date().toISOString();
-    const note: PersonalNote = {
-      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      weekKey: noteWeekKey,
-      dateKey: toLocalDateKey(started),
-      title: payload.title?.trim() || undefined,
-      text: payload.text.trim(),
-      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
-      startedISO: payload.startedISO,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    if (!note.text || note.timeSpentSeconds <= 0) {
-      const message = "Add a note and a duration before saving.";
-      setLogError(message);
-      showError(message);
-      return false;
-    }
-
-    try {
-      if (demoScenario) {
-        setPersonalNotes((current) => [...current, note]);
-        setLogError(undefined);
-        showSuccess(`Demo saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
-        return true;
-      }
-
-      const currentNotes = noteWeekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(noteWeekKey);
-      const nextNotes = sortPersonalNotes([...currentNotes, note]);
-      await savePersonalNotes(noteWeekKey, nextNotes);
-      if (noteWeekKey === weekState.weekKey) {
-        setPersonalNotes(nextNotes);
-      }
-      setLogError(undefined);
-      showSuccess(`Saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to save the personal note locally.";
-      setLogError(message);
-      showError(message);
-      return false;
-    }
-  };
-
-  const handleUpdatePersonalNote = async (payload: {
-    title?: string;
-    text: string;
-    timeSpentSeconds: number;
-    startedISO: string;
-  }) => {
-    if (!editingPersonalNote) {
-      return false;
-    }
-
-    const started = new Date(payload.startedISO);
-    const noteWeekKey = toLocalDateKey(getWeekBounds(started).weekStart);
-    const nextNote: PersonalNote = {
-      ...editingPersonalNote,
-      weekKey: noteWeekKey,
-      dateKey: toLocalDateKey(started),
-      title: payload.title?.trim() || undefined,
-      text: payload.text.trim(),
-      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
-      startedISO: payload.startedISO,
-      updatedAt: new Date().toISOString()
-    };
-
-    if (!nextNote.text || nextNote.timeSpentSeconds <= 0) {
-      const message = "Add a note and a duration before saving.";
-      setLogError(message);
-      showError(message);
-      return false;
-    }
-
-    setIsLogging(true);
-    setLogError(undefined);
-
-    try {
-      if (demoScenario) {
-        setPersonalNotes((current) => updateVisiblePersonalNotes(current, editingPersonalNote, nextNote, weekState.weekKey));
-        showSuccess(`Demo updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
-        return true;
-      }
-
-      if (editingPersonalNote.weekKey === noteWeekKey) {
-        const currentNotes =
-          noteWeekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(editingPersonalNote.weekKey);
-        const nextNotes = sortPersonalNotes([
-          ...currentNotes.filter((note) => note.id !== editingPersonalNote.id),
-          nextNote
-        ]);
-
-        await savePersonalNotes(noteWeekKey, nextNotes);
-        if (noteWeekKey === weekState.weekKey) {
-          setPersonalNotes(nextNotes);
-        }
-      } else {
-        const [previousWeekNotes, nextWeekNotes] = await Promise.all([
-          editingPersonalNote.weekKey === weekState.weekKey
-            ? Promise.resolve(personalNotes)
-            : getPersonalNotes(editingPersonalNote.weekKey),
-          noteWeekKey === weekState.weekKey ? Promise.resolve(personalNotes) : getPersonalNotes(noteWeekKey)
-        ]);
-        const previousWeekNextNotes = previousWeekNotes.filter((note) => note.id !== editingPersonalNote.id);
-        const nextWeekNextNotes = sortPersonalNotes([
-          ...nextWeekNotes.filter((note) => note.id !== editingPersonalNote.id),
-          nextNote
-        ]);
-
-        await Promise.all([
-          savePersonalNotes(editingPersonalNote.weekKey, previousWeekNextNotes),
-          savePersonalNotes(noteWeekKey, nextWeekNextNotes)
-        ]);
-
-        if (editingPersonalNote.weekKey === weekState.weekKey) {
-          setPersonalNotes(previousWeekNextNotes);
-        } else if (noteWeekKey === weekState.weekKey) {
-          setPersonalNotes(nextWeekNextNotes);
-        }
-      }
-
-      showSuccess(`Updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to update the personal note locally.";
-      setLogError(message);
-      showError(message);
-      return false;
-    } finally {
-      setIsLogging(false);
-    }
-  };
-
-  const handleDeletePersonalNote = async () => {
-    if (!editingPersonalNote) {
-      return false;
-    }
-    const note = editingPersonalNote;
-    const remove = (list: PersonalNote[]) => list.filter((candidate) => candidate.id !== note.id);
-
-    try {
-      if (demoScenario) {
-        setPersonalNotes((current) => remove(current));
-        showSuccess("Deleted the local note.");
-        return true;
-      }
-
-      const current = note.weekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(note.weekKey);
-      const next = remove(current);
-      await savePersonalNotes(note.weekKey, next);
-      if (note.weekKey === weekState.weekKey) {
-        setPersonalNotes(next);
-      }
-      showSuccess("Deleted the local note.");
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to delete the personal note locally.";
-      setLogError(message);
-      showError(message);
-      return false;
     }
   };
 
