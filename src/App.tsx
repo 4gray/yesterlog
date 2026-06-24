@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
@@ -18,7 +18,7 @@ import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
-import { useLiveDate } from "./app/useLiveDate";
+import { useDemoScenario } from "./app/useDemoScenario";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
@@ -37,8 +37,6 @@ import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar, type AppView } from "./components/Sidebar";
-import { getDemoConfig } from "./demo/config";
-import { createDemoScenario } from "./demo/fixtures";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
 import { DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
@@ -49,10 +47,7 @@ import { toLocalDateKey } from "./utils/date";
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const App = () => {
-  const demoConfig = useMemo(() => getDemoConfig(), []);
-  const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
-  const isDemo = Boolean(demoScenario);
-  const currentDate = useLiveDate(demoScenario?.today);
+  const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
   const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
   const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);

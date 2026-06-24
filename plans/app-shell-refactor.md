@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -45,7 +45,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 33. Done: extract main view routing from `App.tsx` into an app-level component with coverage.
 34. Done: extract normal app overlay rendering into an app-level component with coverage.
 35. Done: extract welcome shell rendering into an app-level component with coverage.
-36. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+36. Done: extract demo scenario/current date bootstrap into a focused hook with coverage.
+37. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -296,3 +297,11 @@ Phase 35:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for non-demo welcome shell rendering, desktop/mobile overflow, and console health
+
+Phase 36:
+
+- Passed: `npm run test -- src/app/useDemoScenario.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Tickets/light/update state and non-demo welcome shell, with no horizontal overflow
