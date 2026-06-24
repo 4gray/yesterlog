@@ -24,6 +24,7 @@ import { usePersonalNotes } from "./app/usePersonalNotes";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSettingsActions } from "./app/useSettingsActions";
+import { useSidebarState } from "./app/useSidebarState";
 import { useSnackbars } from "./app/useSnackbars";
 import { useSyncControls } from "./app/useSyncControls";
 import { useThemeMode } from "./app/useThemeMode";
@@ -81,7 +82,7 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !isDemo);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
   const { effectiveTheme, selectTheme } = useThemeMode({
@@ -401,7 +402,7 @@ export const App = () => {
           view={view}
           collapsed={sidebarCollapsed}
           onViewChange={handleViewChange}
-          onToggleCollapse={() => setSidebarCollapsed((current) => !current)}
+          onToggleCollapse={toggleSidebarCollapsed}
           syncLabel={syncLabel}
           syncState={syncState}
           showReview={isBitbucketReady}
