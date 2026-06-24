@@ -6,13 +6,13 @@ import type {
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
-  SyncResult,
-  WeekOverride
+  SyncResult
 } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { isJiraConfigured } from "./app/appHelpers";
+import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -38,10 +38,8 @@ import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
-import { DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
+import { DEFAULT_SETTINGS } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
-import { getMonthAnchor } from "./domain/month";
-import { toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -51,14 +49,10 @@ export const App = () => {
   const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
   const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
-  const [weekStart, setWeekStart] = useState(() => demoScenario?.weekStart ?? getWeekBounds(currentDate).weekStart);
-  const [monthAnchor, setMonthAnchor] = useState(() => getMonthAnchor(currentDate));
-  const [weekOverride, setWeekOverride] = useState<WeekOverride>(() => ({
-    ...(demoScenario?.weekOverride ?? {
-      weekKey: toLocalDateKey(getWeekBounds(currentDate).weekStart),
-      skippedDates: []
-    })
-  }));
+  const { weekStart, setWeekStart, monthAnchor, setMonthAnchor, weekOverride, setWeekOverride } = useAppCalendarState({
+    currentDate,
+    demoScenario
+  });
   const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
   const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
   const [recurringEvents, setRecurringEvents] = useState<RecurringEvent[]>(() =>
