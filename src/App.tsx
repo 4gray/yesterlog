@@ -9,10 +9,7 @@ import type {
   SyncResult,
   WeekOverride
 } from "../shared/types";
-import {
-  formatSyncTime,
-  isJiraConfigured
-} from "./app/appHelpers";
+import { isJiraConfigured } from "./app/appHelpers";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -28,6 +25,7 @@ import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSettingsActions } from "./app/useSettingsActions";
 import { useSnackbars } from "./app/useSnackbars";
+import { useSyncControls } from "./app/useSyncControls";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
@@ -340,12 +338,14 @@ export const App = () => {
     showError
   });
 
-  const handleSync = useCallback(async () => {
-    await runSync();
-    if (isBitbucketConfigured(settings)) {
-      await runReviewSync(settings);
-    }
-  }, [runReviewSync, runSync, settings]);
+  const { handleSync, syncLabel, syncState } = useSyncControls({
+    settings,
+    syncResult,
+    isSyncing,
+    isSyncingReviews,
+    runSync,
+    runReviewSync
+  });
   const { handleToggleSkipped, handleExportWeekCsv } = useWeekActions({
     weekState,
     weekOverride,
@@ -368,8 +368,6 @@ export const App = () => {
     runReviewSync
   });
 
-  const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
-  const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);
   const { openAddTime, openEditWorklog, openEditPersonalNote } = useAddTimeModalActions({
     currentDate,
     weekState,
