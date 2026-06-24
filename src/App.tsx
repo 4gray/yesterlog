@@ -26,6 +26,7 @@ import {
 } from "./app/appHelpers";
 import { useLiveDate } from "./app/useLiveDate";
 import { useIssueMetadata } from "./app/useIssueMetadata";
+import { useJiraSync } from "./app/useJiraSync";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
@@ -104,7 +105,6 @@ export const App = () => {
   );
   const [recurringOccurrences, setRecurringOccurrences] = useState<RecurringOccurrence[]>([]);
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
   const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
@@ -127,7 +127,6 @@ export const App = () => {
     initialTheme: demoConfig?.theme,
     persist: !demoScenario
   });
-  const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
   const {
@@ -206,64 +205,16 @@ export const App = () => {
   });
 
   const addTimeDateOptions = weekState.activeWorkingDates;
-
-  const runSync = useCallback(
-    async (
-      settingsForSync: AppSettings = settings,
-      options: { queueAfterCurrent?: boolean } = {}
-    ): Promise<SyncResult | undefined> => {
-      if (demoScenario) {
-        setSyncResult(demoScenario.syncResult);
-        showSuccess("Demo data refreshed from seeded fixtures.");
-        return demoScenario.syncResult;
-      }
-
-      while (syncInFlightRef.current) {
-        const currentSync = syncInFlightRef.current;
-        if (!options.queueAfterCurrent) {
-          return currentSync;
-        }
-        await currentSync;
-      }
-
-      if (!isJiraConfigured(settingsForSync)) {
-        showError("Connect Jira in Settings before syncing.");
-        return undefined;
-      }
-
-      setIsSyncing(true);
-
-      const syncTask = (async () => {
-        try {
-          const result = await nativeApi.syncJiraWorklogs({
-            settings: settingsForSync,
-            weekKey: weekState.weekKey,
-            weekStartISO: weekState.weekStartISO,
-            weekEndExclusiveISO: weekState.weekEndExclusiveISO
-          });
-          await saveSyncResult(result);
-          setSyncResult(result);
-          showSuccess(`Synced ${result.worklogCount} worklogs across ${result.issueCount} candidate issues.`);
-          return result;
-        } catch (error) {
-          showError(error instanceof Error ? error.message : "Unable to sync Jira worklogs.");
-          return undefined;
-        }
-      })();
-
-      syncInFlightRef.current = syncTask;
-
-      try {
-        return await syncTask;
-      } finally {
-        if (syncInFlightRef.current === syncTask) {
-          syncInFlightRef.current = undefined;
-          setIsSyncing(false);
-        }
-      }
-    },
-    [demoScenario, settings, showError, showSuccess, weekState.weekEndExclusiveISO, weekState.weekKey, weekState.weekStartISO]
-  );
+  const { isSyncing, runSync } = useJiraSync({
+    settings,
+    weekKey: weekState.weekKey,
+    weekStartISO: weekState.weekStartISO,
+    weekEndExclusiveISO: weekState.weekEndExclusiveISO,
+    demoSyncResult: demoScenario?.syncResult,
+    onSyncResult: setSyncResult,
+    showSuccess,
+    showError
+  });
 
   const runReviewSync = useCallback(
     async (settingsForSync: AppSettings = settings): Promise<BitbucketReviewSyncResult | undefined> => {
