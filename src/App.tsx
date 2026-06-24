@@ -5,7 +5,6 @@ import type {
   BitbucketReviewSyncResult,
   BitbucketReviewTargetMode,
   JiraConnectionResult,
-  JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
   PersonalNote,
@@ -26,6 +25,7 @@ import {
   updateVisiblePersonalNotes
 } from "./app/appHelpers";
 import { useLiveDate } from "./app/useLiveDate";
+import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
@@ -182,86 +182,30 @@ export const App = () => {
     [currentDate, personalNotes, recurringEvents, recurringOccurrences, settings, syncResult, weekOverride, weekStart]
   );
 
-  const visibleSyncResult = syncResult?.weekKey === weekState.weekKey ? syncResult : undefined;
-  const visibleBitbucketReviewResult =
-    bitbucketReviewResult?.weekKey === weekState.weekKey ? bitbucketReviewResult : undefined;
-
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
 
-  const hoursByKey = useMemo(() => {
-    const map: Record<string, number> = {};
-    if (visibleSyncResult) {
-      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
-        for (const issue of bucket.issues) {
-          map[issue.key] = (map[issue.key] ?? 0) + issue.loggedSeconds / 3600;
-        }
-      }
-    }
-    return map;
-  }, [visibleSyncResult]);
-
-  const issueUrlsByKey = useMemo(() => {
-    const map: Record<string, string> = {};
-    if (visibleSyncResult) {
-      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
-        for (const issue of bucket.issues) {
-          if (issue.url) {
-            map[issue.key] = issue.url;
-          }
-        }
-      }
-    }
-
-    for (const ticket of [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])]) {
-      map[ticket.key] = ticket.url;
-    }
-
-    if (selectedTicket) {
-      map[selectedTicket.key] = selectedTicket.url;
-    }
-
-    return map;
-  }, [selectedTicket, tickets, visibleSyncResult]);
-
-  const issueTypesByKey = useMemo(() => {
-    const map: Record<string, JiraIssueTypeInfo> = {};
-    if (visibleSyncResult) {
-      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
-        for (const issue of bucket.issues) {
-          if (issue.issueType) {
-            map[issue.key] = issue.issueType;
-          }
-        }
-      }
-    }
-
-    for (const ticket of [...(tickets?.inProgress ?? []), ...(tickets?.recentlyClosed ?? [])]) {
-      if (ticket.issueType) {
-        map[ticket.key] = ticket.issueType;
-      }
-    }
-
-    if (selectedTicket?.issueType) {
-      map[selectedTicket.key] = selectedTicket.issueType;
-    }
-
-    return map;
-  }, [selectedTicket, tickets, visibleSyncResult]);
-
-  const todayKey = toLocalDateKey(currentDate);
-  const todaySummary = weekState.days.find((day) => day.dateKey === todayKey);
-  const todayBucket = visibleSyncResult?.daySummaries[todayKey];
-  const todayWorklogs = todayBucket?.worklogs ?? [];
-  const todayPersonalNotes = todaySummary?.personalNotes ?? [];
-  const todayTrackedHours = todaySummary?.trackedHours ?? (todayBucket?.trackedSeconds ?? 0) / 3600;
+  const {
+    visibleSyncResult,
+    visibleBitbucketReviewResult,
+    hoursByKey,
+    issueUrlsByKey,
+    issueTypesByKey,
+    todayKey,
+    todayWorklogs,
+    todayPersonalNotes,
+    todayTrackedHours,
+    touchedNotLogged
+  } = useIssueMetadata({
+    currentDate,
+    weekState,
+    syncResult,
+    bitbucketReviewResult,
+    tickets,
+    selectedTicket
+  });
 
   const addTimeDateOptions = weekState.activeWorkingDates;
-
-  const touchedNotLogged = useMemo(() => {
-    const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
-    return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
-  }, [tickets, todayWorklogs]);
 
   const runSync = useCallback(
     async (

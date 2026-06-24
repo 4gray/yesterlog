@@ -17,8 +17,9 @@ Continue with narrow hooks from `App.tsx` only when their behavior can be covere
 5. Done: extract `useLiveDate` from `App.tsx` with fake-timer coverage for ticking, demo freeze, and cleanup.
 6. Done: extract `useReleaseUpdates` from `App.tsx` with demo, cache, native success/error, and open-action coverage.
 7. Done: extract `useTickets` from `App.tsx` with loading, search, favorite, and derived-list coverage.
-8. Next: map Jira sync and worklog dependencies before extracting write-adjacent hooks.
-9. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+8. Done: extract read-only issue metadata from `App.tsx` with visible-week scoping, issue maps, today worklog, and touched-ticket coverage.
+9. Next: extract Jira sync/worklog write orchestration only after preserving queueing, optimistic merge, ticket refresh, and demo behavior.
+10. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -57,3 +58,9 @@ Phase 6:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo tickets view, favorite toggle, and desktop/mobile overflow
+
+Phase 7:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo today/week views, issue metadata, and desktop/mobile overflow
