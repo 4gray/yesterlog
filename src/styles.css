@@ -713,14 +713,18 @@ a {
   flex: 1;
   min-height: 0;
   display: flex;
+  overflow: hidden;
 }
 
 .day-col {
+  position: relative;
   flex: 1;
   min-width: 0;
+  min-height: 0;
   padding: 22px 22px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .day-col + .day-col {
@@ -732,9 +736,23 @@ a {
 }
 
 .day-col-head {
+  position: relative;
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.day-col-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--blue) 48%, transparent), transparent 74%);
+  opacity: 0.42;
 }
 
 .day-add {
@@ -790,6 +808,7 @@ a {
 }
 
 .day-hours {
+  flex: none;
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -850,6 +869,7 @@ a {
 }
 
 .seg-bar {
+  flex: none;
   display: flex;
   gap: 3px;
   height: 11px;
@@ -877,6 +897,46 @@ a {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 112px;
+  margin-right: -10px;
+  padding-right: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: color-mix(in srgb, var(--blue) 38%, var(--border)) transparent;
+  scrollbar-width: thin;
+  background:
+    linear-gradient(var(--bg) 30%, transparent) center top / 100% 22px no-repeat local,
+    linear-gradient(transparent, var(--bg) 70%) center bottom / 100% 22px no-repeat local,
+    radial-gradient(farthest-side at 50% 0, color-mix(in srgb, var(--blue) 18%, transparent), transparent)
+      center top / 100% 18px no-repeat scroll,
+    radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, var(--blue) 12%, transparent), transparent)
+      center bottom / 100% 20px no-repeat scroll;
+}
+
+.day-logs::-webkit-scrollbar {
+  width: 8px;
+}
+
+.day-logs::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--blue) 30%, var(--border));
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+.day-logs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.day-logs > .day-log,
+.day-logs > .day-note-row {
+  flex: none;
+}
+
+.day-logs > .day-spacer {
+  flex: 0 0 30px;
 }
 
 .day-log {
@@ -1345,8 +1405,11 @@ a {
 }
 
 .day-skip {
+  position: absolute;
+  left: 22px;
+  bottom: 14px;
   align-self: flex-start;
-  margin-top: 14px;
+  margin-top: 0;
   padding: 4px 0;
   border: none;
   background: none;
@@ -4850,6 +4913,49 @@ input:focus {
   .chart-panel {
     border-right: none;
     border-bottom: 1px solid var(--line);
+  }
+}
+
+@media (max-height: 640px) {
+  .week-header {
+    padding-top: 18px;
+    padding-bottom: 16px;
+  }
+
+  .day-col {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .day-col-head {
+    padding-bottom: 8px;
+  }
+
+  .day-date {
+    font-size: 38px;
+  }
+
+  .day-hours {
+    margin-top: 8px;
+  }
+
+  .day-hours .tracked {
+    font-size: 22px;
+  }
+
+  .seg-bar {
+    height: 8px;
+    margin-top: 6px;
+  }
+
+  .day-logs {
+    min-height: 72px;
+    margin-top: 10px;
+  }
+
+  .day-skip {
+    left: 18px;
+    bottom: 10px;
   }
 }
 
