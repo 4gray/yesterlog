@@ -11,6 +11,11 @@ import type {
   WeekOverride
 } from "../shared/types";
 import {
+  canOpenTrackingShortcut,
+  createTrackingShortcutDate,
+  selectAddTimeDate
+} from "./app/addTimeModalState";
+import {
   formatSyncTime,
   isJiraConfigured
 } from "./app/appHelpers";
@@ -50,7 +55,7 @@ import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
 import { saveWeekOverride } from "./storage/db";
-import { addDays, fromLocalDateKey, toLocalDateKey } from "./utils/date";
+import { addDays, toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -457,24 +462,20 @@ export const App = () => {
     setEditingWorklog(undefined);
     setEditingPersonalNote(undefined);
     setLogError(undefined);
-
-    const preferredDateKey = date ? toLocalDateKey(date) : toLocalDateKey(currentDate);
-    const fallbackDateKey =
-      [...weekState.days]
-        .reverse()
-        .find((day) => day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey <= preferredDateKey)?.dateKey ??
-      addTimeDateOptions[0] ??
-      weekState.days[0]?.dateKey ??
-      preferredDateKey;
-    const selectedDateKey = addTimeDateOptions.includes(preferredDateKey) ? preferredDateKey : fallbackDateKey;
-    const selectedDate = fromLocalDateKey(selectedDateKey);
-    selectedDate.setHours(currentDate.getHours(), currentDate.getMinutes(), 0, 0);
-
-    setAddModalDate(selectedDate);
+    setAddModalDate(selectAddTimeDate({ currentDate, requestedDate: date, weekState }));
   };
 
   const openTrackingShortcut = useCallback(() => {
-    if (!isConfigured || welcomeConnected || isBooting || addModalDate || editingWorklog || editingPersonalNote) {
+    if (
+      !canOpenTrackingShortcut({
+        isConfigured,
+        welcomeConnected,
+        isBooting,
+        hasAddModal: Boolean(addModalDate),
+        hasEditingWorklog: Boolean(editingWorklog),
+        hasEditingPersonalNote: Boolean(editingPersonalNote)
+      })
+    ) {
       return;
     }
 
@@ -482,10 +483,7 @@ export const App = () => {
     setEditingWorklog(undefined);
     setEditingPersonalNote(undefined);
     setLogError(undefined);
-
-    const selectedDate = new Date(currentDate);
-    selectedDate.setSeconds(0, 0);
-    setAddModalDate(selectedDate);
+    setAddModalDate(createTrackingShortcutDate(currentDate));
   }, [addModalDate, currentDate, editingPersonalNote, editingWorklog, isBooting, isConfigured, welcomeConnected]);
 
   useEffect(() => {
