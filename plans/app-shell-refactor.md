@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; main view routing, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -43,7 +43,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 31. Done: extract repeated loading view into a focused component with coverage.
 32. Done: extract sidebar collapse state into a focused hook with coverage.
 33. Done: extract main view routing from `App.tsx` into an app-level component with coverage.
-34. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+34. Done: extract normal app overlay rendering into an app-level component with coverage.
+35. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -278,3 +279,11 @@ Phase 33:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo main view routing across Week, Month, Today, Review, Tickets, Reports, Settings, desktop/mobile overflow, and console health
+
+Phase 34:
+
+- Passed: `npm run test -- src/app/AppOverlays.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Add Time overlay, release notes dialog, update snackbar, mobile overflow, and console health

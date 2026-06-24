@@ -10,6 +10,7 @@ import type {
   WeekOverride
 } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
+import { AppOverlays } from "./app/AppOverlays";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
@@ -34,10 +35,8 @@ import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
-import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { SnackbarStack } from "./components/SnackbarStack";
-import { TimeEntryModalLayer } from "./components/TimeEntryModalLayer";
 import { WelcomeView } from "./components/WelcomeView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
@@ -481,7 +480,7 @@ export const App = () => {
         />
       </div>
 
-      <TimeEntryModalLayer
+      <AppOverlays
         addModalDate={addModalDate}
         editingWorklog={editingWorklog}
         editingPersonalNote={editingPersonalNote}
@@ -503,18 +502,13 @@ export const App = () => {
         onDeletePersonalNote={handleDeletePersonalNote}
         getRecurringCandidates={recurringCandidatesForDate}
         onLogRecurring={handleConfirmRecurring}
+        releaseNotesDialogInfo={releaseNotesDialogInfo}
+        onCloseReleaseNotes={closeReleaseNotes}
+        onDownloadUpdate={openUpdateDownload}
+        onOpenReleasePage={openReleasePage}
+        notifications={snackbars}
+        onDismissNotification={dismissSnackbar}
       />
-
-      {releaseNotesDialogInfo && (
-        <ReleaseNotesDialog
-          updateInfo={releaseNotesDialogInfo}
-          onClose={closeReleaseNotes}
-          onDownload={openUpdateDownload}
-          onOpenReleasePage={openReleasePage}
-        />
-      )}
-
-      <SnackbarStack notifications={snackbars} onDismiss={dismissSnackbar} />
     </div>
   );
 };
