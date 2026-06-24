@@ -16,7 +16,7 @@
     "dist:mac": "npm run build && electron-builder --mac dmg zip --publish never",
     "dist:win": "npm run build && electron-builder --win nsis zip --publish never",
     "dist:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
-    "release:dry-run": "npm run test && npm run build",
+    "release:dry-run": "npm run test && npm run e2e:renderer && npm run build",
     "release:patch": "npm version patch -m \"chore(release): v%s\"",
     "release:minor": "npm version minor -m \"chore(release): v%s\"",
     "release:major": "npm version major -m \"chore(release): v%s\"",
@@ -26,7 +26,8 @@
     "screenshots": "node scripts/capture-screenshots.mjs",
     "screenshots:install-browser": "playwright install chromium",
     "screenshots:release": "node scripts/capture-screenshots.mjs --seed release --today 2026-06-17",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e:renderer": "node --test e2e/renderer.e2e.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

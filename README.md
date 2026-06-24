@@ -102,6 +102,7 @@ The packaged output is written to `release/`.
 
 ```bash
 npm run test      # Run Vitest tests
+npm run e2e:renderer # Run Playwright renderer E2E against demo data
 npm run lint      # Type-check renderer code
 npm run build     # Type-check, build renderer, compile Electron files
 npm run dist:mac  # Build macOS DMG and ZIP
@@ -206,14 +207,17 @@ Agentic development plans live in `/plans`. If a user changes the plan, update t
 
 ## Release Automation
 
+Regular pushes to `main` run unit tests, renderer E2E, and the production build through [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
+
 Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will:
 
 1. install dependencies
 2. run tests
-3. build the app
-4. package macOS, Windows, and Linux builds on native runners
-5. create or update a GitHub Release
-6. upload the generated installers and archives
+3. run renderer E2E against deterministic demo data
+4. build the app
+5. package macOS, Windows, and Linux builds on native runners
+6. create or update a GitHub Release
+7. upload the generated installers and archives
 
 The workflow uses `gh release create` / `gh release upload` with the built-in `GITHUB_TOKEN`, so no extra release token is needed for normal same-repository releases.
 

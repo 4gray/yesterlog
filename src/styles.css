@@ -1365,7 +1365,7 @@ a {
   background: none;
   color: var(--dim);
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transition: opacity 120ms ease, color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
@@ -1375,9 +1375,16 @@ a {
 
 .day-log:hover .day-log-edit,
 .day-note-row:hover .day-log-edit,
+.day-log:focus-within .day-log-edit,
+.day-note-row:focus-within .day-log-edit,
 .day-log-edit:focus-visible {
   opacity: 1;
-  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .day-log-edit {
+    opacity: 1;
+  }
 }
 
 .day-log-edit:hover {

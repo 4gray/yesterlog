@@ -32,6 +32,12 @@ jobs:
       - name: Run tests
         run: npm run test
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run renderer E2E tests
+        run: npm run e2e:renderer
+
       - name: Build renderer and Electron files
         run: npm run build
 
