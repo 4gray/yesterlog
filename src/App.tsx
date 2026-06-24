@@ -31,7 +31,6 @@ import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
-import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { ReviewView } from "./components/ReviewView";
@@ -39,6 +38,7 @@ import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { SnackbarStack } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
+import { TimeEntryModalLayer } from "./components/TimeEntryModalLayer";
 import { TodayView } from "./components/TodayView";
 import { MonthView } from "./components/MonthView";
 import { WelcomeView } from "./components/WelcomeView";
@@ -558,58 +558,29 @@ export const App = () => {
         </main>
       </div>
 
-      {addModalDate && (
-        <AddTimeModal
-          date={addModalDate}
-          dateOptions={addTimeDateOptions}
-          ticketOptions={ticketOptions}
-          isConfigured={isConfigured}
-          isLogging={isLogging}
-          logError={logError}
-          onClose={() => setAddModalDate(undefined)}
-          onLog={handleAddWorklog}
-          onSearchTickets={searchTickets}
-          onAddPersonalNote={handleAddPersonalNote}
-          getRecurringCandidates={recurringCandidatesForDate}
-          onLogRecurring={handleConfirmRecurring}
-        />
-      )}
-
-      {editingWorklog && (
-        <AddTimeModal
-          date={new Date(editingWorklog.started)}
-          dateOptions={addTimeDateOptions}
-          ticketOptions={ticketOptions}
-          isConfigured={isConfigured}
-          isLogging={isLogging}
-          isDeleting={isDeletingWorklog}
-          logError={logError}
-          editingWorklog={editingWorklog}
-          onClose={() => setEditingWorklog(undefined)}
-          onLog={handleUpdateWorklog}
-          onDelete={handleDeleteWorklog}
-          onSearchTickets={searchTickets}
-          onAddPersonalNote={handleAddPersonalNote}
-        />
-      )}
-
-      {editingPersonalNote && (
-        <AddTimeModal
-          date={new Date(editingPersonalNote.startedISO)}
-          dateOptions={addTimeDateOptions}
-          ticketOptions={ticketOptions}
-          isConfigured={isConfigured}
-          isLogging={isLogging}
-          logError={logError}
-          editingPersonalNote={editingPersonalNote}
-          onClose={() => setEditingPersonalNote(undefined)}
-          onLog={handleAddWorklog}
-          onDelete={handleDeletePersonalNote}
-          onSearchTickets={searchTickets}
-          onAddPersonalNote={handleAddPersonalNote}
-          onUpdatePersonalNote={handleUpdatePersonalNote}
-        />
-      )}
+      <TimeEntryModalLayer
+        addModalDate={addModalDate}
+        editingWorklog={editingWorklog}
+        editingPersonalNote={editingPersonalNote}
+        dateOptions={addTimeDateOptions}
+        ticketOptions={ticketOptions}
+        isConfigured={isConfigured}
+        isLogging={isLogging}
+        isDeletingWorklog={isDeletingWorklog}
+        logError={logError}
+        onCloseAddTime={() => setAddModalDate(undefined)}
+        onCloseEditingWorklog={() => setEditingWorklog(undefined)}
+        onCloseEditingPersonalNote={() => setEditingPersonalNote(undefined)}
+        onAddWorklog={handleAddWorklog}
+        onUpdateWorklog={handleUpdateWorklog}
+        onDeleteWorklog={handleDeleteWorklog}
+        onSearchTickets={searchTickets}
+        onAddPersonalNote={handleAddPersonalNote}
+        onUpdatePersonalNote={handleUpdatePersonalNote}
+        onDeletePersonalNote={handleDeletePersonalNote}
+        getRecurringCandidates={recurringCandidatesForDate}
+        onLogRecurring={handleConfirmRecurring}
+      />
 
       {releaseNotesDialogInfo && (
         <ReleaseNotesDialog

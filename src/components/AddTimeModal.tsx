@@ -23,7 +23,7 @@ const minutesLabel = (minutes: number) => {
   return rest === 0 ? `${hours}h` : `${hours}h ${String(rest).padStart(2, "0")}m`;
 };
 
-interface LogPayload {
+export interface LogPayload {
   issueKey: string;
   ticket: JiraTicket;
   timeSpentSeconds: number;
@@ -31,7 +31,7 @@ interface LogPayload {
   comment?: string;
 }
 
-interface AddTimeModalProps {
+export interface AddTimeModalProps {
   date: Date;
   dateOptions: string[];
   ticketOptions: JiraTicket[];
