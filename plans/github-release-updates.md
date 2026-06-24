@@ -18,14 +18,14 @@ Add a lightweight, cross-platform update checker that shows the current app vers
 
 ## Pending Work
 
-- Run final tests/build after update-check caching and screenshot workflow changes.
-- Capture v1.3.0 release screenshots after the version bump.
-- Push v1.3.0 tag, wait for the release workflow, then update the GitHub release notes and screenshot.
+- None.
 
 ## Verification
 
 - `npm run test` passes.
 - `npm run build` passes.
+- `npm run release:dry-run` passes for `v1.3.0`.
+- `npm run screenshots:release` captured 12 screenshots in `screenshots/v1.3.0`, including `dark-month.png` and `light-month.png`.
 - Browser QA with Browser plugin at `http://127.0.0.1:5174/?demo=1&view=settings&theme=dark&seed=release&today=2026-06-17&update=available`:
   - Desktop `1280x720`: About settings renders, Check updates shows the update snackbar with Release notes and Download actions, Release notes opens the dialog, snackbar remains visible, release notes body renders, no horizontal overflow, and console warn/error logs are empty.
   - Mobile `390x844`: Same flow works, modal and snackbar fit within the viewport, no horizontal overflow, and console warn/error logs are empty.
