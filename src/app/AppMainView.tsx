@@ -2,19 +2,19 @@ import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import { MonthView } from "../components/MonthView";
 import { ReportsView } from "../components/ReportsView";
-import { ReviewView } from "../components/ReviewView";
 import type { AppView } from "../components/Sidebar";
 import { TicketsView } from "../components/TicketsView";
 import { TodayView } from "../components/TodayView";
 import { WeekView } from "../components/WeekView";
+import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
 type WeekViewProps = ComponentProps<typeof WeekView>;
 type MonthViewProps = ComponentProps<typeof MonthView>;
-type ReviewViewProps = ComponentProps<typeof ReviewView>;
 type TicketsViewProps = ComponentProps<typeof TicketsView>;
 type ReportsViewProps = ComponentProps<typeof ReportsView>;
+type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 
 export interface AppMainViewProps {
@@ -26,27 +26,27 @@ export interface AppMainViewProps {
   todayWorklogs: TodayViewProps["todayWorklogs"];
   todayPersonalNotes: TodayViewProps["personalNotes"];
   issueUrlsByKey: TodayViewProps["issueUrlsByKey"];
-  issueTypesByKey: ReviewViewProps["issueTypesByKey"];
+  issueTypesByKey: AppReviewRouteProps["issueTypesByKey"];
   todayTrackedHours: TodayViewProps["todayTrackedHours"];
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
-  settings: ReviewViewProps["settings"];
+  settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   weekState: WeekViewProps["weekState"];
   syncResult: WeekViewProps["syncResult"];
   monthState: MonthViewProps["monthState"] | undefined;
-  visibleBitbucketReviewResult: ReviewViewProps["result"];
+  visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: { inProgress: TicketsViewProps["inProgress"]; recentlyClosed: TicketsViewProps["recentlyClosed"] } | undefined;
   favoriteKeys: TicketsViewProps["favoriteKeys"];
   hoursByKey: TicketsViewProps["hoursByKey"];
   dockTickets: WeekViewProps["dockTickets"];
   activeTicketCount: WeekViewProps["activeTicketCount"];
-  reviewTargetMode: ReviewViewProps["targetMode"];
+  reviewTargetMode: AppReviewRouteProps["reviewTargetMode"];
   isConfigured: TodayViewProps["isConfigured"];
-  isBitbucketReady: ReviewViewProps["isConfigured"];
+  isBitbucketReady: AppReviewRouteProps["isBitbucketReady"];
   isSyncing: WeekViewProps["isSyncing"];
-  isSyncingReviews: ReviewViewProps["isSyncing"];
+  isSyncingReviews: AppReviewRouteProps["isSyncingReviews"];
   isLogging: TodayViewProps["isLogging"];
-  isLoggingReview: ReviewViewProps["isLogging"];
+  isLoggingReview: AppReviewRouteProps["isLoggingReview"];
   ticketsLoading: TicketsViewProps["isLoading"];
   ticketsError: TicketsViewProps["error"];
   isTesting: AppSettingsRouteProps["isTesting"];
@@ -66,9 +66,9 @@ export interface AppMainViewProps {
   goToCurrentMonth: MonthViewProps["onCurrentMonth"];
   goToNextMonth: MonthViewProps["onNextMonth"];
   openWeekFromMonth: MonthViewProps["onSelectWeek"];
-  handleReviewSync: ReviewViewProps["onSync"];
-  handleLogReviewSessions: ReviewViewProps["onLogSessions"];
-  setReviewTargetMode: ReviewViewProps["onTargetModeChange"];
+  handleReviewSync: AppReviewRouteProps["handleReviewSync"];
+  handleLogReviewSessions: AppReviewRouteProps["handleLogReviewSessions"];
+  setReviewTargetMode: AppReviewRouteProps["setReviewTargetMode"];
   toggleFavorite: TicketsViewProps["onToggleFavorite"];
   handleLogTicket: TicketsViewProps["onLog"];
   setSettingsDraft: AppSettingsRouteProps["setSettingsDraft"];
@@ -242,23 +242,23 @@ export const AppMainView = ({
     );
   } else if (view === "review") {
     content = (
-      <ReviewView
+      <AppReviewRoute
         weekKey={weekState.weekKey}
         weekStartISO={weekState.weekStartISO}
         settings={settings}
-        result={visibleBitbucketReviewResult}
+        visibleBitbucketReviewResult={visibleBitbucketReviewResult}
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
-        isConfigured={isBitbucketReady}
-        isSyncing={isSyncingReviews}
-        isLogging={isLoggingReview}
-        targetMode={reviewTargetMode}
-        onTargetModeChange={setReviewTargetMode}
-        onSync={handleReviewSync}
-        onLogSessions={handleLogReviewSessions}
-        onPreviousWeek={goToPreviousWeek}
-        onCurrentWeek={goToCurrentWeek}
-        onNextWeek={goToNextWeek}
+        isBitbucketReady={isBitbucketReady}
+        isSyncingReviews={isSyncingReviews}
+        isLoggingReview={isLoggingReview}
+        reviewTargetMode={reviewTargetMode}
+        setReviewTargetMode={setReviewTargetMode}
+        handleReviewSync={handleReviewSync}
+        handleLogReviewSessions={handleLogReviewSessions}
+        goToPreviousWeek={goToPreviousWeek}
+        goToCurrentWeek={goToCurrentWeek}
+        goToNextWeek={goToNextWeek}
       />
     );
   } else if (view === "tickets") {
