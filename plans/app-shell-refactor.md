@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Review route rendering, Settings route rendering, shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Tickets route rendering, Review route rendering, Settings route rendering, shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -57,7 +57,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 45. Done: extract app shell frame rendering into a focused component with coverage.
 46. Done: extract Settings route rendering from `AppMainView` into a focused component with coverage.
 47. Done: extract Review route rendering from `AppMainView` into a focused component with coverage.
-48. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+48. Done: extract Tickets route rendering from `AppMainView` into a focused component with coverage.
+49. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -404,3 +405,11 @@ Phase 47:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Review target mode confirmation to review bucket, with no horizontal overflow and no console errors
+
+Phase 48:
+
+- Passed: `npm run test -- src/app/AppTicketsRoute.test.tsx src/app/AppMainView.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Tickets favorite toggle and LOG navigation to Today, with no horizontal overflow and no console errors

@@ -3,19 +3,19 @@ import { LoadingView } from "../components/LoadingView";
 import { MonthView } from "../components/MonthView";
 import { ReportsView } from "../components/ReportsView";
 import type { AppView } from "../components/Sidebar";
-import { TicketsView } from "../components/TicketsView";
 import { TodayView } from "../components/TodayView";
 import { WeekView } from "../components/WeekView";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
+import { AppTicketsRoute } from "./AppTicketsRoute";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
 type WeekViewProps = ComponentProps<typeof WeekView>;
 type MonthViewProps = ComponentProps<typeof MonthView>;
-type TicketsViewProps = ComponentProps<typeof TicketsView>;
 type ReportsViewProps = ComponentProps<typeof ReportsView>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
+type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
 
 export interface AppMainViewProps {
   view: AppView;
@@ -35,9 +35,9 @@ export interface AppMainViewProps {
   syncResult: WeekViewProps["syncResult"];
   monthState: MonthViewProps["monthState"] | undefined;
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
-  tickets: { inProgress: TicketsViewProps["inProgress"]; recentlyClosed: TicketsViewProps["recentlyClosed"] } | undefined;
-  favoriteKeys: TicketsViewProps["favoriteKeys"];
-  hoursByKey: TicketsViewProps["hoursByKey"];
+  tickets: AppTicketsRouteProps["tickets"];
+  favoriteKeys: AppTicketsRouteProps["favoriteKeys"];
+  hoursByKey: AppTicketsRouteProps["hoursByKey"];
   dockTickets: WeekViewProps["dockTickets"];
   activeTicketCount: WeekViewProps["activeTicketCount"];
   reviewTargetMode: AppReviewRouteProps["reviewTargetMode"];
@@ -47,8 +47,8 @@ export interface AppMainViewProps {
   isSyncingReviews: AppReviewRouteProps["isSyncingReviews"];
   isLogging: TodayViewProps["isLogging"];
   isLoggingReview: AppReviewRouteProps["isLoggingReview"];
-  ticketsLoading: TicketsViewProps["isLoading"];
-  ticketsError: TicketsViewProps["error"];
+  ticketsLoading: AppTicketsRouteProps["ticketsLoading"];
+  ticketsError: AppTicketsRouteProps["ticketsError"];
   isTesting: AppSettingsRouteProps["isTesting"];
   isTestingBitbucket: AppSettingsRouteProps["isTestingBitbucket"];
   effectiveTheme: AppSettingsRouteProps["effectiveTheme"];
@@ -69,8 +69,8 @@ export interface AppMainViewProps {
   handleReviewSync: AppReviewRouteProps["handleReviewSync"];
   handleLogReviewSessions: AppReviewRouteProps["handleLogReviewSessions"];
   setReviewTargetMode: AppReviewRouteProps["setReviewTargetMode"];
-  toggleFavorite: TicketsViewProps["onToggleFavorite"];
-  handleLogTicket: TicketsViewProps["onLog"];
+  toggleFavorite: AppTicketsRouteProps["toggleFavorite"];
+  handleLogTicket: AppTicketsRouteProps["handleLogTicket"];
   setSettingsDraft: AppSettingsRouteProps["setSettingsDraft"];
   handleSaveSettings: AppSettingsRouteProps["handleSaveSettings"];
   handleTestConnection: AppSettingsRouteProps["handleTestConnection"];
@@ -263,17 +263,16 @@ export const AppMainView = ({
     );
   } else if (view === "tickets") {
     content = (
-      <TicketsView
-        inProgress={tickets?.inProgress ?? []}
-        recentlyClosed={tickets?.recentlyClosed ?? []}
+      <AppTicketsRoute
+        tickets={tickets}
         favoriteKeys={favoriteKeys}
         hoursByKey={hoursByKey}
         weekHoursLogged={weekState.trackedWeekHours}
         isConfigured={isConfigured}
-        isLoading={ticketsLoading}
-        error={ticketsError}
-        onToggleFavorite={toggleFavorite}
-        onLog={handleLogTicket}
+        ticketsLoading={ticketsLoading}
+        ticketsError={ticketsError}
+        toggleFavorite={toggleFavorite}
+        handleLogTicket={handleLogTicket}
       />
     );
   } else if (view === "reports") {
