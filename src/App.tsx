@@ -1,9 +1,5 @@
 import { useState } from "react";
-import type {
-  BitbucketReviewTargetMode,
-  PersonalNote,
-  SyncResult
-} from "../shared/types";
+import type { BitbucketReviewTargetMode } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
@@ -13,6 +9,7 @@ import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
 import { useAppShellState } from "./app/useAppShellState";
 import { useAppTimeEntryModalState } from "./app/useAppTimeEntryModalState";
+import { useAppWeekDataState } from "./app/useAppWeekDataState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -50,8 +47,9 @@ export const App = () => {
     currentDate,
     demoScenario
   });
-  const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
-  const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
+  const { syncResult, setSyncResult, personalNotes, setPersonalNotes } = useAppWeekDataState({
+    demoSyncResult: demoScenario?.syncResult
+  });
   const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
     isDemo
   });
