@@ -1,9 +1,9 @@
 import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
-import { MonthView } from "../components/MonthView";
 import type { AppView } from "../components/Sidebar";
 import { TodayView } from "../components/TodayView";
 import { WeekView } from "../components/WeekView";
+import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
@@ -11,7 +11,7 @@ import { AppTicketsRoute } from "./AppTicketsRoute";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
 type WeekViewProps = ComponentProps<typeof WeekView>;
-type MonthViewProps = ComponentProps<typeof MonthView>;
+type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
@@ -32,7 +32,7 @@ export interface AppMainViewProps {
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   weekState: WeekViewProps["weekState"];
   syncResult: WeekViewProps["syncResult"];
-  monthState: MonthViewProps["monthState"] | undefined;
+  monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: AppTicketsRouteProps["tickets"];
   favoriteKeys: AppTicketsRouteProps["favoriteKeys"];
@@ -61,10 +61,10 @@ export interface AppMainViewProps {
   goToPreviousWeek: WeekViewProps["onPreviousWeek"];
   goToCurrentWeek: WeekViewProps["onCurrentWeek"];
   goToNextWeek: WeekViewProps["onNextWeek"];
-  goToPreviousMonth: MonthViewProps["onPreviousMonth"];
-  goToCurrentMonth: MonthViewProps["onCurrentMonth"];
-  goToNextMonth: MonthViewProps["onNextMonth"];
-  openWeekFromMonth: MonthViewProps["onSelectWeek"];
+  goToPreviousMonth: AppMonthRouteProps["goToPreviousMonth"];
+  goToCurrentMonth: AppMonthRouteProps["goToCurrentMonth"];
+  goToNextMonth: AppMonthRouteProps["goToNextMonth"];
+  openWeekFromMonth: AppMonthRouteProps["openWeekFromMonth"];
   handleReviewSync: AppReviewRouteProps["handleReviewSync"];
   handleLogReviewSessions: AppReviewRouteProps["handleLogReviewSessions"];
   setReviewTargetMode: AppReviewRouteProps["setReviewTargetMode"];
@@ -228,16 +228,14 @@ export const AppMainView = ({
       />
     );
   } else if (view === "month") {
-    content = monthState ? (
-      <MonthView
+    content = (
+      <AppMonthRoute
         monthState={monthState}
-        onSelectWeek={openWeekFromMonth}
-        onPreviousMonth={goToPreviousMonth}
-        onCurrentMonth={goToCurrentMonth}
-        onNextMonth={goToNextMonth}
+        openWeekFromMonth={openWeekFromMonth}
+        goToPreviousMonth={goToPreviousMonth}
+        goToCurrentMonth={goToCurrentMonth}
+        goToNextMonth={goToNextMonth}
       />
-    ) : (
-      <LoadingView />
     );
   } else if (view === "review") {
     content = (
