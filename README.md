@@ -1,115 +1,222 @@
 <p align="center">
-  <img src="./src/assets/app-icon.svg" alt="TimeBro logo" width="144" />
+  <img src="./src/assets/app-icon.svg" alt="TimeBro logo" width="128" />
 </p>
 
-⏱️ Your manager has bravely decided that every minute is a tiny KPI waiting to be loved. If you are now searching for the perfect time-tracking instrument, TimeBro is your reliable desk buddy for keeping Jira worklogs tidy and making the manager suspiciously happy.
-
-TimeBro turns your Jira work logs into a calm weekly cockpit: what is logged, what is missing, which days are off, and which ticket needs a little attention before the week closes.
+<h1 align="center">TimeBro 🐻⏱️</h1>
 
 <p align="center">
-  <img src="./screenshots/v1.0.0/dark-week.png" alt="TimeBro dark Week view showing weekday cards, tracked hours, target progress, Jira worklog rows, vacation controls, and add-time buttons." width="960" />
+  <strong>Your desk buddy for Jira time tracking — so logging hours stops feeling like a chore.</strong>
 </p>
 
 <p align="center">
-  <em>Dark Week view: weekly progress ring, Monday-local day columns, tracked/target hours, Jira worklog rows with notes, skipped-day handling, and quick add/edit controls.</em>
+  <img src="https://img.shields.io/badge/version-1.4.0-4C6EF5?style=flat-square" alt="Version 1.4.0" />
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-2DBF7F?style=flat-square" alt="macOS, Windows, Linux" />
+  <img src="https://img.shields.io/badge/local--first-no%20telemetry-EC9A3C?style=flat-square" alt="Local-first, no telemetry" />
+  <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-2A2724?style=flat-square" alt="Built with Electron and React" />
 </p>
 
-TimeBro is a small desktop app built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server, no telemetry, and no credential relay: your data stays on your machine and Jira calls go only to the Jira site you configure.
+---
 
-## Views
+## Meet TimeBro 👋
 
-- **Today**: log time into the selected Jira ticket, pick duration presets or a custom value, add worklog notes, review today's Jira worklogs and local personal notes, and see how much remains against the daily target.
-- **Week**: browse previous/current/next weeks, inspect Monday-Friday day columns, compare tracked hours to targets, mark vacation/skipped days, add or edit entries from a day, and see Jira worklog comments inline.
-- **Tickets**: review assigned in-progress tickets, recently closed tickets, favorite/starred tickets, weekly logged hours by issue, epic/project context, and one-click logging.
-- **Reports**: summarize weekly target progress with daily average, days on target, tickets touched, billable Jira percentage, hours-per-day charts, ticket breakdowns, and CSV export.
-- **Settings**: connect Jira Cloud with email + API token, test the connection, configure weekly targets and working days, schedule local reminders, and choose light or dark theme.
+So your manager has bravely decided that **every minute is a tiny KPI waiting to be loved.** ❤️ And now it's Friday afternoon and you're squinting at an empty Jira worklog, trying to remember what Tuesday-you actually did.
 
-## Feature Highlights
+That's where TimeBro comes in. 🤝
 
-- Local-first storage for settings, week overrides, favorites, personal notes, and sync results in IndexedDB.
-- Jira Cloud REST API v3 sync for your own work log items, filtered by authenticated account ID and Monday-local week bounds.
-- Safe Add Time flow that intentionally creates Jira work log items with started time, duration, and optional ADF comment.
-- Configurable weekly target hours, defaulting to `40h`, with working-day and skipped-day redistribution.
-- Work log fidelity across API, IPC, storage, and UI: item IDs, issue keys, started timestamps, durations, and flattened ADF comments are preserved.
-- Native Electron reminder notifications while the app is running, with vacation days and completed weeks respected.
-- Light and dark themes, plus deterministic demo screenshots for release notes and docs.
+TimeBro is a calm little desktop app that turns your messy week into a tidy cockpit: **what's logged, what's missing, which days are off, and which ticket still needs a few hours before the week closes.** Pick a ticket, tap a duration, done. Or just **drag an in-progress ticket onto a day** and watch your weekly ring fill up.
 
-## Tech Stack
+Your manager gets clean worklogs. You get your Friday back. 🎉
 
-- React 18
-- TypeScript
-- Vite
-- Electron
-- Vitest
-- IndexedDB
-- Jira Cloud REST API v3
+> 🔒 **No backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB, and the only thing TimeBro ever phones is the Jira site *you* point it at.
 
-## Project Structure
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-week.png" alt="TimeBro Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
+</p>
 
-```text
-.
-├── electron/          # Electron main process, preload bridge, Jira API calls, reminders
-├── shared/            # Shared TypeScript types
-├── src/               # React renderer app
-├── plans/             # Agent-maintained implementation plans
-├── screenshots/       # Versioned release screenshots
-├── AGENTS.md          # Agent development instructions
-└── package.json       # Scripts, dependencies, Electron packaging config
-```
+<p align="center">
+  <em>The weekly cockpit — progress ring, per-day targets, and an Active Work dock you can drag tickets out of.</em>
+</p>
 
-## Getting Started
+---
 
-Install dependencies:
+## Why you'll like it
+
+- ⚡ **Two-click logging.** Pick a ticket, tap `2h`, hit save. There's even a `Cmd/Ctrl-K` for the impatient.
+- 🎯 **Targets that keep you honest.** Daily and weekly goals, with vacation days that quietly redistribute the rest of your week.
+- 🖱️ **Drag-and-drop time.** Grab a card from the Active Work dock and drop it on any day.
+- 🔍 **Log to *any* ticket.** Search all of Jira from the composer — not just the handful assigned to you.
+- ✏️ **Fix mistakes.** Edit or delete worklogs right from the app.
+- 👀 **Code review counts too.** Optional Bitbucket integration estimates your PR-review time and logs it for you.
+- 📅 **Zoom out.** A Month calendar hunts down the days you forgot, and Reports turn it all into numbers (and CSV).
+- 🌗 **Light or dark, your call.** A warm, editorial design that's easy on the eyes either way.
+
+---
+
+## Take the tour 🎬
+
+### ☀️ Today — log it before you forget it
+
+Pick a ticket (or search all of Jira), tap a duration preset, jot a note, and you're done. A **"touched today, not logged"** rail nudges you about tickets you clearly worked on but haven't logged yet, and a target bar shows exactly how much is left in the day. Prefer to keep something to yourself? Flip to **Personal note** for a local-only entry that never touches Jira.
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-today.png" alt="TimeBro Today view with a daily target bar, a worklog composer with ticket picker and duration presets, today's logged entries, and a sidebar of tickets touched but not yet logged." width="900" />
+</p>
+
+### 🗓️ Month — the big picture
+
+The whole month as a calendar, color-coded by whether each day hit target. The **"jump to next gap"** button walks you straight to the days you forgot, so backfilling a sloppy month takes minutes instead of detective work.
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-month.png" alt="TimeBro Month view: a calendar grid of daily hour totals color-coded by target attainment, weekly totals on the right, and a jump-to-next-gap button." width="900" />
+</p>
+
+### 👀 Review — get credit for code review too *(optional)*
+
+Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each pull request from your actual review activity. Tick the sessions you want, choose whether they land on **the reviewed ticket** or a dedicated **code-review bucket**, and log them all to Jira in **one batch**. It's strictly read-only on the Bitbucket side — Jira worklogs stay the only thing TimeBro ever writes.
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-review.png" alt="TimeBro Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
+</p>
+
+### 🏷️ Tickets — your workload, starred and sorted
+
+Everything assigned and in progress, plus recently closed tickets and your **starred favorites**, each with a status badge, project context, hours logged this week, and a one-click **LOG** button that drops you into Today with the ticket pre-selected.
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-tickets.png" alt="TimeBro Tickets view listing favorite and in-progress tickets with status and issue-type badges, weekly logged hours, project names, and per-row LOG buttons." width="900" />
+</p>
+
+### 📊 Reports — numbers your manager will love
+
+Daily average, days on target, tickets touched, billable percentage, an hours-per-day chart, and a per-ticket breakdown. Browse previous weeks, then **export to CSV** for the inevitable "can you send me the spreadsheet?"
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-reports.png" alt="TimeBro Reports view with weekly KPIs, an hours-per-day bar chart, and a by-ticket breakdown showing hours and percentage of the week." width="900" />
+</p>
+
+### ⚙️ Settings — five minutes, tops
+
+Connect Jira (and optionally Bitbucket), set your weekly target and working days, schedule a gentle end-of-day reminder, import/export your personal notes, and pick **light, dark, or auto**.
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/dark-settings.png" alt="TimeBro Settings view with a Jira Cloud sign-in panel and a left rail of sections: Jira, Bitbucket, Tracking, Recurring, Appearance, Data, and About." width="900" />
+</p>
+
+### 🌗 Looks great in the light, too
+
+<p align="center">
+  <img src="./screenshots/v1.4.0/light-week.png" alt="TimeBro Week view in the light theme, showing the same weekly cockpit with a cooler gray palette." width="900" />
+</p>
+
+---
+
+## Everything TimeBro can do
+
+<details open>
+<summary><strong>Time logging</strong></summary>
+
+- Two-click logging with duration presets (15m → 8h) or a custom **H / D / W** picker (1d = 8h, 1w = 5d).
+- Global **`Cmd/Ctrl-K`** shortcut to log time from anywhere.
+- **Drag-and-drop** from the Active Work dock onto any day in the Week view.
+- **Edit and delete** existing Jira worklogs (duration, start time, comment, date).
+- Optional worklog comments that sync to the Jira work log item itself.
+- **Personal notes** — local-only entries that count toward your totals but never touch Jira.
+- Optimistic refresh: new entries show up immediately, before the next full sync.
+
+</details>
+
+<details>
+<summary><strong>Jira integration</strong></summary>
+
+- Sign in with your Atlassian email + a regular API token — **no Jira admin required**.
+- Syncs only *your* work log items, scoped to your account and the Monday-local week.
+- **Search all of Jira** from the composer, not just assigned tickets.
+- Assigned, in-progress, and recently-closed tickets fetched on startup (and right after you connect).
+- **Status badges** (OPEN / IN PROGRESS / IN REVIEW / DONE) and issue-type badges (EPIC / SUB).
+- Every ticket key is a clickable link straight to your Jira site.
+- Auto-sync on launch so you open to fresh numbers.
+
+</details>
+
+<details>
+<summary><strong>Bitbucket review ledger (optional)</strong></summary>
+
+- Read-only Bitbucket Cloud integration that adds a **Review** screen when configured.
+- Estimates review time per pull request from your real review activity.
+- Filter by PRs you reviewed vs. your own PRs.
+- Log review sessions to **the reviewed ticket** or a dedicated **code-review bucket**.
+- Per-PR duration controls and a confirmation step before anything is written to Jira.
+- Batch-log a whole week of reviews in one go.
+
+</details>
+
+<details>
+<summary><strong>Planning &amp; insight</strong></summary>
+
+- **Week** view: progress ring, per-day targets, vacation/skipped-day handling that redistributes your weekly goal.
+- **Month** view: calendar of daily totals with a jump-to-next-gap helper.
+- **Reports**: daily average, days on target, tickets touched, billable %, hours-per-day chart, by-ticket breakdown, and CSV export across your sync history.
+- **Recurring** local rituals for the standups and ceremonies you log every week.
+
+</details>
+
+<details>
+<summary><strong>Niceties</strong></summary>
+
+- Warm editorial design in **light, dark, or auto** (follows your system).
+- Collapsible sidebar and a sync-status dot you can click to refresh.
+- Snackbar notifications for sync, save, and update events.
+- Native reminder notifications (skipped on vacation days and completed weeks).
+- In-app update checks with release notes and a download link.
+- Window position and size remembered between launches.
+- Responsive down to phone-width viewports.
+- Import/export personal notes as CSV to move between machines.
+
+</details>
+
+---
+
+## Get TimeBro
+
+**Just want to use it?** Grab the installer for your platform from the [latest release](../../releases/latest):
+
+- 🍎 **macOS** — `.dmg` (signed &amp; notarized) or `.zip`
+- 🪟 **Windows** — `.exe` installer or `.zip`
+- 🐧 **Linux** — `AppImage`, `.deb`, or `.tar.gz`
+
+Then head to **Settings → Jira** and paste in your site, email, and API token (see [Connect Jira](#connect-jira) below). That's the whole setup.
+
+---
+
+## Build it yourself
+
+TimeBro is a small desktop app built with **React, TypeScript, Vite, Electron, and IndexedDB**. No backend, no telemetry, no credential relay.
 
 ```bash
-npm install
+npm install      # install dependencies
+npm run dev      # launch the full Electron app
 ```
 
-Start the full Electron app:
+`npm run dev` starts the Vite renderer on `http://127.0.0.1:5173/`, a TypeScript watch build for Electron, and the desktop window pointed at the dev server.
 
 ```bash
-npm run dev
+npm run dev:renderer   # browser-only renderer preview
+npm run build          # type-check, build renderer, compile Electron
+npm run preview        # preview a production renderer build
+npm run dist           # package the desktop app into release/
 ```
 
-This starts:
-
-- Vite renderer dev server on `http://127.0.0.1:5173/`
-- Electron TypeScript watch build
-- Electron desktop window pointed at the dev server
-
-Start only the browser renderer preview:
+### Common commands
 
 ```bash
-npm run dev:renderer
-```
-
-Preview a production renderer build:
-
-```bash
-npm run build
-npm run preview
-```
-
-Package the desktop app:
-
-```bash
-npm run dist
-```
-
-The packaged output is written to `release/`.
-
-## Common Commands
-
-```bash
-npm run test      # Run Vitest tests
-npm run e2e:renderer # Run Playwright renderer E2E against demo data
-npm run lint      # Type-check renderer code
-npm run build     # Type-check, build renderer, compile Electron files
-npm run dist:mac  # Build macOS DMG and ZIP
-npm run dist:win  # Build Windows NSIS installer and ZIP
-npm run dist:linux # Build Linux AppImage, DEB, and tar.gz
-npm run screenshots # Capture release/blog screenshots with demo data
-npm audit         # Check dependency advisories
+npm run test          # Vitest unit tests
+npm run e2e:renderer  # Playwright renderer E2E against demo data
+npm run lint          # type-check renderer + Electron
+npm run dist:mac      # macOS DMG + ZIP
+npm run dist:win      # Windows NSIS installer + ZIP
+npm run dist:linux    # Linux AppImage + DEB + tar.gz
+npm run screenshots   # capture release screenshots with demo data
+npm audit             # check dependency advisories
 ```
 
 Regenerate app icons after editing `assets/app-icon.svg`:
@@ -118,131 +225,152 @@ Regenerate app icons after editing `assets/app-icon.svg`:
 npm run assets:icons
 ```
 
-## Jira Sign-In: Token Or OAuth?
+### Tech stack
 
-For a personal local desktop app, use your Atlassian account email plus a regular Atlassian API token. You do not need to be a Jira administrator.
+React 18 · TypeScript · Vite · Electron · Vitest · Playwright · IndexedDB · Jira Cloud REST API v3 · Bitbucket Cloud REST API
 
-The token acts as you, so Jira still enforces your normal permissions. Sync works when your user can browse the relevant projects and see the issues and work log items. If a project, issue security level, or work log visibility rule hides something from you in Jira, the app cannot read it either.
+### Project structure
 
-OAuth 2.0 3LO is better for a distributed product with a registered Atlassian integration, consent screen, client ID, client secret, redirect URL, and scopes. For this local MVP it is more setup, not less. Scoped API tokens also require the Atlassian API gateway URL with a Cloud ID, while this app uses the simpler direct Jira site URL. The app keeps the code open for OAuth or scoped-token gateway support later, but regular token auth is the simplest path right now.
+```text
+.
+├── electron/      # Electron main process, preload bridge, Jira/Bitbucket calls, reminders
+├── shared/        # Shared TypeScript types + ADF flattening
+├── src/           # React renderer (api, app, components, demo, domain, storage, styles, utils)
+├── e2e/           # Playwright renderer end-to-end tests
+├── scripts/       # Icon generation + release screenshot capture
+├── plans/         # Agent-maintained implementation plans
+├── screenshots/   # Versioned release screenshots
+├── AGENTS.md      # Agent development instructions
+└── package.json   # Scripts, dependencies, Electron packaging config
+```
 
-## Create A Jira API Token
+---
+
+## Connect Jira
+
+For a personal local desktop app, use your Atlassian account **email + a regular Atlassian API token**. You do **not** need to be a Jira administrator.
+
+The token acts as *you*, so Jira still enforces your normal permissions — if a project, security level, or worklog visibility rule hides something from you in Jira, the app can't see it either.
+
+**Create a token:**
 
 1. Open [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
-2. Choose **Create API token**. For now, do not choose the scoped-token flow.
-3. Give it a label such as `TimeBro`.
-4. Copy the token once and paste it into the app Settings view with your Jira email.
-5. Enter your Jira site as either `mycompany`, `mycompany.atlassian.net`, or `https://mycompany.atlassian.net`.
+2. Choose **Create API token** (for now, *not* the scoped-token flow).
+3. Give it a label like `TimeBro`.
+4. Copy the token once and paste it into **Settings → Jira** with your email.
+5. Enter your site as `mycompany`, `mycompany.atlassian.net`, or `https://mycompany.atlassian.net`.
 
-The MVP uses Basic auth with Jira email plus API token. Do not paste your Atlassian password.
+> The app uses Basic auth with Jira email + API token. Don't paste your Atlassian password.
 
-If your organization requires scoped API tokens, the read-only scopes this app needs are:
+<details>
+<summary>Why a regular token instead of OAuth or scoped tokens?</summary>
 
-- `read:jira-work` for JQL issue search and issue work log items.
-- `read:jira-user` for `/rest/api/3/myself`, which identifies your Jira account ID so the app can keep only your work log items.
+OAuth 2.0 3LO is better for a distributed product with a registered Atlassian integration, consent screen, client ID/secret, redirect URL, and scopes. For this local app it's *more* setup, not less. Scoped API tokens also require Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway with a Cloud ID, while TimeBro talks to the simpler direct Jira site URL. The code is kept open for OAuth or scoped-token gateway support later, but regular token auth is the simplest path today.
 
-Scoped tokens use Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway instead of the direct `https://company.atlassian.net` site URL, so gateway support would need to be added before scoped tokens are used in this MVP. No write, project-management, or Jira-admin scopes are needed for the current read-only sync.
+If your org *requires* scoped tokens, the read-only scopes TimeBro needs are `read:jira-work` (JQL issue search + work log items) and `read:jira-user` (`/rest/api/3/myself`, to identify your account ID so it keeps only your worklogs). Gateway support would need to be added before scoped tokens work. No write, project-management, or admin scopes are needed for read-only sync.
 
-## Data And Privacy
+</details>
 
-- Jira credentials are stored only in local IndexedDB.
-- Credentials are sent only to the configured Jira Cloud site when testing the connection or syncing worklogs.
-- No backend server is used.
-- Sync results and skipped days remain local.
-- Jira API calls are made by the Electron main process via IPC.
+## Connect Bitbucket *(optional)*
 
-## Jira Work Log Item API
+Want the **Review** screen? Add a read-only Bitbucket Cloud token in **Settings → Bitbucket**:
 
-The app syncs Jira work log items, not issue discussion comments. Jira stores work log notes on the work log item itself under `worklogs[*].comment` as Atlassian Document Format (ADF). The app flattens that ADF comment with `shared/adf.ts` and keeps it on both the individual `JiraWorklog.comment` and summarized issue `comments` lists.
+1. Create a Bitbucket Cloud **scoped API token** and select **only read scopes**.
+2. Enter your Bitbucket email, the token, your workspace, and the repositories to watch.
+3. Optionally set a **code-review bucket** Jira issue key to log all review time against one ticket.
+4. Hit **Test Bitbucket connection** to confirm, then **Save**.
 
-The app identifies the authenticated Jira account with:
+The **Review** nav item only appears once Bitbucket is configured, and the integration never writes to Bitbucket — it only reads your review activity so it can suggest worklogs for Jira.
+
+---
+
+## Data &amp; privacy
+
+- Jira and Bitbucket credentials are stored only in local **IndexedDB**.
+- Credentials are sent only to the Jira/Bitbucket sites you configure, and only when testing a connection or syncing.
+- **No backend server.** Sync results, skipped days, favorites, and personal notes stay on your machine.
+- API calls are made by the Electron main process over IPC.
+
+**IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`.
+
+<details>
+<summary>How the Jira work log sync actually works</summary>
+
+TimeBro syncs Jira **work log items**, not issue discussion comments. Jira stores worklog notes on the work log item under `worklogs[*].comment` as Atlassian Document Format (ADF); the app flattens that with `shared/adf.ts`.
+
+It identifies your account with:
 
 ```text
 GET /rest/api/3/myself
 ```
 
-It searches candidate issues with JQL:
+Searches candidate issues with JQL:
 
 ```jql
 worklogAuthor = currentUser()
-AND worklogDate >= "<week-start-yyyy-mm-dd>"
-AND worklogDate <= "<week-end-yyyy-mm-dd>"
+AND worklogDate >= "<week-start>"
+AND worklogDate <= "<week-end>"
 ORDER BY updated DESC
 ```
 
-It then fetches:
+Then fetches per-issue worklogs:
 
 ```text
 GET /rest/api/3/issue/{issueIdOrKey}/worklog?startedAfter=<ms>&startedBefore=<ms>
 ```
 
-For each returned work log item, the app:
+For each item it uses `started` as the timestamp, `timeSpentSeconds` for math, filters by your account ID, keeps only items inside the week, reads optional notes from `comment`, and sums by day and week.
 
-- uses `worklog.started` as the tracking timestamp
-- uses `timeSpentSeconds` for calculations
-- filters by the authenticated user's Jira account ID
-- includes only work log items where `started >= weekStart` and `started < weekEndExclusive`
-- reads optional work log notes from `worklog.comment`
-- sums tracked seconds by day and week
-
-The Add Time flow intentionally writes a new Jira work log item with:
+**Add Time** intentionally writes a new work log item:
 
 ```text
 POST /rest/api/3/issue/{issueIdOrKey}/worklog
 ```
 
-That write sends Jira `started`, `timeSpentSeconds`, and an optional ADF `comment`. The app does not use `GET /rest/api/3/issue/{issueIdOrKey}/comment` for work log notes; that endpoint is for issue discussion comments, a different Jira object.
+…sending `started`, `timeSpentSeconds`, and an optional ADF `comment`. (The `.../comment` endpoint is for issue discussion comments — a different Jira object — and is not used for worklog notes.)
 
-## Local Data Stores
+</details>
 
-IndexedDB stores:
+---
 
-- `settings`: Jira site, email, API token, weekly target, working days, reminder settings
-- `weekOverrides`: skipped/vacation days by week
-- `syncResults`: last calculated Jira worklog summary by week
+## For maintainers
 
-## Agent Plans
+<details>
+<summary>Release automation</summary>
 
-Agentic development plans live in `/plans`. If a user changes the plan, update the relevant plan file so it stays current. See [AGENTS.md](./AGENTS.md) for agent-specific instructions.
+Pushes to `main` run unit tests, renderer E2E, and the production build via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
-## Release Automation
+Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will install deps, run tests + E2E, build, package macOS/Windows/Linux on native runners, and create/update a GitHub Release with the installers attached. It uses the built-in `GITHUB_TOKEN`, so no extra release token is needed for same-repo releases.
 
-Regular pushes to `main` run unit tests, renderer E2E, and the production build through [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
+**One-command version bumps:**
 
-Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will:
+```bash
+npm run release:dry-run   # test + e2e + build
+npm run release:patch     # or release:minor / release:major
+npm run release:push      # push commit + tag → starts the release workflow
+```
 
-1. install dependencies
-2. run tests
-3. run renderer E2E against deterministic demo data
-4. build the app
-5. package macOS, Windows, and Linux builds on native runners
-6. create or update a GitHub Release
-7. upload the generated installers and archives
+`npm version` updates `package.json` / `package-lock.json`, commits, and tags `vX.Y.Z`. `release:push` pushes the commit and tags; the pushed tag triggers the workflow.
 
-The workflow uses `gh release create` / `gh release upload` with the built-in `GITHUB_TOKEN`, so no extra release token is needed for normal same-repository releases.
+</details>
 
-## Release Screenshots
+<details>
+<summary>Release screenshots</summary>
 
-Generate deterministic light/dark screenshots for release notes, blog posts, and app store material:
+Generate deterministic light/dark screenshots for release notes and docs:
 
 ```bash
 npm run screenshots
 ```
 
-On a fresh machine, install the Playwright browser once if the script asks for it:
+On a fresh machine, install the Playwright browser once if asked:
 
 ```bash
 npm run screenshots:install-browser
 ```
 
-The script starts the renderer on a free local port, opens demo URLs such as
-`?demo=1&view=week&theme=dark&seed=release&today=2026-06-17`, and writes PNGs to:
-
-```text
-screenshots/v<package-version>/
-```
-
-It captures `today`, `week`, `tickets`, `reports`, and `settings` in both dark and light themes. The data is in-memory only and does not write fake Jira settings, worklogs, tickets, or favorites into IndexedDB.
+The script starts the renderer on a free port, opens demo URLs like
+`?demo=1&view=week&theme=dark&seed=release&today=2026-06-17`, and writes PNGs to `screenshots/v<package-version>/`. It captures `today`, `week`, `month`, `review`, `tickets`, `reports`, and `settings` in both themes. The demo data is in-memory only — it never writes fake Jira settings or worklogs into IndexedDB.
 
 Useful overrides:
 
@@ -251,65 +379,44 @@ npm run screenshots -- --seed blog-1 --today 2026-06-17 --viewport 1600x1000
 npm run screenshots -- --views week,reports --themes dark --out screenshots/blog-1
 ```
 
-### One-Command Version Bumps
+</details>
 
-For the least manual release flow:
+<details>
+<summary>macOS code signing &amp; notarization</summary>
 
-```bash
-npm run release:dry-run
-npm run release:patch
-npm run release:push
-```
-
-Use `release:minor` or `release:major` instead of `release:patch` when appropriate.
-
-`npm version` updates `package.json` and `package-lock.json`, commits the version bump, and creates a tag like `v0.1.1`. `npm run release:push` pushes both the commit and tags. The pushed tag starts the GitHub release workflow.
-
-### Manual Tag Flow
-
-If you want to tag manually:
-
-```bash
-git tag -a v0.1.1 -m "v0.1.1"
-git push origin v0.1.1
-```
-
-Use semantic version tags in the `vX.Y.Z` format, for example `v0.2.0`.
-
-### Local Packaging
-
-You can build packages locally, but native CI builds are recommended for releases.
-
-```bash
-npm run dist:mac
-npm run dist:win
-npm run dist:linux
-```
-
-`npm run dist:all` asks electron-builder to build all configured targets from the current machine. That is convenient on machines with the right platform tooling installed, but the GitHub Actions matrix is more reliable because each OS builds its own native package.
-
-### Code Signing
-
-The release workflow signs and notarizes macOS packages with Apple Developer ID. Add these GitHub repository secrets before pushing a release tag:
+The release workflow signs and notarizes macOS packages with an Apple Developer ID. Add these GitHub repository secrets before pushing a release tag:
 
 | Secret | Value |
 | --- | --- |
-| `MAC_CSC_LINK` | Base64-encoded `.p12` export of the **Developer ID Application** certificate and private key |
-| `MAC_CSC_KEY_PASSWORD` | Password used when exporting the `.p12` file |
-| `APPLE_API_KEY_BASE64` | Base64-encoded App Store Connect API key `.p8` file |
+| `MAC_CSC_LINK` | Base64-encoded `.p12` export of the **Developer ID Application** certificate + private key |
+| `MAC_CSC_KEY_PASSWORD` | Password used when exporting the `.p12` |
+| `APPLE_API_KEY_BASE64` | Base64-encoded App Store Connect API key `.p8` |
 | `APPLE_API_KEY_ID` | App Store Connect API key ID |
 | `APPLE_API_ISSUER` | App Store Connect issuer ID |
-| `APPLE_TEAM_ID` | Apple Developer Team ID, for example `ABCDE12345` |
+| `APPLE_TEAM_ID` | Apple Developer Team ID (e.g. `ABCDE12345`) |
 
-Create the Developer ID certificate in Apple Developer: **Certificates, Identifiers & Profiles** -> **Certificates** -> **+** -> **Software** -> **Developer ID Application**. After installing the downloaded `.cer` into Keychain Access, export it from **My Certificates** as a password-protected `.p12`.
+Create the Developer ID certificate in Apple Developer (**Certificates, Identifiers & Profiles → Certificates → + → Software → Developer ID Application**), install the `.cer` into Keychain Access, and export it from **My Certificates** as a password-protected `.p12`.
 
-Create the notarization API key in App Store Connect: **Users and Access** -> **Integrations** -> **App Store Connect API** -> **Team Keys** -> **Generate API Key**. Use the Developer role, download the `.p8` file once, then copy the Key ID and Issuer ID from the same page.
+Create the notarization key in App Store Connect (**Users and Access → Integrations → App Store Connect API → Team Keys → Generate API Key**) with the Developer role; download the `.p8` once and copy the Key ID and Issuer ID.
 
-Encode the local files before adding them as GitHub secrets:
+Encode the files before adding them as secrets:
 
 ```bash
 base64 -i DeveloperIDApplication.p12 | tr -d '\n' | pbcopy
 base64 -i AuthKey_XXXXXXXXXX.p8 | tr -d '\n' | pbcopy
 ```
 
-Add the secrets in GitHub under **Settings** -> **Secrets and variables** -> **Actions** -> **New repository secret**. Windows packages are still unsigned.
+Add them under **Settings → Secrets and variables → Actions → New repository secret**. Windows packages are currently unsigned.
+
+</details>
+
+<details>
+<summary>Agent plans</summary>
+
+Agentic development plans live in [`/plans`](./plans). If a plan changes, update the relevant file so it stays current. See [AGENTS.md](./AGENTS.md) for agent-specific instructions.
+
+</details>
+
+---
+
+<p align="center"><em>Made for developers who'd rather write code than remember what they wrote. 🐻</em></p>
