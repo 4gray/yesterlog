@@ -1,10 +1,10 @@
 import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import { MonthView } from "../components/MonthView";
-import { ReportsView } from "../components/ReportsView";
 import type { AppView } from "../components/Sidebar";
 import { TodayView } from "../components/TodayView";
 import { WeekView } from "../components/WeekView";
+import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
 import { AppTicketsRoute } from "./AppTicketsRoute";
@@ -12,7 +12,6 @@ import { AppTicketsRoute } from "./AppTicketsRoute";
 type TodayViewProps = ComponentProps<typeof TodayView>;
 type WeekViewProps = ComponentProps<typeof WeekView>;
 type MonthViewProps = ComponentProps<typeof MonthView>;
-type ReportsViewProps = ComponentProps<typeof ReportsView>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
@@ -277,11 +276,11 @@ export const AppMainView = ({
     );
   } else if (view === "reports") {
     content = (
-      <ReportsView
+      <AppReportsRoute
         weekState={weekState}
-        onPreviousWeek={goToPreviousWeek}
-        onCurrentWeek={goToCurrentWeek}
-        onNextWeek={goToNextWeek}
+        goToPreviousWeek={goToPreviousWeek}
+        goToCurrentWeek={goToCurrentWeek}
+        goToNextWeek={goToNextWeek}
       />
     );
   } else {
