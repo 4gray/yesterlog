@@ -143,6 +143,8 @@ export interface BitbucketLoggedReview {
   worklogId: string;
   loggedAt: string;
   targetMode: BitbucketReviewTargetMode;
+  timeSpentSeconds?: number;
+  estimatedSecondsAtLog?: number;
 }
 
 export interface BitbucketReviewSession {

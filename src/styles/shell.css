@@ -26,6 +26,7 @@
 
 .week-header,
 .today-header,
+.review-header,
 .tickets-header,
 .reports-header,
 .settings-header {
@@ -326,4 +327,3 @@
     transform: translateY(0) scale(1);
   }
 }
-

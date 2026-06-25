@@ -86,6 +86,10 @@ export const useBitbucketReviewLogging = ({
         if (isDemo) {
           const demoLogged = sessionsToLog.flatMap((session, index) => {
             const issueKey = getReviewTargetIssueKey(session, settings, targetMode);
+            const timeSpentSeconds =
+              durationOverrides[session.id] && durationOverrides[session.id] > 0
+                ? durationOverrides[session.id]
+                : session.estimatedSeconds;
             return issueKey
               ? [
                   {
@@ -94,7 +98,9 @@ export const useBitbucketReviewLogging = ({
                       issueKey,
                       worklogId: `demo-review-wl-${index + 1}`,
                       loggedAt: new Date().toISOString(),
-                      targetMode
+                      targetMode,
+                      timeSpentSeconds,
+                      estimatedSecondsAtLog: session.estimatedSeconds
                     }
                   }
                 ]
@@ -131,7 +137,9 @@ export const useBitbucketReviewLogging = ({
                 issueKey,
                 worklogId: result.worklogId,
                 loggedAt: new Date().toISOString(),
-                targetMode
+                targetMode,
+                timeSpentSeconds: result.timeSpentSeconds,
+                estimatedSecondsAtLog: session.estimatedSeconds
               }
             });
           } catch (error) {

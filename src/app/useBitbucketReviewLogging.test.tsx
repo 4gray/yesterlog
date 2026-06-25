@@ -188,7 +188,7 @@ describe("useBitbucketReviewLogging", () => {
     renderHarness({ sourceResult: result, isDemo: true });
 
     await act(async () => {
-      await expect(getApi().handleLogReviewSessions(["s1", "s2"], "reviewed-ticket")).resolves.toBe(true);
+      await expect(getApi().handleLogReviewSessions(["s1", "s2"], "reviewed-ticket", { s1: 900 })).resolves.toBe(true);
     });
 
     expect(addWorklog).not.toHaveBeenCalled();
@@ -197,6 +197,10 @@ describe("useBitbucketReviewLogging", () => {
     expect(loadTickets).not.toHaveBeenCalled();
     expect(onReviewResult).toHaveBeenCalledTimes(1);
     expect(onReviewResult.mock.calls[0][0].sessions.map((session) => session.status)).toEqual(["logged", "unlogged"]);
+    expect(onReviewResult.mock.calls[0][0].sessions[0].logged).toMatchObject({
+      timeSpentSeconds: 900,
+      estimatedSecondsAtLog: 1800
+    });
     expect(showSuccess).toHaveBeenCalledWith("Demo logged 1 review sessions.");
     expect(getApi().isLoggingReview).toBe(false);
   });
@@ -243,6 +247,14 @@ describe("useBitbucketReviewLogging", () => {
     expect(onReviewResult.mock.calls[0][0].sessions.map((session) => session.logged?.worklogId)).toEqual([
       "wl-1",
       "wl-2"
+    ]);
+    expect(onReviewResult.mock.calls[0][0].sessions.map((session) => session.logged?.timeSpentSeconds)).toEqual([
+      900,
+      2400
+    ]);
+    expect(onReviewResult.mock.calls[0][0].sessions.map((session) => session.logged?.estimatedSecondsAtLog)).toEqual([
+      1800,
+      2400
     ]);
     expect(showSuccess).toHaveBeenCalledWith("Logged 2 review sessions to Jira.");
     expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });

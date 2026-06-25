@@ -246,7 +246,7 @@
 
 .review-session {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 96px;
+  grid-template-columns: 30px minmax(0, 1fr) 132px;
   gap: 12px;
   align-items: start;
   padding: 16px 0;
@@ -277,7 +277,22 @@
 }
 
 .review-session.is-logged {
-  opacity: 0.58;
+  color: var(--muted);
+}
+
+.review-session.is-logged .review-session-main {
+  border-left-color: rgba(62, 207, 142, 0.72);
+}
+
+.review-session.is-logged .review-title {
+  color: var(--muted);
+}
+
+.review-session.is-logged .review-check.active:disabled {
+  color: #0f241b;
+  border-color: rgba(62, 207, 142, 0.8);
+  background: var(--green);
+  opacity: 1;
 }
 
 .review-session-main {
@@ -342,9 +357,9 @@
 }
 
 .review-state.is-logged {
-  color: var(--dim);
-  border-color: var(--line);
-  background: var(--line-soft);
+  color: var(--green);
+  border-color: rgba(62, 207, 142, 0.42);
+  background: rgba(62, 207, 142, 0.1);
 }
 
 .review-confidence {
@@ -389,15 +404,41 @@
 .review-session-time {
   display: grid;
   justify-items: end;
-  gap: 8px;
+  gap: 5px;
   color: var(--dim);
   font-family: var(--font-mono);
   font-size: 12px;
+  text-align: right;
 }
 
 .review-session-time strong {
   color: var(--muted);
   font-size: 14px;
+}
+
+.review-session-time.is-logged strong {
+  color: var(--green);
+}
+
+.review-session-time.is-logged span {
+  line-height: 1.25;
+}
+
+.review-logged-delta {
+  color: var(--dim);
+  font-size: 10.5px;
+}
+
+.review-logged-delta.is-even {
+  color: var(--green);
+}
+
+.review-logged-delta.is-over {
+  color: var(--amber);
+}
+
+.review-logged-delta.is-under {
+  color: var(--blue-soft);
 }
 
 .review-dialog-panel {

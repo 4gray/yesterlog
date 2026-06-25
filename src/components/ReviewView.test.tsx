@@ -175,6 +175,43 @@ describe("ReviewView", () => {
     expect(markup).toContain("LOG 1 SESSION");
   });
 
+  it("renders logged review sessions with Jira target, actual duration, and estimate delta", () => {
+    const loggedResult = {
+      ...reviewResult,
+      sessions: [
+        buildSession(214, {
+          pullRequestTitle: "Active interrupt handling for poller",
+          jiraIssueKey: "FTDM-328",
+          status: "logged",
+          logged: {
+            issueKey: "FTDM-328",
+            worklogId: "wl-214",
+            loggedAt: "2026-06-15T12:30:00.000Z",
+            targetMode: "reviewed-ticket",
+            timeSpentSeconds: 60 * 60,
+            estimatedSecondsAtLog: 45 * 60
+          }
+        })
+      ]
+    };
+
+    const markup = renderToStaticMarkup(
+      <ReviewView
+        {...baseProps()}
+        result={loggedResult}
+        issueUrlsByKey={{ "FTDM-328": "https://example.atlassian.net/browse/FTDM-328" }}
+      />
+    );
+
+    expect(markup).toContain("LOGGED");
+    expect(markup).toContain("Review session for PR 214 logged");
+    expect(markup).toContain("1h 00m");
+    expect(markup).toContain("suggested 45m");
+    expect(markup).toContain("+15m");
+    expect(markup).toContain("FTDM-328");
+    expect(markup).toContain("LOG 0 SESSIONS");
+  });
+
   it("keeps the confirm dialog scoped to manually selected sessions after editing duration", async () => {
     const result = {
       ...reviewResult,

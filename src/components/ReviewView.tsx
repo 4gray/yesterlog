@@ -163,6 +163,27 @@ const buildTargetPreview = (
     targetIssueKey: getReviewTargetIssueKey(session, settings, mode)
   }));
 
+const getLoggedDurationDeltaClass = (deltaSeconds: number) => {
+  if (deltaSeconds > 0) {
+    return "is-over";
+  }
+
+  if (deltaSeconds < 0) {
+    return "is-under";
+  }
+
+  return "is-even";
+};
+
+const getLoggedDurationDeltaLabel = (deltaSeconds: number) => {
+  if (deltaSeconds === 0) {
+    return "as suggested";
+  }
+
+  const prefix = deltaSeconds > 0 ? "+" : "-";
+  return `${prefix}${formatClock(Math.abs(deltaSeconds))}`;
+};
+
 interface ReviewDialogFrameProps {
   title: string;
   eyebrow?: string;
@@ -599,10 +620,15 @@ export const ReviewView = ({
                 {daySessions.map((session) => {
                   const targetIssueKey = getReviewTargetIssueKey(session, settings, targetMode);
                   const isLogged = session.status === "logged";
+                  const displayIssueKey = isLogged ? session.logged?.issueKey ?? targetIssueKey : targetIssueKey;
                   const isSelectable = Boolean(targetIssueKey && !isLogged);
                   const start = new Date(session.startedISO);
                   const end = new Date(session.endedISO);
                   const authorLabel = getSessionAuthorLabel(session);
+                  const loggedSeconds = session.logged?.timeSpentSeconds;
+                  const suggestedSeconds = session.logged?.estimatedSecondsAtLog ?? session.estimatedSeconds;
+                  const loggedDeltaSeconds =
+                    typeof loggedSeconds === "number" ? loggedSeconds - suggestedSeconds : undefined;
 
                   return (
                     <div className={`review-session ${isLogged ? "is-logged" : ""}`} key={session.id}>
@@ -635,11 +661,11 @@ export const ReviewView = ({
                           <span>{authorLabel}</span>
                           <span>{session.commentCount} comments</span>
                           <span>
-                            {targetIssueKey ? (
+                            {displayIssueKey ? (
                               <TicketKeyLink
-                                issueKey={targetIssueKey}
-                                url={issueUrlsByKey[targetIssueKey]}
-                                issueType={issueTypesByKey[targetIssueKey]}
+                                issueKey={displayIssueKey}
+                                url={issueUrlsByKey[displayIssueKey]}
+                                issueType={issueTypesByKey[displayIssueKey]}
                                 keyClassName="review-issue-key"
                               />
                             ) : (
@@ -649,11 +675,32 @@ export const ReviewView = ({
                         </div>
                       </div>
 
-                      <div className="review-session-time">
-                        <strong>{formatClock(session.estimatedSeconds)}</strong>
-                        <span>
-                          {formatHm24(start)}-{formatHm24(end)}
-                        </span>
+                      <div className={`review-session-time ${isLogged ? "is-logged" : ""}`}>
+                        {isLogged ? (
+                          <>
+                            <strong>{typeof loggedSeconds === "number" ? formatClock(loggedSeconds) : "LOGGED"}</strong>
+                            <span>{typeof loggedSeconds === "number" ? "logged" : "amount unknown"}</span>
+                            <span
+                              className={`review-logged-delta ${
+                                typeof loggedDeltaSeconds === "number"
+                                  ? getLoggedDurationDeltaClass(loggedDeltaSeconds)
+                                  : ""
+                              }`}
+                            >
+                              suggested {formatClock(suggestedSeconds)}
+                              {typeof loggedDeltaSeconds === "number"
+                                ? ` · ${getLoggedDurationDeltaLabel(loggedDeltaSeconds)}`
+                                : ""}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <strong>{formatClock(session.estimatedSeconds)}</strong>
+                            <span>
+                              {formatHm24(start)}-{formatHm24(end)}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
