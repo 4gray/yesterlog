@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Settings route rendering, shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -55,7 +55,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 43. Done: extract Review target mode state into a focused hook with coverage.
 44. Done: extract Jira/Bitbucket connection readiness derivation into a focused hook with coverage.
 45. Done: extract app shell frame rendering into a focused component with coverage.
-46. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+46. Done: extract Settings route rendering from `AppMainView` into a focused component with coverage.
+47. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -386,3 +387,11 @@ Phase 45:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Week shell frame and Add Time overlay placement, with no horizontal overflow and no console errors
+
+Phase 46:
+
+- Passed: `npm run test -- src/app/AppSettingsRoute.test.tsx src/app/AppMainView.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Settings About/update route and release notes dialog, with no horizontal overflow and no console errors

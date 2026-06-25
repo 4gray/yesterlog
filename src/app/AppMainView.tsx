@@ -3,11 +3,11 @@ import { LoadingView } from "../components/LoadingView";
 import { MonthView } from "../components/MonthView";
 import { ReportsView } from "../components/ReportsView";
 import { ReviewView } from "../components/ReviewView";
-import { SettingsView } from "../components/SettingsView";
 import type { AppView } from "../components/Sidebar";
 import { TicketsView } from "../components/TicketsView";
 import { TodayView } from "../components/TodayView";
 import { WeekView } from "../components/WeekView";
+import { AppSettingsRoute } from "./AppSettingsRoute";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
 type WeekViewProps = ComponentProps<typeof WeekView>;
@@ -15,7 +15,7 @@ type MonthViewProps = ComponentProps<typeof MonthView>;
 type ReviewViewProps = ComponentProps<typeof ReviewView>;
 type TicketsViewProps = ComponentProps<typeof TicketsView>;
 type ReportsViewProps = ComponentProps<typeof ReportsView>;
-type SettingsViewProps = ComponentProps<typeof SettingsView>;
+type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 
 export interface AppMainViewProps {
   view: AppView;
@@ -30,7 +30,7 @@ export interface AppMainViewProps {
   todayTrackedHours: TodayViewProps["todayTrackedHours"];
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
   settings: ReviewViewProps["settings"];
-  settingsDraft: SettingsViewProps["draft"];
+  settingsDraft: AppSettingsRouteProps["settingsDraft"];
   weekState: WeekViewProps["weekState"];
   syncResult: WeekViewProps["syncResult"];
   monthState: MonthViewProps["monthState"] | undefined;
@@ -49,13 +49,13 @@ export interface AppMainViewProps {
   isLoggingReview: ReviewViewProps["isLogging"];
   ticketsLoading: TicketsViewProps["isLoading"];
   ticketsError: TicketsViewProps["error"];
-  isTesting: SettingsViewProps["isTesting"];
-  isTestingBitbucket: SettingsViewProps["isTestingBitbucket"];
-  effectiveTheme: SettingsViewProps["effectiveTheme"];
-  updateInfo: SettingsViewProps["updateInfo"];
-  isCheckingUpdates: SettingsViewProps["isCheckingUpdates"];
-  recurringEvents: SettingsViewProps["recurringEvents"];
-  isImportingPersonalNotes: SettingsViewProps["isImportingPersonalNotes"];
+  isTesting: AppSettingsRouteProps["isTesting"];
+  isTestingBitbucket: AppSettingsRouteProps["isTestingBitbucket"];
+  effectiveTheme: AppSettingsRouteProps["effectiveTheme"];
+  updateInfo: AppSettingsRouteProps["updateInfo"];
+  isCheckingUpdates: AppSettingsRouteProps["isCheckingUpdates"];
+  recurringEvents: AppSettingsRouteProps["recurringEvents"];
+  isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
   handleAddWorklog: TodayViewProps["onLog"] & NonNullable<WeekViewProps["onDockLog"]>;
   handleAddPersonalNote: TodayViewProps["onAddPersonalNote"];
   handleSync: WeekViewProps["onSync"];
@@ -71,20 +71,20 @@ export interface AppMainViewProps {
   setReviewTargetMode: ReviewViewProps["onTargetModeChange"];
   toggleFavorite: TicketsViewProps["onToggleFavorite"];
   handleLogTicket: TicketsViewProps["onLog"];
-  setSettingsDraft: SettingsViewProps["onDraftChange"];
-  handleSaveSettings: SettingsViewProps["onSave"];
-  handleTestConnection: SettingsViewProps["onTestConnection"];
-  handleTestBitbucketConnection: SettingsViewProps["onTestBitbucketConnection"];
-  selectTheme: SettingsViewProps["onSelectTheme"];
-  checkForUpdatesFromSettings: SettingsViewProps["onCheckForUpdates"];
-  openCurrentReleaseNotes: SettingsViewProps["onShowReleaseNotes"];
-  openCurrentUpdateDownload: SettingsViewProps["onDownloadUpdate"];
-  openReleasePage: SettingsViewProps["onOpenReleasePage"];
-  handleExportWeekCsv: SettingsViewProps["onExportWeekCsv"];
-  handleImportPersonalNotes: SettingsViewProps["onImportPersonalNotes"];
-  handleSaveRecurringEvent: SettingsViewProps["onSaveRecurringEvent"];
-  handleDeleteRecurringEvent: SettingsViewProps["onDeleteRecurringEvent"];
-  handleToggleRecurringEvent: SettingsViewProps["onToggleRecurringEvent"];
+  setSettingsDraft: AppSettingsRouteProps["setSettingsDraft"];
+  handleSaveSettings: AppSettingsRouteProps["handleSaveSettings"];
+  handleTestConnection: AppSettingsRouteProps["handleTestConnection"];
+  handleTestBitbucketConnection: AppSettingsRouteProps["handleTestBitbucketConnection"];
+  selectTheme: AppSettingsRouteProps["selectTheme"];
+  checkForUpdatesFromSettings: AppSettingsRouteProps["checkForUpdatesFromSettings"];
+  openCurrentReleaseNotes: AppSettingsRouteProps["openCurrentReleaseNotes"];
+  openCurrentUpdateDownload: AppSettingsRouteProps["openCurrentUpdateDownload"];
+  openReleasePage: AppSettingsRouteProps["openReleasePage"];
+  handleExportWeekCsv: AppSettingsRouteProps["handleExportWeekCsv"];
+  handleImportPersonalNotes: AppSettingsRouteProps["handleImportPersonalNotes"];
+  handleSaveRecurringEvent: AppSettingsRouteProps["handleSaveRecurringEvent"];
+  handleDeleteRecurringEvent: AppSettingsRouteProps["handleDeleteRecurringEvent"];
+  handleToggleRecurringEvent: AppSettingsRouteProps["handleToggleRecurringEvent"];
   setSelectedTicket: TodayViewProps["onSelectTicket"];
   searchTickets: TodayViewProps["onSearchTickets"];
   openAddTime: WeekViewProps["onAddTime"];
@@ -287,30 +287,30 @@ export const AppMainView = ({
     );
   } else {
     content = (
-      <SettingsView
-        draft={settingsDraft}
-        onDraftChange={setSettingsDraft}
-        onSave={handleSaveSettings}
-        onTestConnection={handleTestConnection}
-        onTestBitbucketConnection={handleTestBitbucketConnection}
+      <AppSettingsRoute
+        settingsDraft={settingsDraft}
+        setSettingsDraft={setSettingsDraft}
+        handleSaveSettings={handleSaveSettings}
+        handleTestConnection={handleTestConnection}
+        handleTestBitbucketConnection={handleTestBitbucketConnection}
         isTesting={isTesting}
         isTestingBitbucket={isTestingBitbucket}
         effectiveTheme={effectiveTheme}
-        onSelectTheme={selectTheme}
+        selectTheme={selectTheme}
         updateInfo={updateInfo}
         isCheckingUpdates={isCheckingUpdates}
-        onCheckForUpdates={checkForUpdatesFromSettings}
-        onShowReleaseNotes={openCurrentReleaseNotes}
-        onDownloadUpdate={openCurrentUpdateDownload}
-        onOpenReleasePage={openReleasePage}
+        checkForUpdatesFromSettings={checkForUpdatesFromSettings}
+        openCurrentReleaseNotes={openCurrentReleaseNotes}
+        openCurrentUpdateDownload={openCurrentUpdateDownload}
+        openReleasePage={openReleasePage}
         weekRangeLabel={weekState.weekRangeLabel}
-        onExportWeekCsv={handleExportWeekCsv}
-        onImportPersonalNotes={handleImportPersonalNotes}
+        handleExportWeekCsv={handleExportWeekCsv}
+        handleImportPersonalNotes={handleImportPersonalNotes}
         isImportingPersonalNotes={isImportingPersonalNotes}
         recurringEvents={recurringEvents}
-        onSaveRecurringEvent={handleSaveRecurringEvent}
-        onDeleteRecurringEvent={handleDeleteRecurringEvent}
-        onToggleRecurringEvent={handleToggleRecurringEvent}
+        handleSaveRecurringEvent={handleSaveRecurringEvent}
+        handleDeleteRecurringEvent={handleDeleteRecurringEvent}
+        handleToggleRecurringEvent={handleToggleRecurringEvent}
       />
     );
   }
