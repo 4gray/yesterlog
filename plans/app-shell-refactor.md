@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Today route rendering, Week route rendering, Month route rendering, Reports route rendering, Tickets route rendering, Review route rendering, Settings route rendering, shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, sync button/status controls, and Week header rendering live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Today route rendering, Week route rendering, Month route rendering, Reports route rendering, Tickets route rendering, Review route rendering, Settings route rendering, shell frame rendering, connection readiness derivation, Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, Add Time recurring form rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, sync button/status controls, and Week header rendering live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -63,7 +63,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 51. Done: extract Week route rendering from `AppMainView` into a focused component with coverage.
 52. Done: extract Today route rendering from `AppMainView` into a focused component with coverage.
 53. Done: extract Week header rendering from `WeekView` into a focused component with coverage.
-54. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+54. Done: extract Add Time recurring form rendering into a focused component with coverage.
+55. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -458,3 +459,11 @@ Phase 53:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Week header sync, Add Time modal, and next-week navigation, with no horizontal overflow and no console errors
+
+Phase 54:
+
+- Passed: `npm run test -- src/components/AddTimeRecurringForm.test.tsx src/components/AddTimeModal.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Add Time recurring tab selection, duration preset, note edit, and local log submit, with no horizontal overflow and no console errors

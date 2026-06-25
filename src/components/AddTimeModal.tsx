@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Repeat2, Trash2, X } from "lucide-react";
+import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote, RecurringEvent } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import type { JiraDurationUnit } from "../utils/date";
+import { AddTimeRecurringForm, formatRecurringMinutes } from "./AddTimeRecurringForm";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
 export interface LogRecurringPayload {
@@ -11,17 +12,6 @@ export interface LogRecurringPayload {
   timeSpentSeconds: number;
   note?: string;
 }
-
-const RECURRING_PRESET_MINUTES = [10, 15, 30, 45, 60] as const;
-
-const minutesLabel = (minutes: number) => {
-  if (minutes < 60) {
-    return `${minutes}m`;
-  }
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest === 0 ? `${hours}h` : `${hours}h ${String(rest).padStart(2, "0")}m`;
-};
 
 export interface LogPayload {
   issueKey: string;
@@ -575,82 +565,15 @@ export const AddTimeModal = ({
 
         <div className="modal-body">
           {isRecurringView ? (
-            <div className="recurring-form">
-              <div className="personal-note-title recurring-title">
-                <Repeat2 size={14} />
-                <span>RECURRING EVENT</span>
-                <em className="is-purple">
-                  <LockKeyhole size={9} />
-                  LOCAL
-                </em>
-              </div>
-
-              {recurringCandidates.length > 0 ? (
-                <>
-                  <div className="modal-label">SCHEDULED THIS DAY — NOT YET LOGGED</div>
-                  <div className="recurring-picker" role="radiogroup" aria-label="Recurring event">
-                    {recurringCandidates.map((event) => {
-                      const isSelected = event.id === recEvent?.id;
-                      return (
-                        <button
-                          key={event.id}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          className={`recurring-option ${isSelected ? "active" : ""}`}
-                          onClick={() => selectRecurring(event)}
-                        >
-                          <span className="recurring-radio">{isSelected && <span />}</span>
-                          <span className="recurring-option-title">{event.title}</span>
-                          <span className="recurring-option-time">{event.localTime}</span>
-                          <span className="recurring-option-dur">{minutesLabel(event.durationMinutes)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="personal-note-duration">
-                    <div className="modal-label">TIME SPENT</div>
-                    <div className="duration-picker">
-                      <div className="personal-note-time">{minutesLabel(recMinutes)}</div>
-                      <div className="modal-presets">
-                        {RECURRING_PRESET_MINUTES.map((value) => (
-                          <button
-                            type="button"
-                            key={value}
-                            className={`preset ${recMinutes === value ? "active" : ""}`}
-                            onClick={() => setRecMinutes(value)}
-                          >
-                            {minutesLabel(value)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="modal-label" style={{ marginTop: 18 }}>
-                    NOTE
-                  </div>
-                  <textarea
-                    className="note-textarea"
-                    placeholder="Note for this entry…"
-                    value={recNote}
-                    onChange={(event) => setRecNote(event.target.value)}
-                    rows={2}
-                  />
-
-                  <div className="local-note-callout">
-                    <LockKeyhole size={13} />
-                    <span>One per event per day · stays on this device and is not synced to Jira.</span>
-                  </div>
-                </>
-              ) : (
-                <div className="recurring-empty">
-                  <p>No recurring events scheduled for this day — or all are already logged.</p>
-                  <small>Manage recurring events in Settings.</small>
-                </div>
-              )}
-            </div>
+            <AddTimeRecurringForm
+              candidates={recurringCandidates}
+              selectedEvent={recEvent}
+              minutes={recMinutes}
+              note={recNote}
+              onSelect={selectRecurring}
+              onMinutesChange={setRecMinutes}
+              onNoteChange={setRecNote}
+            />
           ) : isTicketView ? (
             <>
               <div className="modal-label">TICKET</div>
@@ -811,7 +734,7 @@ export const AddTimeModal = ({
                   : isEditingPersonalNote
                     ? "Save note"
                     : isRecurringView
-                      ? `Log ${minutesLabel(recMinutes)} locally`
+                      ? `Log ${formatRecurringMinutes(recMinutes)} locally`
                       : mode === "note"
                         ? "Save note"
                         : activeTicket
