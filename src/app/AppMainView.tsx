@@ -95,6 +95,7 @@ export interface AppMainViewProps {
   handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
   handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
   openSettings: () => void;
+  settingsSection: AppSettingsRouteProps["initialSection"];
   syncState: "synced" | "stale" | "syncing";
   syncLabel: string;
 }
@@ -177,6 +178,7 @@ export const AppMainView = ({
   handleSkipRecurring,
   handleDeleteRecurringOccurrence,
   openSettings,
+  settingsSection,
   syncState,
   syncLabel
 }: AppMainViewProps) => {
@@ -307,6 +309,7 @@ export const AppMainView = ({
   } else {
     content = (
       <AppSettingsRoute
+        initialSection={settingsSection}
         settingsDraft={settingsDraft}
         setSettingsDraft={setSettingsDraft}
         handleSaveSettings={handleSaveSettings}

@@ -4,6 +4,7 @@ import { SettingsView } from "../components/SettingsView";
 type SettingsViewProps = ComponentProps<typeof SettingsView>;
 
 export interface AppSettingsRouteProps {
+  initialSection?: SettingsViewProps["initialSection"];
   settingsDraft: SettingsViewProps["draft"];
   setSettingsDraft: SettingsViewProps["onDraftChange"];
   handleSaveSettings: SettingsViewProps["onSave"];
@@ -30,6 +31,7 @@ export interface AppSettingsRouteProps {
 }
 
 export const AppSettingsRoute = ({
+  initialSection,
   settingsDraft,
   setSettingsDraft,
   handleSaveSettings,
@@ -55,6 +57,7 @@ export const AppSettingsRoute = ({
   handleToggleRecurringEvent
 }: AppSettingsRouteProps) => (
   <SettingsView
+    initialSection={initialSection}
     draft={settingsDraft}
     onDraftChange={setSettingsDraft}
     onSave={handleSaveSettings}

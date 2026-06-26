@@ -29,7 +29,7 @@ import {
   Upload,
   type LucideIcon
 } from "lucide-react";
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import type { AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
 import { probeOllama, type OllamaStatus } from "../api/ollama";
 import type { ThemeMode } from "./Sidebar";
@@ -71,7 +71,7 @@ interface SettingsViewProps {
   initialSection?: SettingsSection;
 }
 
-type SettingsSection =
+export type SettingsSection =
   | "jira"
   | "bitbucket"
   | "reconstruct"
@@ -285,6 +285,33 @@ export const SettingsView = ({
       setIsProbingOllama(false);
     }
   };
+
+  // Auto-probe whenever the Local AI section is shown (or the endpoint/model changes), so
+  // the pulled-model list and the activation chain are live without pressing Test connection.
+  useEffect(() => {
+    if (activeSection !== "reconstruct") {
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setIsProbingOllama(true);
+      void probeOllama({ endpoint: draft.ollamaEndpoint, model: draft.ollamaModel })
+        .then((status) => {
+          if (!cancelled) {
+            setOllamaStatus(status);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsProbingOllama(false);
+          }
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeSection, draft.ollamaEndpoint, draft.ollamaModel]);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({

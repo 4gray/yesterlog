@@ -1,7 +1,10 @@
+import { useCallback, useState } from "react";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppShellFrame } from "./app/AppShellFrame";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
+import type { AppView } from "./components/Sidebar";
+import type { SettingsSection } from "./components/SettingsView";
 import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAppConnectionState } from "./app/useAppConnectionState";
 import { useAppReviewTargetState } from "./app/useAppReviewTargetState";
@@ -129,6 +132,20 @@ export const App = () => {
     setMonthAnchor,
     setSelectedTicket
   });
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("jira");
+  const openAiSettings = useCallback(() => {
+    setSettingsSection("reconstruct");
+    handleViewChange("settings");
+  }, [handleViewChange]);
+  const handleShellViewChange = useCallback(
+    (nextView: AppView) => {
+      if (nextView === "settings") {
+        setSettingsSection("jira");
+      }
+      handleViewChange(nextView);
+    },
+    [handleViewChange]
+  );
   const monthState = useMonthState({
     isMonthView: view === "month",
     isBooting,
@@ -365,7 +382,7 @@ export const App = () => {
       theme={effectiveTheme}
       view={view}
       sidebarCollapsed={sidebarCollapsed}
-      onViewChange={handleViewChange}
+      onViewChange={handleShellViewChange}
       onToggleSidebarCollapsed={toggleSidebarCollapsed}
       syncLabel={syncLabel}
       syncState={syncState}
@@ -479,7 +496,8 @@ export const App = () => {
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
-        openSettings={() => handleViewChange("settings")}
+        openSettings={openAiSettings}
+        settingsSection={settingsSection}
         syncState={syncState}
         syncLabel={syncLabel}
       />
