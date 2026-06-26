@@ -22,6 +22,7 @@ const day = (): ReconstructDay => ({
     row({ hour: "11:00", kind: "locked", key: "FTDM-9", title: "Standup", durationMinutes: 30 })
   ],
   targetMinutes: 480,
+  accountableMinutes: 480,
   reconstructedMinutes: 60,
   loggedMinutes: 30,
   gapMinutes: 390,

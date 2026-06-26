@@ -103,6 +103,8 @@ export const useReconstruct = ({
   }, [weekKeys]);
 
   const targetMinutes = Math.max(0, Math.round(dailyTargetHours * 60));
+  // Hour-bucketed so today's view advances each hour without recomputing every minute.
+  const nowMinutes = selIsToday ? currentDate.getHours() * 60 : undefined;
 
   const coreDay = useMemo<ReconstructDay>(() => {
     const weekKey = weekKeyOf(selDateKey);
@@ -156,9 +158,20 @@ export const useReconstruct = ({
       targetMinutes,
       worklogs,
       reviewSessions,
-      commits
+      commits,
+      nowMinutes
     });
-  }, [loaded, reviewResult, selDateKey, selIsToday, selWeekdayIso, settings.workingDays, syncResult, targetMinutes]);
+  }, [
+    loaded,
+    nowMinutes,
+    reviewResult,
+    selDateKey,
+    selIsToday,
+    selWeekdayIso,
+    settings.workingDays,
+    syncResult,
+    targetMinutes
+  ]);
 
   // ---- rule-based auto-distribute (core, no model) --------------------------
   const [distributedKey, setDistributedKey] = useState<string | undefined>();

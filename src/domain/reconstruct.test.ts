@@ -206,6 +206,36 @@ describe("buildReconstructDay", () => {
     expect(getReconstructSummary(day).dayTag).toBe("TODAY");
   });
 
+  it("does not show future gap rows or count future time on today", () => {
+    // ~14:00 today → no empty rows past 14:00; accountable = elapsed (09:00–14:00 = 5h)
+    const day = buildReconstructDay(input({ isToday: true, worklogs: [], reviewSessions: [], nowMinutes: 14 * 60 }));
+    const emptyHours = day.rows.filter((r) => r.kind === "empty").map((r) => r.hour);
+    expect(emptyHours).not.toContain("15:00");
+    expect(emptyHours).not.toContain("16:00");
+    expect(emptyHours).not.toContain("17:00");
+    expect(emptyHours).toContain("14:00");
+    expect(day.accountableMinutes).toBe(300); // 5h elapsed, not the full 8h
+    expect(getReconstructSummary(day).footerTail).toBe("unaccounted so far");
+  });
+
+  it("still renders the full 09–18 grid for a finished past day", () => {
+    const day = buildReconstructDay(input({ isToday: false, worklogs: [], reviewSessions: [] }));
+    const emptyHours = day.rows.filter((r) => r.kind === "empty").map((r) => r.hour);
+    expect(emptyHours).toContain("17:00");
+    expect(day.accountableMinutes).toBe(480);
+  });
+
+  it("auto-distributes only against elapsed time on today (no future fill)", () => {
+    const base = buildReconstructDay(
+      input({ isToday: true, worklogs: [], reviewSessions: [review({ estimatedSeconds: 60 * 60 })], nowMinutes: 13 * 60 })
+    );
+    const distributed = autoDistribute(base);
+    // every filled row sits at or before 13:00 — nothing fabricated in the future
+    const filledHours = distributed.rows.filter((r) => r.kind === "filled").map((r) => r.hour);
+    expect(filledHours.every((h) => h <= "13:00")).toBe(true);
+    expect(distributed.reconstructedMinutes).toBeLessThanOrEqual(base.accountableMinutes);
+  });
+
   it("treats a fully-logged day as complete with no gap rows", () => {
     const day = buildReconstructDay(
       input({

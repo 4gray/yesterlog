@@ -70,11 +70,17 @@ export interface ReconstructDay {
   signals: ReconstructSignal[];
   rows: TimelineRow[];
   targetMinutes: number;
+  /**
+   * Minutes that can be accounted for *so far*: the full target for a finished day, but
+   * only the elapsed working time for today (you can't reconstruct hours that haven't
+   * happened). Drives the gap and auto-distribute.
+   */
+  accountableMinutes: number;
   /** Sum of proposed (filled) row durations. */
   reconstructedMinutes: number;
   /** Sum of already-logged (locked) row durations — read via worklogDate. */
   loggedMinutes: number;
-  /** Unaccounted minutes against the target (never negative). */
+  /** Unaccounted minutes against {@link accountableMinutes} (never negative). */
   gapMinutes: number;
   /** Number of proposed entries that could be sent to Jira. */
   sendCount: number;
@@ -137,6 +143,12 @@ export interface ReconstructInput {
   reviewSessions: ReconstructReviewSession[];
   /** The user's own commit runs for the day (their coding work). */
   commits?: ReconstructCommitGroup[];
+  /**
+   * Local minutes since midnight "now" — only meaningful when {@link isToday}. When set,
+   * the timeline stops at the current hour (no future gap rows) and the gap is measured
+   * against elapsed working time rather than the full target.
+   */
+  nowMinutes?: number;
 }
 
 const WORKING_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -300,6 +312,14 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
 
   const loggedMinutes = input.worklogs.reduce((sum, w) => sum + Math.round(w.timeSpentSeconds / 60), 0);
 
+  // ---- "now" cap for today: never reconstruct hours that haven't happened ----
+  const dayStartMinutes = WORKING_HOURS[0] * 60;
+  const capNow = input.isToday && typeof input.nowMinutes === "number";
+  const lastGapHour = capNow ? Math.min(17, Math.max(9, Math.floor(input.nowMinutes! / 60))) : 17;
+  const accountableMinutes = capNow
+    ? Math.max(0, Math.min(input.targetMinutes, input.nowMinutes! - dayStartMinutes))
+    : input.targetMinutes;
+
   // ---- day kind -----------------------------------------------------------
   let kind: ReconstructDayKind;
   if (!workingDay && !hasActivity) {
@@ -324,6 +344,7 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
       signals: [],
       rows: [],
       targetMinutes: input.targetMinutes,
+      accountableMinutes: 0,
       reconstructedMinutes: 0,
       loggedMinutes: 0,
       gapMinutes: 0,
@@ -374,7 +395,8 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     const label = `${pad2(hour)}:00`;
     if (content) {
       rows.push({ ...content.row, hour: label });
-    } else if (kind !== "complete") {
+    } else if (kind !== "complete" && hour <= lastGapHour) {
+      // Skip empty hours that haven't happened yet on today — no future "gaps".
       rows.push({
         hour: label,
         kind: "empty",
@@ -393,7 +415,7 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     rows.push({ ...item.value.row, hour: `${pad2(item.hour)}:00` });
   }
 
-  const gapMinutes = Math.max(0, input.targetMinutes - reconstructedMinutes - loggedMinutes);
+  const gapMinutes = Math.max(0, accountableMinutes - reconstructedMinutes - loggedMinutes);
 
   return {
     dateKey: input.dateKey,
@@ -402,6 +424,7 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     signals,
     rows,
     targetMinutes: input.targetMinutes,
+    accountableMinutes,
     reconstructedMinutes,
     loggedMinutes,
     gapMinutes,
@@ -453,7 +476,7 @@ export const getReconstructSummary = (day: ReconstructDay): ReconstructSummary =
     bigWord: "reconstructed",
     sub: `· ${formatReconDuration(accounted)} of ${formatReconDuration(target)} accounted`,
     gapLabel: formatReconDuration(day.gapMinutes),
-    footerTail: "still unaccounted",
+    footerTail: day.isToday ? "unaccounted so far" : "still unaccounted",
     sendBtnLabel: `Log ${day.sendCount} ${day.sendCount === 1 ? "entry" : "entries"} in Jira`,
     unplacedLabel: `${day.signals.length} unplaced`,
     dayTag: day.kind === "today" ? "TODAY" : "PAST DAY"
@@ -504,7 +527,7 @@ export const autoDistribute = (day: ReconstructDay): ReconstructDay => {
     ...day,
     rows,
     reconstructedMinutes,
-    gapMinutes: Math.max(0, day.targetMinutes - reconstructedMinutes - day.loggedMinutes),
+    gapMinutes: Math.max(0, day.accountableMinutes - reconstructedMinutes - day.loggedMinutes),
     sendCount: rows.filter((row) => row.kind === "filled").length
   };
 };
