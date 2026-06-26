@@ -47,6 +47,9 @@ export const AppReconRoute = ({
       syncState={syncState}
       syncLabel={syncLabel}
       onSync={onSync}
+      onPlaceSignal={vm.placeSignal}
+      onUnplaceSignal={vm.unplaceSignal}
+      onPlaceAll={vm.placeAllSignals}
     />
   );
 };

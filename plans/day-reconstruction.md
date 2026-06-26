@@ -81,6 +81,16 @@ Deferred (need explicit go-ahead — AGENTS.md write-surface caution / larger sc
 - CI-run and Jira-changelog signal collection (commits now land; engine accepts the rest).
 
 ## Follow-ups shipped
+- Today no longer reconstructs future hours (gap grid + auto-distribute stop at the
+  current hour; gap measured against elapsed working time).
+- Sync state + manual refresh in the header; sync-aware empty/loading rail states.
+- **Drag-and-drop placement**: signals start unplaced in the rail and are placed by drag
+  (or click "Place" / "Place everything"); placed entries re-position by drag and return
+  to the rail via drag or the × button. Placement is a per-day draft persisted in
+  IndexedDB (`reconstructDrafts`). `buildReconstructDay(input, placements?)` is the
+  placement-aware core; the gap-fill auto-distribute and AI overlay compose on top.
+  - Still deferred: real batch worklog write to Jira (the "Log N entries" button opens
+    the existing Add Time flow; bulk write is a write-surface that needs explicit sign-off).
 - Own-PR activity is reclassified as low-confidence "On your PR" work, not "Review".
 - Bitbucket **commit** signals: `syncBitbucketReviewSessions` now also collects the user's
   own commits (per authored PR), grouped by branch/ticket/day, and the engine renders them

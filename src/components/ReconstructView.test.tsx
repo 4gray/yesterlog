@@ -60,6 +60,9 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
       syncState="synced"
       syncLabel="SYNCED 6:47 PM"
       onSync={() => undefined}
+      onPlaceSignal={() => undefined}
+      onUnplaceSignal={() => undefined}
+      onPlaceAll={() => undefined}
       {...overrides}
     />
   );
@@ -72,6 +75,16 @@ describe("ReconstructView", () => {
     expect(markup).toContain("WED 17 JUN");
     expect(markup).toContain("FTDM-395");
     expect(markup).toContain("WORKING DAY");
+  });
+
+  it("shows unplaced signals as draggable cards with place actions", () => {
+    const day = buildReconstructDay(baseInput(), {}); // nothing placed yet → all in the rail
+    expect(day.unplacedSignalIds.length).toBeGreaterThan(0);
+    const markup = render({ day });
+    expect(markup).toContain('draggable="true"'); // rail cards are draggable
+    expect(markup).toContain(">Place<"); // per-card place action
+    expect(markup).toContain("Place everything"); // bulk place
+    expect(markup).toContain("Drag a card onto an hour");
   });
 
   it("invites connecting a local model when AI is off (the LLM mention requirement)", () => {

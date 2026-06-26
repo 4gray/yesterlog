@@ -951,6 +951,82 @@
   filter: brightness(1.06);
 }
 
+/* ============================ drag & drop ============================ */
+.recon-sig[draggable="true"] {
+  cursor: grab;
+}
+
+.recon-sig[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.recon-sig.is-marker-card {
+  cursor: default;
+}
+
+.recon-sig-place {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.recon-sig-place:hover {
+  color: var(--blue);
+  border-color: rgba(79, 124, 255, 0.4);
+  background: rgba(79, 124, 255, 0.1);
+}
+
+.recon-rail.is-drop {
+  outline: 1px dashed color-mix(in srgb, var(--blue) 55%, transparent);
+  outline-offset: -4px;
+  border-radius: 12px;
+}
+
+.recon-tl-cell.is-draggable {
+  cursor: grab;
+}
+
+.recon-tl-cell.is-draggable:active {
+  cursor: grabbing;
+}
+
+.recon-tl-cell.is-drop {
+  border-color: var(--blue) !important;
+  border-style: solid !important;
+  box-shadow: 0 0 0 2px rgba(79, 124, 255, 0.25);
+}
+
+.recon-tl-remove {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.recon-tl-cell:hover .recon-tl-remove {
+  opacity: 1;
+}
+
+.recon-tl-remove:hover {
+  color: #ff8b84;
+  background: var(--bg-hover);
+}
+
 /* ============================ Settings · Local AI card ============================ */
 .ai-card {
   display: flex;

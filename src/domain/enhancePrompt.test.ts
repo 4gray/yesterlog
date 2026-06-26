@@ -26,7 +26,9 @@ const day = (): ReconstructDay => ({
   reconstructedMinutes: 60,
   loggedMinutes: 30,
   gapMinutes: 390,
-  sendCount: 1
+  sendCount: 1,
+  placements: {},
+  unplacedSignalIds: []
 });
 
 describe("buildEnhancePrompt", () => {

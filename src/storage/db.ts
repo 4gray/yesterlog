@@ -10,7 +10,7 @@ import type {
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -23,7 +23,8 @@ type StoreName =
   | "personalNotes"
   | "bitbucketReviewResults"
   | "recurringEvents"
-  | "recurringOccurrences";
+  | "recurringOccurrences"
+  | "reconstructDrafts";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -68,6 +69,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("recurringOccurrences")) {
         db.createObjectStore("recurringOccurrences", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("reconstructDrafts")) {
+        db.createObjectStore("reconstructDrafts", { keyPath: "dateKey" });
       }
     };
 
@@ -182,4 +187,17 @@ export const getRecurringOccurrences = async (weekKey: string): Promise<Recurrin
 
 export const saveRecurringOccurrences = (weekKey: string, occurrences: RecurringOccurrence[]) => {
   return writeStore("recurringOccurrences", { weekKey, occurrences });
+};
+
+/** Per-day Day-Reconstruction placement draft: signalId → assigned working hour. */
+export const getReconstructDraft = async (dateKey: string): Promise<Record<string, number> | undefined> => {
+  const stored = await readStore<{ dateKey: string; placements: Record<string, number> }>(
+    "reconstructDrafts",
+    dateKey
+  );
+  return stored?.placements;
+};
+
+export const saveReconstructDraft = (dateKey: string, placements: Record<string, number>) => {
+  return writeStore("reconstructDrafts", { dateKey, placements });
 };

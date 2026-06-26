@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppSettings, BitbucketReviewSyncResult, SyncResult } from "../../shared/types";
 import { enhanceReconstructDay, probeOllama } from "../api/ollama";
 import type {
+  PlacementMap,
   ReconstructCommitGroup,
   ReconstructDay,
   ReconstructReviewSession,
@@ -9,7 +10,12 @@ import type {
 } from "../domain/reconstruct";
 import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../domain/reconstruct";
 import type { ReconstructDateLabels } from "../components/ReconstructView";
-import { getBitbucketReviewResult, getSyncResult } from "../storage/db";
+import {
+  getBitbucketReviewResult,
+  getReconstructDraft,
+  getSyncResult,
+  saveReconstructDraft
+} from "../storage/db";
 import { addDays, fromLocalDateKey, isoWeekday, startOfWeekMonday, toLocalDateKey } from "../utils/date";
 
 /** Trailing days the stepper spans, ending today — the worklog sync/edit window. */
@@ -39,6 +45,8 @@ const buildDateLabels = (date: Date): ReconstructDateLabels => ({
 });
 
 const weekKeyOf = (dateKey: string) => toLocalDateKey(startOfWeekMonday(fromLocalDateKey(dateKey)));
+
+const clampHour = (hour: number) => Math.min(17, Math.max(9, Math.round(hour)));
 
 /**
  * Derives the Reconstruct view-model for the trailing ~2-week sync window. The
@@ -106,6 +114,39 @@ export const useReconstruct = ({
   // Hour-bucketed so today's view advances each hour without recomputing every minute.
   const nowMinutes = selIsToday ? currentDate.getHours() * 60 : undefined;
 
+  // ---- per-day drag/drop placement draft (persisted) ------------------------
+  // A day starts with everything unplaced (in the rail); the user drags or bulk-places.
+  const [drafts, setDrafts] = useState<Record<string, PlacementMap>>({});
+  const placements = drafts[selDateKey] ?? {};
+
+  useEffect(() => {
+    let cancelled = false;
+    void getReconstructDraft(selDateKey).then((saved) => {
+      if (!cancelled && saved) {
+        setDrafts((current) => (current[selDateKey] ? current : { ...current, [selDateKey]: saved }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selDateKey]);
+
+  // Functional update so rapid edits in one tick compose instead of clobbering.
+  const mutatePlacements = useCallback(
+    (fn: (prev: PlacementMap) => PlacementMap) => {
+      setDrafts((current) => ({ ...current, [selDateKey]: fn(current[selDateKey] ?? {}) }));
+    },
+    [selDateKey]
+  );
+
+  // Persist the active day's draft whenever it changes.
+  useEffect(() => {
+    const draft = drafts[selDateKey];
+    if (draft) {
+      void saveReconstructDraft(selDateKey, draft);
+    }
+  }, [drafts, selDateKey]);
+
   const coreDay = useMemo<ReconstructDay>(() => {
     const weekKey = weekKeyOf(selDateKey);
     const sync = syncResult?.weekKey === weekKey ? syncResult : loaded.sync[weekKey];
@@ -150,20 +191,24 @@ export const useReconstruct = ({
         confidence: group.confidence
       }));
 
-    return buildReconstructDay({
-      dateKey: selDateKey,
-      weekdayIso: selWeekdayIso,
-      isToday: selIsToday,
-      workingDays: settings.workingDays,
-      targetMinutes,
-      worklogs,
-      reviewSessions,
-      commits,
-      nowMinutes
-    });
+    return buildReconstructDay(
+      {
+        dateKey: selDateKey,
+        weekdayIso: selWeekdayIso,
+        isToday: selIsToday,
+        workingDays: settings.workingDays,
+        targetMinutes,
+        worklogs,
+        reviewSessions,
+        commits,
+        nowMinutes
+      },
+      placements
+    );
   }, [
     loaded,
     nowMinutes,
+    placements,
     reviewResult,
     selDateKey,
     selIsToday,
@@ -172,6 +217,38 @@ export const useReconstruct = ({
     syncResult,
     targetMinutes
   ]);
+
+  // ---- drag/drop placement handlers ----------------------------------------
+  const placeSignal = useCallback(
+    (signalId: string, hour: number) => {
+      mutatePlacements((prev) => ({ ...prev, [signalId]: clampHour(hour) }));
+    },
+    [mutatePlacements]
+  );
+  const unplaceSignal = useCallback(
+    (signalId: string) => {
+      mutatePlacements((prev) => {
+        const next = { ...prev };
+        delete next[signalId];
+        return next;
+      });
+    },
+    [mutatePlacements]
+  );
+  const placeAllSignals = useCallback(() => {
+    mutatePlacements((prev) => {
+      const next = { ...prev };
+      for (const signal of coreDay.signals) {
+        if (signal.isMarker || signal.durationMinutes <= 0) {
+          continue;
+        }
+        if (typeof next[signal.id] !== "number") {
+          next[signal.id] = clampHour(signal.startHour);
+        }
+      }
+      return next;
+    });
+  }, [coreDay.signals, mutatePlacements]);
 
   // ---- rule-based auto-distribute (core, no model) --------------------------
   const [distributedKey, setDistributedKey] = useState<string | undefined>();
@@ -253,6 +330,9 @@ export const useReconstruct = ({
     stepForward: () => setSelIndex((index) => Math.min(lastSelectable, index + 1)),
     refreshAi,
     distribute,
+    placeSignal,
+    unplaceSignal,
+    placeAllSignals,
     selectedDate: selected.date
   };
 };

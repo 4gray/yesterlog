@@ -46,6 +46,8 @@ export interface TimelineRow {
   hour: string;
   kind: TimelineRowKind;
   signalKind?: SignalKind;
+  /** Source signal id for a placed (filled-from-signal) row — used for drag/drop. */
+  signalId?: string;
   key: string;
   title: string;
   /** Factual sub-line; for locked rows: "already in Jira · 1h 15m". */
@@ -84,7 +86,14 @@ export interface ReconstructDay {
   gapMinutes: number;
   /** Number of proposed entries that could be sent to Jira. */
   sendCount: number;
+  /** Effective signal→hour placement used to assemble the timeline (drag/drop draft). */
+  placements: PlacementMap;
+  /** Ids of placeable signals not currently on the timeline (shown in the rail). */
+  unplacedSignalIds: string[];
 }
+
+/** signalId → assigned working hour (9..17). Absent ⇒ unplaced (sits in the rail). */
+export type PlacementMap = Record<string, number>;
 
 /** Narrowed Jira worklog shape — only what the engine needs. */
 export interface ReconstructWorklog {
@@ -302,7 +311,7 @@ interface PlacedContent {
   minutes: number;
 }
 
-export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => {
+export const buildReconstructDay = (input: ReconstructInput, placements?: PlacementMap): ReconstructDay => {
   const commits = input.commits ?? [];
   const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
     (a, b) => a.startHour - b.startHour
@@ -348,7 +357,9 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
       reconstructedMinutes: 0,
       loggedMinutes: 0,
       gapMinutes: 0,
-      sendCount: 0
+      sendCount: 0,
+      placements: {},
+      unplacedSignalIds: []
     };
   }
 
@@ -367,12 +378,19 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     return { hour: localHourOf(worklog.startedISO), value: { kind: "locked" as const, row, minutes } };
   });
 
-  const filledItems = signals
-    .filter((signal) => !signal.isMarker && signal.durationMinutes > 0)
+  const placeable = signals.filter((signal) => !signal.isMarker && signal.durationMinutes > 0);
+  const clampHour = (hour: number) => Math.min(17, Math.max(9, hour));
+  // No placement map ⇒ auto-place every signal at its estimated hour (default view).
+  const effective: PlacementMap =
+    placements ?? Object.fromEntries(placeable.map((signal) => [signal.id, clampHour(signal.startHour)]));
+
+  const filledItems = placeable
+    .filter((signal) => typeof effective[signal.id] === "number")
     .map((signal) => {
       const row: TimelineRow = {
         hour: "",
         kind: "filled",
+        signalId: signal.id,
         signalKind: signal.kind,
         key: signal.key,
         title: signal.title,
@@ -380,12 +398,16 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
         durationMinutes: signal.durationMinutes,
         naiveDescription: signal.naiveDescription
       };
-      return { hour: signal.startHour, value: { kind: "filled" as const, row, minutes: signal.durationMinutes } };
+      return { hour: clampHour(effective[signal.id]), value: { kind: "filled" as const, row, minutes: signal.durationMinutes } };
     });
+
+  const unplacedSignalIds = placeable
+    .filter((signal) => typeof effective[signal.id] !== "number")
+    .map((signal) => signal.id);
 
   const { placed, overflow } = placeByHour<PlacedContent>([...lockedItems, ...filledItems]);
 
-  // Every filled item is rendered (placed or overflow), so totals match the timeline.
+  // Every placed filled item is rendered (placed or overflow), so totals match the timeline.
   const reconstructedMinutes = filledItems.reduce((sum, item) => sum + item.value.minutes, 0);
 
   // ---- assemble rows ------------------------------------------------------
@@ -428,7 +450,9 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     reconstructedMinutes,
     loggedMinutes,
     gapMinutes,
-    sendCount: filledItems.length
+    sendCount: filledItems.length,
+    placements: effective,
+    unplacedSignalIds
   };
 };
 
@@ -478,7 +502,7 @@ export const getReconstructSummary = (day: ReconstructDay): ReconstructSummary =
     gapLabel: formatReconDuration(day.gapMinutes),
     footerTail: day.isToday ? "unaccounted so far" : "still unaccounted",
     sendBtnLabel: `Log ${day.sendCount} ${day.sendCount === 1 ? "entry" : "entries"} in Jira`,
-    unplacedLabel: `${day.signals.length} unplaced`,
+    unplacedLabel: `${day.unplacedSignalIds.length} unplaced`,
     dayTag: day.kind === "today" ? "TODAY" : "PAST DAY"
   };
 };

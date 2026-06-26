@@ -191,6 +191,26 @@ describe("buildReconstructDay", () => {
     expect(kinds).toEqual(["commit", "pr"]);
   });
 
+  it("respects an explicit placement map (drag/drop draft), leaving the rest unplaced", () => {
+    const args = input({
+      worklogs: [],
+      reviewSessions: [review({ id: "rev", startedISO: "2026-06-17T11:00:00" })],
+      commits: [commit({ id: "com" })]
+    });
+
+    // default: everything auto-placed onto the timeline
+    expect(buildReconstructDay(args).unplacedSignalIds).toHaveLength(0);
+
+    // draft: only the commit is placed (at 16:00); the review returns to the rail
+    const draft = buildReconstructDay(args, { com: 16 });
+    expect(draft.unplacedSignalIds).toEqual(["rev"]);
+    expect(draft.placements).toMatchObject({ com: 16 });
+    const placed = draft.rows.find((row) => row.signalId === "com");
+    expect(placed).toMatchObject({ kind: "filled", hour: "16:00" });
+    expect(draft.rows.some((row) => row.signalId === "rev")).toBe(false);
+    expect(draft.reconstructedMinutes).toBe(110); // only the placed commit counts
+  });
+
   it("describes own-PR work without calling it a review", () => {
     const day = buildReconstructDay(
       input({ worklogs: [], reviewSessions: [review({ isPullRequestAuthor: true })] })

@@ -17,10 +17,11 @@ import {
   RefreshCw,
   Send,
   Sparkles,
+  X,
   Zap,
   type LucideIcon
 } from "lucide-react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties, type DragEvent } from "react";
 import type {
   ReconstructConfidence,
   ReconstructDay,
@@ -61,7 +62,17 @@ export interface ReconstructViewProps {
   syncLabel: string;
   /** Re-sync this week's signals from Jira + Bitbucket. */
   onSync: () => void;
+  /** Place a signal onto the timeline at a working hour (drag/drop or bulk). */
+  onPlaceSignal: (signalId: string, hour: number) => void;
+  /** Return a placed signal to the rail. */
+  onUnplaceSignal: (signalId: string) => void;
+  /** Place every still-unplaced signal at once. */
+  onPlaceAll: () => void;
 }
+
+const HOUR_DND_MIME = "application/x-recon-signal";
+
+const hourOf = (label: string) => Number.parseInt(label.slice(0, 2), 10);
 
 const SIGNAL_ACCENT: Record<SignalKind, string> = {
   commit: "var(--blue-soft)",
@@ -107,7 +118,10 @@ export const ReconstructView = ({
   onLogTime,
   syncState,
   syncLabel,
-  onSync
+  onSync,
+  onPlaceSignal,
+  onUnplaceSignal,
+  onPlaceAll
 }: ReconstructViewProps) => {
   const modelShort = aiModel.split(":")[0] || aiModel;
   const isWeekend = day.kind === "weekend";
@@ -115,6 +129,34 @@ export const ReconstructView = ({
   const isActive = !isWeekend && !isComplete;
   const showTimeline = isActive || isComplete;
   const isSyncing = syncState === "syncing";
+
+  const [dragOverHour, setDragOverHour] = useState<number | null>(null);
+  const [railDragOver, setRailDragOver] = useState(false);
+
+  const unplacedIds = new Set(day.unplacedSignalIds);
+  const railSignals = day.signals.filter((signal) => signal.isMarker || unplacedIds.has(signal.id));
+
+  const startDrag = (event: DragEvent, signalId: string) => {
+    event.dataTransfer.setData(HOUR_DND_MIME, signalId);
+    event.dataTransfer.setData("text/plain", signalId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+  const dropOnHour = (event: DragEvent, hour: number) => {
+    event.preventDefault();
+    const signalId = event.dataTransfer.getData(HOUR_DND_MIME) || event.dataTransfer.getData("text/plain");
+    setDragOverHour(null);
+    if (signalId) {
+      onPlaceSignal(signalId, hour);
+    }
+  };
+  const dropOnRail = (event: DragEvent) => {
+    event.preventDefault();
+    const signalId = event.dataTransfer.getData(HOUR_DND_MIME) || event.dataTransfer.getData("text/plain");
+    setRailDragOver(false);
+    if (signalId) {
+      onUnplaceSignal(signalId);
+    }
+  };
 
   return (
     <div className="view recon-view">
@@ -261,22 +303,36 @@ export const ReconstructView = ({
 
       {/* ---- body ---- */}
       <div className="recon-body">
-        {/* signals rail */}
-        <aside className="recon-rail">
+        {/* signals rail (drop here to return a placed entry) */}
+        <aside
+          className={`recon-rail ${railDragOver ? "is-drop" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setRailDragOver(true);
+          }}
+          onDragLeave={() => setRailDragOver(false)}
+          onDrop={dropOnRail}
+        >
           <div className="recon-rail-head">
             <span className="recon-rail-title">SIGNALS FROM API</span>
             <span className="recon-rail-count">{summary.unplacedLabel}</span>
           </div>
           <p className="recon-rail-help">
-            Durations are <span className="recon-em">estimates</span> from commit and PR timestamps. Add them by hand or
-            let a local model place them — no model required to review.
+            Durations are <span className="recon-em">estimates</span> from commit and PR timestamps.{" "}
+            <span className="recon-em">Drag a card onto an hour</span> to place it, or place them all at once.
           </p>
 
           <div className="recon-rail-list">
-            {day.signals.map((signal) => {
+            {railSignals.map((signal) => {
               const conf = CONFIDENCE[signal.confidence];
               return (
-                <div className="recon-sig" key={signal.id} style={accentStyle(signal.kind)}>
+                <div
+                  className={`recon-sig ${signal.isMarker ? "is-marker-card" : ""}`}
+                  key={signal.id}
+                  style={accentStyle(signal.kind)}
+                  draggable={!signal.isMarker}
+                  onDragStart={signal.isMarker ? undefined : (event) => startDrag(event, signal.id)}
+                >
                   <div className="recon-sig-top">
                     <span className="recon-icon-tile">
                       <SignalGlyph kind={signal.kind} />
@@ -295,12 +351,22 @@ export const ReconstructView = ({
                       <span className="recon-conf-dot" style={{ background: conf.color }} />
                       {conf.label}
                     </span>
+                    {!signal.isMarker && (
+                      <button
+                        type="button"
+                        className="recon-sig-place"
+                        onClick={() => onPlaceSignal(signal.id, signal.startHour)}
+                        title="Place on the timeline"
+                      >
+                        Place
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
 
-            {day.signals.length === 0 && isActive && isSyncing && (
+            {railSignals.length === 0 && isActive && isSyncing && (
               <div className="recon-rail-empty">
                 <span className="recon-rail-empty-icon">
                   <Loader2 size={18} strokeWidth={2} className="spin" />
@@ -326,28 +392,28 @@ export const ReconstructView = ({
               </div>
             )}
 
-            {day.signals.length === 0 && (isWeekend || (!isSyncing && syncState !== "stale")) && (
+            {railSignals.length === 0 && (isWeekend || (!isSyncing && syncState !== "stale")) && (
               <div className="recon-rail-empty">
                 <span className="recon-rail-empty-icon">
                   <PlusCircle size={18} strokeWidth={2} />
                 </span>
                 <div className="recon-rail-empty-title">
-                  {isWeekend ? "No activity this day" : "No unplaced signals"}
+                  {isWeekend ? "No activity this day" : "All signals placed"}
                 </div>
                 <div className="recon-rail-empty-text">
                   {isWeekend
                     ? "No commits, PRs or CI runs detected — expected on a day off."
-                    : "Every commit, PR and CI run for this day is already reflected in a Jira worklog."}
+                    : "Every signal is on the timeline. Drag an entry back here to unplace it."}
                 </div>
               </div>
             )}
           </div>
 
-          {isActive && (
+          {isActive && railSignals.some((signal) => !signal.isMarker) && (
             <div className="recon-rail-foot">
-              <button type="button" className={`recon-rail-btn ${aiOn ? "is-ai" : ""}`} onClick={onPrimaryAction}>
-                {aiOn ? <Sparkles size={16} strokeWidth={1.9} /> : <Zap size={16} strokeWidth={1.9} />}
-                {aiOn ? "Draft & place everything" : "Distribute everything"}
+              <button type="button" className="recon-rail-btn" onClick={onPlaceAll}>
+                <Zap size={16} strokeWidth={1.9} />
+                Place everything
               </button>
             </div>
           )}
@@ -389,15 +455,27 @@ export const ReconstructView = ({
 
           {showTimeline && (
             <div className="recon-tl-list">
-              {day.rows.map((row, index) => (
-                <TimelineRowView
-                  key={`${row.hour}-${index}`}
-                  row={row}
-                  aiOn={aiOn}
-                  modelShort={modelShort}
-                  onLogTime={onLogTime}
-                />
-              ))}
+              {day.rows.map((row, index) => {
+                const hour = hourOf(row.hour);
+                return (
+                  <TimelineRowView
+                    key={`${row.hour}-${index}`}
+                    row={row}
+                    aiOn={aiOn}
+                    modelShort={modelShort}
+                    onLogTime={onLogTime}
+                    isDropTarget={dragOverHour === hour}
+                    onRowDragStart={row.signalId ? (event) => startDrag(event, row.signalId!) : undefined}
+                    onRowDragOver={(event) => {
+                      event.preventDefault();
+                      setDragOverHour(hour);
+                    }}
+                    onRowDragLeave={() => setDragOverHour((current) => (current === hour ? null : current))}
+                    onRowDrop={(event) => dropOnHour(event, hour)}
+                    onRemove={row.signalId ? () => onUnplaceSignal(row.signalId!) : undefined}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -445,16 +523,42 @@ interface TimelineRowViewProps {
   aiOn: boolean;
   modelShort: string;
   onLogTime: () => void;
+  isDropTarget: boolean;
+  onRowDragStart?: (event: DragEvent) => void;
+  onRowDragOver: (event: DragEvent) => void;
+  onRowDragLeave: () => void;
+  onRowDrop: (event: DragEvent) => void;
+  onRemove?: () => void;
 }
 
-const TimelineRowView = ({ row, aiOn, modelShort, onLogTime }: TimelineRowViewProps) => {
+const TimelineRowView = ({
+  row,
+  aiOn,
+  modelShort,
+  onLogTime,
+  isDropTarget,
+  onRowDragStart,
+  onRowDragOver,
+  onRowDragLeave,
+  onRowDrop,
+  onRemove
+}: TimelineRowViewProps) => {
   const showAiDraft = aiOn && Boolean(row.aiDraft);
   const showAiGap = aiOn && Boolean(row.gapText) && row.kind === "empty";
+  const isDraggable = row.kind === "filled" && Boolean(row.signalId);
 
   return (
     <div className="recon-tl-row">
       <span className="recon-tl-hour">{row.hour}</span>
-      <div className={`recon-tl-cell is-${row.kind}`} style={accentStyle(row.signalKind)}>
+      <div
+        className={`recon-tl-cell is-${row.kind} ${isDropTarget ? "is-drop" : ""} ${isDraggable ? "is-draggable" : ""}`}
+        style={accentStyle(row.signalKind)}
+        draggable={isDraggable}
+        onDragStart={onRowDragStart}
+        onDragOver={onRowDragOver}
+        onDragLeave={onRowDragLeave}
+        onDrop={onRowDrop}
+      >
         {row.kind === "filled" && (
           <>
             <span className="recon-bar" />
@@ -475,6 +579,11 @@ const TimelineRowView = ({ row, aiOn, modelShort, onLogTime }: TimelineRowViewPr
               )}
             </div>
             <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
+            {onRemove && (
+              <button type="button" className="recon-tl-remove" onClick={onRemove} title="Return to the rail">
+                <X size={14} strokeWidth={2} />
+              </button>
+            )}
           </>
         )}
 
