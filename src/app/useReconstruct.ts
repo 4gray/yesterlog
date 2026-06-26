@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AppSettings, BitbucketReviewSyncResult, SyncResult } from "../../shared/types";
-import { enhanceReconstructDay, probeOllama } from "../api/ollama";
+import { computeAiDrafts, probeOllama } from "../api/ollama";
+import { applyAiDrafts, type AiDrafts } from "../domain/enhancePrompt";
 import type {
   PlacementMap,
   ReconstructCommitGroup,
@@ -12,8 +13,10 @@ import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../d
 import type { ReconstructDateLabels } from "../components/ReconstructView";
 import {
   getBitbucketReviewResult,
+  getReconstructAiDrafts,
   getReconstructDraft,
   getSyncResult,
+  saveReconstructAiDrafts,
   saveReconstructDraft
 } from "../storage/db";
 import { addDays, fromLocalDateKey, isoWeekday, startOfWeekMonday, toLocalDateKey } from "../utils/date";
@@ -256,66 +259,107 @@ export const useReconstruct = ({
   const distributed = distributedKey === selDateKey;
 
   // ---- optional local-AI enhancement (off by default, never required) -------
+  // Drafts are signal-keyed, cached per day, and re-applied on top of any placement —
+  // so dragging an entry does NOT re-run the model. Drafting happens once per day (on
+  // entry, if uncached) or on the explicit "Auto-draft all" button.
   const [aiActive, setAiActive] = useState(false);
-  const [enhanced, setEnhanced] = useState<{ dateKey: string; day: ReconstructDay } | undefined>();
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [aiDraftsByDay, setAiDraftsByDay] = useState<Record<string, AiDrafts>>({});
+  const enhanceRunId = useRef(0);
+
+  // Latest coreDay without making the AI effect depend on placement edits.
+  const coreDayRef = useRef(coreDay);
+  coreDayRef.current = coreDay;
 
   const aiConnection = useMemo(
     () => ({ endpoint: settings.ollamaEndpoint, model: settings.ollamaModel }),
     [settings.ollamaEndpoint, settings.ollamaModel]
   );
 
-  const runEnhance = useCallback(
-    async (day: ReconstructDay, shouldApply: () => boolean) => {
-      const status = await probeOllama(aiConnection);
-      if (!shouldApply()) return;
-      setAiActive(status.reachable && status.modelReady);
-      if (status.reachable && status.modelReady) {
-        const result = await enhanceReconstructDay(day, aiConnection);
-        if (shouldApply()) setEnhanced({ dateKey: day.dateKey, day: result });
-      } else {
-        setEnhanced({ dateKey: day.dateKey, day });
+  const runDraft = useCallback(
+    async (runId: number) => {
+      const day = coreDayRef.current;
+      const drafts = await computeAiDrafts(day, aiConnection);
+      if (enhanceRunId.current !== runId) {
+        return;
       }
+      setAiDraftsByDay((current) => ({ ...current, [selDateKey]: drafts }));
+      void saveReconstructAiDrafts(selDateKey, drafts);
     },
-    [aiConnection]
+    [aiConnection, selDateKey]
   );
 
+  // On day change / enable: probe, load cached drafts, and auto-draft once if none cached.
   useEffect(() => {
     if (!settings.aiEnabled) {
       setAiActive(false);
-      setEnhanced(undefined);
       setIsEnhancing(false);
       return;
     }
-
     let cancelled = false;
+    const runId = ++enhanceRunId.current;
     setIsEnhancing(true);
-    void runEnhance(coreDay, () => !cancelled).finally(() => {
-      if (!cancelled) setIsEnhancing(false);
-    });
-
+    void (async () => {
+      try {
+        const [status, cached] = await Promise.all([probeOllama(aiConnection), getReconstructAiDrafts(selDateKey)]);
+        if (cancelled || enhanceRunId.current !== runId) {
+          return;
+        }
+        setAiActive(status.reachable && status.modelReady);
+        if (cached) {
+          setAiDraftsByDay((current) => (current[selDateKey] ? current : { ...current, [selDateKey]: cached }));
+          return;
+        }
+        if (status.reachable && status.modelReady) {
+          await runDraft(runId);
+        }
+      } finally {
+        if (!cancelled && enhanceRunId.current === runId) {
+          setIsEnhancing(false);
+        }
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [coreDay, runEnhance, settings.aiEnabled]);
+  }, [aiConnection, runDraft, selDateKey, settings.aiEnabled]);
 
   const refreshAi = useCallback(() => {
-    if (!settings.aiEnabled) return;
+    if (!settings.aiEnabled) {
+      return;
+    }
+    const runId = ++enhanceRunId.current;
     setIsEnhancing(true);
-    void runEnhance(coreDay, () => true).finally(() => setIsEnhancing(false));
-  }, [coreDay, runEnhance, settings.aiEnabled]);
+    void (async () => {
+      try {
+        const status = await probeOllama(aiConnection);
+        if (enhanceRunId.current !== runId) {
+          return;
+        }
+        setAiActive(status.reachable && status.modelReady);
+        if (status.reachable && status.modelReady) {
+          await runDraft(runId);
+        }
+      } finally {
+        if (enhanceRunId.current === runId) {
+          setIsEnhancing(false);
+        }
+      }
+    })();
+  }, [aiConnection, runDraft, settings.aiEnabled]);
+
+  const stopAi = useCallback(() => {
+    enhanceRunId.current += 1; // invalidate any in-flight run
+    setIsEnhancing(false);
+  }, []);
 
   const aiOn = settings.aiEnabled && aiActive;
 
   const day = useMemo<ReconstructDay>(() => {
-    if (aiOn && enhanced?.dateKey === coreDay.dateKey) {
-      return enhanced.day;
-    }
-    if (distributed) {
-      return autoDistribute(coreDay);
-    }
-    return coreDay;
-  }, [aiOn, coreDay, distributed, enhanced]);
+    const base = distributed ? autoDistribute(coreDay) : coreDay;
+    const drafts = aiDraftsByDay[selDateKey];
+    return aiOn && drafts ? applyAiDrafts(base, drafts) : base;
+  }, [aiDraftsByDay, aiOn, coreDay, distributed, selDateKey]);
 
   return {
     day,
@@ -329,6 +373,7 @@ export const useReconstruct = ({
     stepBack: () => setSelIndex((index) => Math.max(0, Math.min(index, lastSelectable) - 1)),
     stepForward: () => setSelIndex((index) => Math.min(lastSelectable, index + 1)),
     refreshAi,
+    stopAi,
     distribute,
     placeSignal,
     unplaceSignal,

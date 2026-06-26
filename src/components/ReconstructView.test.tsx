@@ -56,6 +56,7 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
       onStepForward={() => undefined}
       onOpenSettings={() => undefined}
       onPrimaryAction={() => undefined}
+      onStopAi={() => undefined}
       onLogTime={() => undefined}
       syncState="synced"
       syncLabel="SYNCED 6:47 PM"
@@ -103,6 +104,13 @@ describe("ReconstructView", () => {
     expect(markup).toContain("DRAFTED · llama3.1");
     expect(markup).toContain("Reviewed the schema migration PR.");
     expect(markup).toContain("Auto-draft all");
+    expect(markup).toContain("is-ai-drafted"); // AI rows are clearly highlighted
+  });
+
+  it("offers a Stop control while a draft is in flight", () => {
+    const markup = render({ aiOn: true, isEnhancing: true });
+    expect(markup).toContain("Stop drafting");
+    expect(markup).not.toContain("Auto-draft all");
   });
 
   it("shows a syncing state instead of an empty one while a sync is in flight", () => {

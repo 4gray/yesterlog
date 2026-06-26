@@ -43,6 +43,7 @@ export const AppReconRoute = ({
       onStepForward={vm.stepForward}
       onOpenSettings={onOpenSettings}
       onPrimaryAction={vm.aiOn ? vm.refreshAi : vm.distribute}
+      onStopAi={vm.stopAi}
       onLogTime={() => onLogTime(vm.selectedDate)}
       syncState={syncState}
       syncLabel={syncLabel}

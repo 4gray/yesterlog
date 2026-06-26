@@ -1,4 +1,10 @@
-import { buildEnhancePrompt, ENHANCE_SYSTEM_PROMPT, parseEnhanceResponse } from "../domain/enhancePrompt";
+import {
+  buildEnhancePrompt,
+  ENHANCE_SYSTEM_PROMPT,
+  EMPTY_AI_DRAFTS,
+  parseAiDrafts,
+  type AiDrafts
+} from "../domain/enhancePrompt";
 import type { ReconstructDay } from "../domain/reconstruct";
 import { nativeApi } from "./native";
 
@@ -46,17 +52,16 @@ export const probeOllama = async (connection: OllamaConnection): Promise<OllamaS
 };
 
 /**
- * Polishes a deterministic {@link ReconstructDay} with the local model. Returns the input
- * day unchanged if there is nothing to enhance, the model is unreachable, or anything
- * fails — the reconstruction is always preserved.
+ * Asks the local model to polish a day's signals into clean worklog prose and infer gaps.
+ * Returns signal-keyed drafts; on disablement, unreachability, or any failure it returns
+ * empty drafts so the deterministic reconstruction is preserved.
  */
-export const enhanceReconstructDay = async (
-  day: ReconstructDay,
-  connection: OllamaConnection
-): Promise<ReconstructDay> => {
-  const hasEnhanceable = day.rows.some((row) => row.kind === "filled" || row.kind === "empty");
+export const computeAiDrafts = async (day: ReconstructDay, connection: OllamaConnection): Promise<AiDrafts> => {
+  const hasEnhanceable =
+    day.signals.some((signal) => !signal.isMarker && signal.durationMinutes > 0) ||
+    day.rows.some((row) => row.kind === "empty");
   if (!hasEnhanceable) {
-    return day;
+    return EMPTY_AI_DRAFTS;
   }
 
   try {
@@ -69,11 +74,11 @@ export const enhanceReconstructDay = async (
     });
 
     if (!result.ok || !result.response) {
-      return day;
+      return EMPTY_AI_DRAFTS;
     }
 
-    return parseEnhanceResponse(day, result.response);
+    return parseAiDrafts(result.response);
   } catch {
-    return day;
+    return EMPTY_AI_DRAFTS;
   }
 };

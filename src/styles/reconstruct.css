@@ -256,6 +256,26 @@
   box-shadow: 0 2px 14px color-mix(in srgb, var(--ai) 45%, transparent);
 }
 
+.recon-primary.is-stop {
+  color: var(--ai);
+  background: color-mix(in srgb, var(--ai) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ai) 40%, transparent);
+}
+
+.recon-primary.is-stop:hover {
+  background: color-mix(in srgb, var(--ai) 18%, transparent);
+}
+
+/* AI-drafted timeline rows get a clear local-AI treatment */
+.recon-tl-cell.is-ai-drafted {
+  border-color: color-mix(in srgb, var(--ai) 38%, transparent);
+  background: color-mix(in srgb, var(--ai) 7%, var(--bg-card));
+}
+
+.recon-tl-cell.is-ai-drafted .recon-bar {
+  background: var(--ai);
+}
+
 /* ---- banners ---- */
 .recon-banner {
   margin: 14px 40px 0;

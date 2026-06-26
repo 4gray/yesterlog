@@ -54,6 +54,8 @@ export interface ReconstructViewProps {
   onOpenSettings: () => void;
   /** AI on → re-draft with the model; AI off → rule-based auto-distribute (core path). */
   onPrimaryAction: () => void;
+  /** Cancel an in-flight AI draft. */
+  onStopAi: () => void;
   /** Log entries for this day (opens the existing Add Time write flow). */
   onLogTime: () => void;
   /** Background sync state for Jira worklogs + Bitbucket reviews/commits. */
@@ -115,6 +117,7 @@ export const ReconstructView = ({
   onStepForward,
   onOpenSettings,
   onPrimaryAction,
+  onStopAi,
   onLogTime,
   syncState,
   syncLabel,
@@ -230,23 +233,17 @@ export const ReconstructView = ({
             <span>{aiOn ? `LOCAL AI · ${modelShort}` : "LOCAL AI OFF"}</span>
           </button>
 
-          {isActive && (
-            <button
-              type="button"
-              className={`recon-primary ${aiOn ? "is-ai" : ""}`}
-              onClick={onPrimaryAction}
-              disabled={isEnhancing}
-            >
-              {isEnhancing ? (
-                <Loader2 size={15} strokeWidth={2} className="spin" />
-              ) : aiOn ? (
-                <Sparkles size={15} strokeWidth={2} />
-              ) : (
-                <Zap size={15} strokeWidth={2} />
-              )}
-              {aiOn ? (isEnhancing ? "Drafting…" : "Auto-draft all") : "Auto-distribute"}
+          {isActive && isEnhancing ? (
+            <button type="button" className="recon-primary is-stop" onClick={onStopAi} title="Stop drafting">
+              <Loader2 size={15} strokeWidth={2} className="spin" />
+              Stop drafting
             </button>
-          )}
+          ) : isActive ? (
+            <button type="button" className={`recon-primary ${aiOn ? "is-ai" : ""}`} onClick={onPrimaryAction}>
+              {aiOn ? <Sparkles size={15} strokeWidth={2} /> : <Zap size={15} strokeWidth={2} />}
+              {aiOn ? "Auto-draft all" : "Auto-distribute"}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -551,7 +548,7 @@ const TimelineRowView = ({
     <div className="recon-tl-row">
       <span className="recon-tl-hour">{row.hour}</span>
       <div
-        className={`recon-tl-cell is-${row.kind} ${isDropTarget ? "is-drop" : ""} ${isDraggable ? "is-draggable" : ""}`}
+        className={`recon-tl-cell is-${row.kind} ${isDropTarget ? "is-drop" : ""} ${isDraggable ? "is-draggable" : ""} ${showAiDraft ? "is-ai-drafted" : ""}`}
         style={accentStyle(row.signalKind)}
         draggable={isDraggable}
         onDragStart={onRowDragStart}

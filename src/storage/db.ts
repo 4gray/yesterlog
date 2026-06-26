@@ -10,7 +10,7 @@ import type {
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -24,7 +24,8 @@ type StoreName =
   | "bitbucketReviewResults"
   | "recurringEvents"
   | "recurringOccurrences"
-  | "reconstructDrafts";
+  | "reconstructDrafts"
+  | "reconstructAiDrafts";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -73,6 +74,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("reconstructDrafts")) {
         db.createObjectStore("reconstructDrafts", { keyPath: "dateKey" });
+      }
+
+      if (!db.objectStoreNames.contains("reconstructAiDrafts")) {
+        db.createObjectStore("reconstructAiDrafts", { keyPath: "dateKey" });
       }
     };
 
@@ -200,4 +205,19 @@ export const getReconstructDraft = async (dateKey: string): Promise<Record<strin
 
 export const saveReconstructDraft = (dateKey: string, placements: Record<string, number>) => {
   return writeStore("reconstructDrafts", { dateKey, placements });
+};
+
+interface StoredAiDrafts {
+  entries: Record<string, string>;
+  gaps: Record<string, string>;
+}
+
+/** Per-day cached local-AI drafts (signalId → prose, hour → gap note). */
+export const getReconstructAiDrafts = async (dateKey: string): Promise<StoredAiDrafts | undefined> => {
+  const stored = await readStore<{ dateKey: string; drafts: StoredAiDrafts }>("reconstructAiDrafts", dateKey);
+  return stored?.drafts;
+};
+
+export const saveReconstructAiDrafts = (dateKey: string, drafts: StoredAiDrafts) => {
+  return writeStore("reconstructAiDrafts", { dateKey, drafts });
 };
