@@ -60,7 +60,7 @@ export const MonthView = ({
             </div>
           </div>
           <div>
-            <div className="week-meta-label">MONTH — {monthState.monthLabel}</div>
+            <div className="eyebrow">MONTH — {monthState.monthLabel}</div>
             <div className="month-figure-row">
               <div className="week-figure">
                 {formatHours(monthState.trackedHours).replace("h", "")}

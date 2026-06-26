@@ -4,6 +4,10 @@
   min-height: 0;
   display: flex;
   overflow: hidden;
+  /* Onboarding has no sidebar/header, so make the screen itself the window
+     drag region. Form controls stay interactive via the global no-drag rule
+     on button/input/textarea/select/a/label in base.css. */
+  -webkit-app-region: drag;
 }
 
 .welcome-copy {

@@ -61,7 +61,7 @@ export const WeekHeader = ({
           </div>
         </div>
         <div>
-          <div className="week-meta-label">
+          <div className="eyebrow">
             WEEK {weekNumber} — {rangeLabel}
           </div>
           <div className="week-figure">

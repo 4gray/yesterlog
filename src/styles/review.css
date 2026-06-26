@@ -50,27 +50,29 @@
   padding-bottom: 6px;
 }
 
+/* Mirrors the .add-time-button schema (sans / 11.5px / radius 8 / 10px 15px /
+   accent shadow); keeps the Review view's purple accent for identity. */
 .review-log-button {
-  min-height: 48px;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  padding: 0 18px;
+  gap: 8px;
+  flex: none;
   white-space: nowrap;
   border: none;
   border-radius: 8px;
-  color: #f8f7ff;
+  color: #fff;
   background: var(--purple);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  transition: transform 150ms ease, filter 150ms ease, opacity 150ms ease;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 10px 15px;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--purple) 42%, transparent);
+  transition: filter 150ms ease, opacity 150ms ease;
 }
 
 .review-log-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
+  filter: brightness(1.08);
 }
 
 .review-log-button:disabled {

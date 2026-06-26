@@ -1,7 +1,7 @@
 /* ============================ WEEK view ============================ */
 .week-header {
   flex: none;
-  padding: 24px 40px 22px;
+  padding: 24px 48px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -147,13 +147,6 @@
 
 .week-meta {
   padding-bottom: 8px;
-}
-
-.week-meta-label {
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  letter-spacing: 0.18em;
-  color: var(--dim-2);
 }
 
 .meter-row {

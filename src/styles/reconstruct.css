@@ -22,7 +22,7 @@
 /* ---- header ---- */
 .recon-header {
   flex: none;
-  padding: 28px 40px 22px;
+  padding: 28px 48px 22px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -278,7 +278,7 @@
 
 /* ---- banners ---- */
 .recon-banner {
-  margin: 14px 40px 0;
+  margin: 14px 48px 0;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -408,7 +408,7 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  padding: 16px 40px 0;
+  padding: 16px 48px 0;
   gap: 24px;
 }
 

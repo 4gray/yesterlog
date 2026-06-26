@@ -46,7 +46,7 @@ describe("WeekHeader", () => {
   it("renders the week range, progress, and hour totals", () => {
     renderHeader();
 
-    expect(container.querySelector(".week-meta-label")?.textContent).toBe("WEEK 25 — JUN 15–21");
+    expect(container.querySelector(".eyebrow")?.textContent).toBe("WEEK 25 — JUN 15–21");
     expect(container.querySelector(".ring")?.getAttribute("aria-label")).toBe("30 percent of weekly target");
     expect(container.querySelector(".ring-label")?.textContent).toBe("30%");
     expect(container.querySelector(".week-figure")?.textContent).toBe("28h left · 12h / 40h");
