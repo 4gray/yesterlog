@@ -35,6 +35,8 @@ export interface ReconstructSignal {
   confidence: ReconstructConfidence;
   /** Local start hour [0..23], used to place the signal on the timeline. */
   startHour: number;
+  /** Factual, model-free description used when this signal becomes a timeline entry. */
+  naiveDescription: string;
 }
 
 export type TimelineRowKind = "filled" | "locked" | "empty";
@@ -109,6 +111,21 @@ export interface ReconstructReviewSession {
   isPullRequestAuthor?: boolean;
 }
 
+/** Narrowed Bitbucket commit-group shape — the user's own coding work for a day. */
+export interface ReconstructCommitGroup {
+  id: string;
+  jiraIssueKey?: string;
+  pullRequestId?: number;
+  branch?: string;
+  repositoryName: string;
+  primaryMessage: string;
+  commitCount: number;
+  firstCommitISO: string;
+  lastCommitISO: string;
+  estimatedSeconds: number;
+  confidence: "high" | "medium" | "low";
+}
+
 export interface ReconstructInput {
   dateKey: string;
   /** ISO weekday 1..7 (Mon..Sun). */
@@ -118,6 +135,8 @@ export interface ReconstructInput {
   targetMinutes: number;
   worklogs: ReconstructWorklog[];
   reviewSessions: ReconstructReviewSession[];
+  /** The user's own commit runs for the day (their coding work). */
+  commits?: ReconstructCommitGroup[];
 }
 
 const WORKING_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -182,11 +201,38 @@ export const buildSignals = (sessions: ReconstructReviewSession[]): ReconstructS
         durationMinutes: minutes,
         isMarker: false,
         confidence: isOwn ? "low" : mapConfidence(session.confidence),
-        startHour: localHourOf(session.startedISO)
+        startHour: localHourOf(session.startedISO),
+        naiveDescription: naivePrDescription(session)
       };
     });
 
-/** Factual, model-free description for a proposed PR entry. */
+/** Maps the user's commit runs to draggable "commit" work signals (sorted by start). */
+export const buildCommitSignals = (commits: ReconstructCommitGroup[]): ReconstructSignal[] =>
+  commits
+    .slice()
+    .sort((a, b) => a.firstCommitISO.localeCompare(b.firstCommitISO))
+    .map((group) => {
+      const minutes = Math.round(group.estimatedSeconds / 60);
+      const range =
+        hourLabel(group.firstCommitISO) && hourLabel(group.lastCommitISO)
+          ? `${hourLabel(group.firstCommitISO)}–${hourLabel(group.lastCommitISO)}`
+          : "";
+      const commitLabel = `${group.commitCount} ${group.commitCount === 1 ? "commit" : "commits"}`;
+      return {
+        id: group.id,
+        kind: "commit" as const,
+        key: group.jiraIssueKey?.trim().toUpperCase() ?? "",
+        title: group.primaryMessage,
+        sub: [group.repositoryName, commitLabel, range].filter(Boolean).join(" · "),
+        durationMinutes: minutes,
+        isMarker: false,
+        confidence: mapConfidence(group.confidence),
+        startHour: localHourOf(group.firstCommitISO),
+        naiveDescription: naiveCommitDescription(group)
+      };
+    });
+
+/** Factual, model-free description for a proposed PR-review entry. */
 const naivePrDescription = (session: ReconstructReviewSession): string => {
   const count = session.commentCount;
   if (session.isPullRequestAuthor) {
@@ -195,6 +241,13 @@ const naivePrDescription = (session: ReconstructReviewSession): string => {
   }
   const activity = count > 0 ? ` and left ${count} ${count === 1 ? "comment" : "comments"}` : "";
   return `Reviewed pull request #${session.pullRequestId} (${session.pullRequestTitle}) in ${session.repositoryName}${activity}.`;
+};
+
+/** Factual, model-free description for a proposed commit entry. */
+const naiveCommitDescription = (group: ReconstructCommitGroup): string => {
+  const where = group.branch ? ` on ${group.branch}` : ` in ${group.repositoryName}`;
+  const count = `${group.commitCount} ${group.commitCount === 1 ? "commit" : "commits"}`;
+  return `${group.primaryMessage} — ${count}${where}.`;
 };
 
 /**
@@ -238,8 +291,11 @@ interface PlacedContent {
 }
 
 export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => {
-  const signals = buildSignals(input.reviewSessions);
-  const hasActivity = input.worklogs.length > 0 || input.reviewSessions.length > 0;
+  const commits = input.commits ?? [];
+  const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
+    (a, b) => a.startHour - b.startHour
+  );
+  const hasActivity = input.worklogs.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
   const workingDay = isWorkingDay(input);
 
   const loggedMinutes = input.worklogs.reduce((sum, w) => sum + Math.round(w.timeSpentSeconds / 60), 0);
@@ -290,11 +346,9 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
     return { hour: localHourOf(worklog.startedISO), value: { kind: "locked" as const, row, minutes } };
   });
 
-  const sessionById = new Map(input.reviewSessions.map((session) => [session.id, session]));
   const filledItems = signals
     .filter((signal) => !signal.isMarker && signal.durationMinutes > 0)
     .map((signal) => {
-      const session = sessionById.get(signal.id);
       const row: TimelineRow = {
         hour: "",
         kind: "filled",
@@ -303,7 +357,7 @@ export const buildReconstructDay = (input: ReconstructInput): ReconstructDay => 
         title: signal.title,
         sub: signal.sub,
         durationMinutes: signal.durationMinutes,
-        naiveDescription: session ? naivePrDescription(session) : signal.title
+        naiveDescription: signal.naiveDescription
       };
       return { hour: signal.startHour, value: { kind: "filled" as const, row, minutes: signal.durationMinutes } };
     });

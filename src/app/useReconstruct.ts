@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppSettings, BitbucketReviewSyncResult, SyncResult } from "../../shared/types";
 import { enhanceReconstructDay, probeOllama } from "../api/ollama";
-import type { ReconstructDay, ReconstructReviewSession, ReconstructWorklog } from "../domain/reconstruct";
+import type {
+  ReconstructCommitGroup,
+  ReconstructDay,
+  ReconstructReviewSession,
+  ReconstructWorklog
+} from "../domain/reconstruct";
 import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../domain/reconstruct";
 import type { ReconstructDateLabels } from "../components/ReconstructView";
 import { getBitbucketReviewResult, getSyncResult } from "../storage/db";
@@ -127,6 +132,21 @@ export const useReconstruct = ({
         logged: session.status === "logged",
         isPullRequestAuthor: session.isPullRequestAuthor
       }));
+    const commits: ReconstructCommitGroup[] = (review?.commitGroups ?? [])
+      .filter((group) => group.dateKey === selDateKey)
+      .map((group) => ({
+        id: group.id,
+        jiraIssueKey: group.jiraIssueKey,
+        pullRequestId: group.pullRequestId,
+        branch: group.branch,
+        repositoryName: group.repositoryName,
+        primaryMessage: group.primaryMessage,
+        commitCount: group.commitCount,
+        firstCommitISO: group.firstCommitISO,
+        lastCommitISO: group.lastCommitISO,
+        estimatedSeconds: group.estimatedSeconds,
+        confidence: group.confidence
+      }));
 
     return buildReconstructDay({
       dateKey: selDateKey,
@@ -135,7 +155,8 @@ export const useReconstruct = ({
       workingDays: settings.workingDays,
       targetMinutes,
       worklogs,
-      reviewSessions
+      reviewSessions,
+      commits
     });
   }, [loaded, reviewResult, selDateKey, selIsToday, selWeekdayIso, settings.workingDays, syncResult, targetMinutes]);
 

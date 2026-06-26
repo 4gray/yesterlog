@@ -1,14 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
   autoDistribute,
+  buildCommitSignals,
   buildReconstructDay,
   buildSignals,
   formatReconDuration,
   getReconstructSummary,
+  type ReconstructCommitGroup,
   type ReconstructInput,
   type ReconstructReviewSession,
   type ReconstructWorklog
 } from "./reconstruct";
+
+const commit = (overrides: Partial<ReconstructCommitGroup> = {}): ReconstructCommitGroup => ({
+  id: "team/web#220:commits:2026-06-15",
+  jiraIssueKey: "FTDM-328",
+  pullRequestId: 220,
+  branch: "feature/FTDM-328-auth",
+  repositoryName: "web-app",
+  primaryMessage: "Add auth middleware",
+  commitCount: 5,
+  firstCommitISO: "2026-06-15T09:12:00",
+  lastCommitISO: "2026-06-15T11:05:00",
+  estimatedSeconds: 110 * 60,
+  confidence: "high",
+  ...overrides
+});
 
 const review = (overrides: Partial<ReconstructReviewSession> = {}): ReconstructReviewSession => ({
   id: "team/web#511:2026-06-15",
@@ -72,6 +89,17 @@ describe("buildSignals", () => {
   it("excludes already-logged sessions (never offered twice)", () => {
     const signals = buildSignals([review({ id: "logged", logged: true }), review({ id: "open" })]);
     expect(signals.map((s) => s.id)).toEqual(["open"]);
+  });
+
+  it("maps commit runs to blue 'commit' work signals attributed to the ticket", () => {
+    const [sig] = buildCommitSignals([commit()]);
+    expect(sig.kind).toBe("commit");
+    expect(sig.key).toBe("FTDM-328");
+    expect(sig.title).toBe("Add auth middleware");
+    expect(sig.durationMinutes).toBe(110);
+    expect(sig.sub).toContain("5 commits");
+    expect(sig.naiveDescription).toContain("Add auth middleware");
+    expect(sig.naiveDescription).toContain("on feature/FTDM-328-auth");
   });
 
   it("reclassifies activity on your own PR as low-confidence work, not a review", () => {
@@ -141,6 +169,26 @@ describe("buildReconstructDay", () => {
       sendBtnLabel: "Log 2 entries in Jira",
       dayTag: "PAST DAY"
     });
+  });
+
+  it("reconstructs an active day from your own commits", () => {
+    const day = buildReconstructDay(
+      input({ worklogs: [], reviewSessions: [], commits: [commit({ estimatedSeconds: 95 * 60 })] })
+    );
+    expect(day.kind).toBe("past");
+    expect(day.signals.map((s) => s.kind)).toContain("commit");
+    const row = day.rows.find((r) => r.kind === "filled" && r.signalKind === "commit");
+    expect(row?.key).toBe("FTDM-328");
+    expect(row?.naiveDescription).toContain("Add auth middleware");
+    expect(day.reconstructedMinutes).toBe(95);
+  });
+
+  it("combines commits and reviews into one signal list", () => {
+    const day = buildReconstructDay(
+      input({ worklogs: [], reviewSessions: [review()], commits: [commit()] })
+    );
+    const kinds = day.signals.map((s) => s.kind).sort();
+    expect(kinds).toEqual(["commit", "pr"]);
   });
 
   it("describes own-PR work without calling it a review", () => {

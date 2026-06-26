@@ -185,6 +185,29 @@ export interface BitbucketReviewSession {
   logged?: BitbucketLoggedReview;
 }
 
+/**
+ * A run of the current user's own commits on one PR's branch on one day — the raw signal
+ * of coding work, grouped for Day Reconstruction. Optional on the sync result so older
+ * cached results stay valid.
+ */
+export interface BitbucketCommitGroup {
+  id: string;
+  workspace: string;
+  repositorySlug: string;
+  repositoryName: string;
+  branch?: string;
+  jiraIssueKey?: string;
+  pullRequestId?: number;
+  dateKey: string;
+  commitCount: number;
+  firstCommitISO: string;
+  lastCommitISO: string;
+  estimatedSeconds: number;
+  /** Representative commit subject for the group. */
+  primaryMessage: string;
+  confidence: BitbucketReviewConfidence;
+}
+
 export interface BitbucketReviewSyncResult {
   weekKey: string;
   weekStartISO: string;
@@ -197,6 +220,8 @@ export interface BitbucketReviewSyncResult {
   pullRequestCount: number;
   sessionCount: number;
   sessions: BitbucketReviewSession[];
+  /** The user's own commit runs for the week (for Day Reconstruction). */
+  commitGroups?: BitbucketCommitGroup[];
 }
 
 export type TicketStatusCategory = "new" | "indeterminate" | "done" | "unknown";

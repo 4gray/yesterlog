@@ -78,7 +78,13 @@ Deferred (need explicit go-ahead — AGENTS.md write-surface caution / larger sc
 - Weekend exact-date logging: the shared Add Time flow coerces to working days at two
   points; "Log time anyway" opens Add Time (the day selector shows the chosen working day,
   not silent). Reworking that flow is out of this feature's scope.
-- Live commit/CI/Jira-changelog signal collection in `native` (engine already accepts them).
+- CI-run and Jira-changelog signal collection (commits now land; engine accepts the rest).
+
+## Follow-ups shipped
+- Own-PR activity is reclassified as low-confidence "On your PR" work, not "Review".
+- Bitbucket **commit** signals: `syncBitbucketReviewSessions` now also collects the user's
+  own commits (per authored PR), grouped by branch/ticket/day, and the engine renders them
+  as blue "commit" work entries. This closes the "my coding work is invisible" gap.
 
 ## Status
 Implemented and verified. `npm run test` (382 passing, incl. new engine/prompt/view/route/

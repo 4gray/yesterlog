@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  BitbucketCommitGroup,
   BitbucketReviewSession,
   BitbucketReviewSyncResult,
   JiraIssueSummary,
@@ -212,14 +213,59 @@ const reviewSession = ({
   };
 };
 
+const commitGroup = ({
+  repositorySlug,
+  repositoryName,
+  pullRequestId,
+  issueKey,
+  dateKey,
+  time,
+  durationSeconds,
+  commitCount,
+  message,
+  confidence = "high"
+}: {
+  repositorySlug: string;
+  repositoryName: string;
+  pullRequestId: number;
+  issueKey: string;
+  dateKey: string;
+  time: string;
+  durationSeconds: number;
+  commitCount: number;
+  message: string;
+  confidence?: BitbucketCommitGroup["confidence"];
+}): BitbucketCommitGroup => {
+  const first = new Date(localStartISO(dateKey, time));
+  const last = new Date(first.getTime() + durationSeconds * 1000);
+  return {
+    id: `timebro-demo/${repositorySlug}#${pullRequestId}:commits:${dateKey}`,
+    workspace: "timebro-demo",
+    repositorySlug,
+    repositoryName,
+    branch: `feature/${issueKey.toLowerCase()}`,
+    jiraIssueKey: issueKey,
+    pullRequestId,
+    dateKey,
+    commitCount,
+    firstCommitISO: first.toISOString(),
+    lastCommitISO: last.toISOString(),
+    estimatedSeconds: durationSeconds,
+    primaryMessage: message,
+    confidence
+  };
+};
+
 const buildBitbucketReviewResult = ({
   weekStart,
   today,
-  sessions
+  sessions,
+  commitGroups
 }: {
   weekStart: Date;
   today: Date;
   sessions: BitbucketReviewSession[];
+  commitGroups: BitbucketCommitGroup[];
 }): BitbucketReviewSyncResult => ({
   weekKey: toLocalDateKey(weekStart),
   weekStartISO: weekStart.toISOString(),
@@ -231,7 +277,8 @@ const buildBitbucketReviewResult = ({
   repositoryCount: new Set(sessions.map((session) => session.repositorySlug)).size,
   pullRequestCount: new Set(sessions.map((session) => `${session.repositorySlug}#${session.pullRequestId}`)).size,
   sessionCount: sessions.length,
-  sessions
+  sessions,
+  commitGroups
 });
 
 const buildSyncResult = ({
@@ -706,6 +753,43 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     })
   ];
 
+  const commitGroups = [
+    commitGroup({
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 220,
+      issueKey: "FTDM-328",
+      dateKey: mondayKey,
+      time: "09:12",
+      durationSeconds: seconds(1, 50),
+      commitCount: 5,
+      message: "Add auth middleware"
+    }),
+    commitGroup({
+      repositorySlug: "api",
+      repositoryName: "api",
+      pullRequestId: 224,
+      issueKey: "FTDM-377",
+      dateKey: tuesdayKey,
+      time: "10:25",
+      durationSeconds: seconds(1, 10),
+      commitCount: 3,
+      message: "Refactor cursor pagination",
+      confidence: "medium"
+    }),
+    commitGroup({
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 230,
+      issueKey: "FTDM-410",
+      dateKey: todayKey,
+      time: "09:20",
+      durationSeconds: seconds(2, 5),
+      commitCount: 7,
+      message: "Interrupt-safe queue draining"
+    })
+  ];
+
   return {
     today,
     weekStart,
@@ -731,7 +815,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       skippedDates: [fridayKey]
     },
     syncResult: buildSyncResult({ weekStart, today, logs, ticketsByKey }),
-    bitbucketReviewResult: buildBitbucketReviewResult({ weekStart, today, sessions: reviewSessions }),
+    bitbucketReviewResult: buildBitbucketReviewResult({ weekStart, today, sessions: reviewSessions, commitGroups }),
     tickets: {
       fetchedAt: today.toISOString(),
       accountId: ACCOUNT_ID,

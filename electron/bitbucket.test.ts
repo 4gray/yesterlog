@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
+import { buildCommitGroupsForPullRequest, syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -164,5 +164,50 @@ describe("Bitbucket review sync", () => {
       status: "unlogged"
     });
     expect(result.sessions[0].estimatedSeconds).toBe(45 * 60);
+  });
+});
+
+describe("buildCommitGroupsForPullRequest", () => {
+  const me = { account_id: "me", uuid: "{me}" };
+  const weekStart = new Date(2026, 5, 15);
+  const weekEndExclusive = new Date(2026, 5, 22);
+  const pullRequest = {
+    id: 220,
+    title: "Auth middleware",
+    source: { branch: { name: "feature/FTDM-328-auth" } },
+    destination: { branch: { name: "main" } },
+    author: me
+  };
+  const repository = { slug: "explorer-web", name: "explorer-web" };
+
+  it("groups the user's own commits by day, maps the ticket, and estimates duration", () => {
+    const groups = buildCommitGroupsForPullRequest({
+      workspace: "team",
+      repository,
+      pullRequest,
+      currentUser: me,
+      weekStart,
+      weekEndExclusive,
+      commits: [
+        { hash: "a", date: "2026-06-15T09:12:00", message: "FTDM-328 add middleware", author: { user: me } },
+        { hash: "b", date: "2026-06-15T11:05:00", message: "wip", author: { user: me } },
+        // other author — excluded
+        { hash: "c", date: "2026-06-15T12:00:00", message: "tweak", author: { user: { account_id: "other" } } },
+        // before the window — excluded
+        { hash: "d", date: "2026-06-10T09:00:00", message: "old", author: { user: me } }
+      ]
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      dateKey: "2026-06-15",
+      jiraIssueKey: "FTDM-328",
+      pullRequestId: 220,
+      branch: "feature/FTDM-328-auth",
+      commitCount: 2,
+      primaryMessage: "add middleware",
+      confidence: "high"
+    });
+    expect(groups[0].estimatedSeconds).toBeGreaterThan(0);
   });
 });

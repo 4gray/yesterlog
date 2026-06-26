@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  BitbucketCommitGroup,
   BitbucketConnectionResult,
   BitbucketReviewEvent,
   BitbucketReviewSession,
@@ -70,6 +71,16 @@ interface BitbucketActivityItem {
   };
 }
 
+interface BitbucketCommit {
+  hash?: string;
+  date?: string;
+  message?: string;
+  author?: {
+    user?: BitbucketUser;
+    raw?: string;
+  };
+}
+
 interface BitbucketPage<T> {
   values?: T[];
   next?: string;
@@ -89,6 +100,7 @@ const API_BASE_URL = "https://api.bitbucket.org/2.0";
 const PULL_REQUEST_STATES = ["OPEN", "MERGED", "DECLINED"] as const;
 const MAX_PAGES_PER_REPOSITORY_STATE = 8;
 const MAX_ACTIVITY_PAGES_PER_PULL_REQUEST = 8;
+const MAX_COMMIT_PAGES_PER_PULL_REQUEST = 6;
 const JIRA_ISSUE_KEY_RE = /\b([a-z][a-z0-9]+-\d+)\b/i;
 
 const ensureBitbucketSettings = (settings: AppSettings) => {
@@ -468,6 +480,137 @@ const buildSessionsForPullRequest = ({
   return sessions;
 };
 
+const estimateCommitSeconds = (commits: BitbucketCommit[]) => {
+  const timestamps = commits
+    .map((commit) => (commit.date ? new Date(commit.date).getTime() : NaN))
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  const minimum = commits.length >= 4 ? 90 * 60 : commits.length >= 2 ? 50 * 60 : 30 * 60;
+
+  if (timestamps.length <= 1) {
+    return minimum;
+  }
+
+  const spanSeconds = Math.round((timestamps[timestamps.length - 1] - timestamps[0]) / 1000);
+  // Add lead time for coding before the first commit of the run.
+  return clamp(spanSeconds + 25 * 60, minimum, 4 * 60 * 60);
+};
+
+const commitGroupConfidence = (
+  commits: BitbucketCommit[],
+  jiraIssueKey?: string
+): BitbucketReviewSession["confidence"] => {
+  if (jiraIssueKey && commits.length >= 2) {
+    return "high";
+  }
+
+  if (jiraIssueKey || commits.length >= 2) {
+    return "medium";
+  }
+
+  return "low";
+};
+
+const cleanCommitSubject = (message?: string) => {
+  const first = (message ?? "").split("\n")[0].trim();
+  const withoutTicket = first.replace(/^[a-z][a-z0-9]+-\d+[:\s-]+/i, "").trim();
+  const withoutType = withoutTicket
+    .replace(/^(feat|fix|chore|refactor|docs|test|style|perf|build|ci)(\([^)]*\))?!?:\s*/i, "")
+    .trim();
+  return withoutType || first || "Code changes";
+};
+
+const fetchPullRequestCommits = async (
+  settings: AppSettings,
+  workspace: string,
+  repositorySlug: string,
+  pullRequestId: number
+) => {
+  const commits: BitbucketCommit[] = [];
+  let next: string | undefined = `${API_BASE_URL}${repositoryPath(
+    workspace,
+    repositorySlug
+  )}/pullrequests/${pullRequestId}/commits?pagelen=50`;
+  let guard = 0;
+
+  while (next && guard < MAX_COMMIT_PAGES_PER_PULL_REQUEST) {
+    const page: BitbucketPage<BitbucketCommit> = await bitbucketRequest(settings, next);
+    commits.push(...(page.values ?? []));
+    guard += 1;
+    next = page.next;
+  }
+
+  return commits;
+};
+
+export const buildCommitGroupsForPullRequest = ({
+  workspace,
+  repository,
+  pullRequest,
+  commits,
+  currentUser,
+  weekStart,
+  weekEndExclusive
+}: {
+  workspace: string;
+  repository: BitbucketRepository;
+  pullRequest: BitbucketPullRequest;
+  commits: BitbucketCommit[];
+  currentUser: BitbucketUser;
+  weekStart: Date;
+  weekEndExclusive: Date;
+}): BitbucketCommitGroup[] => {
+  const repositorySlug = repository.slug ?? "repository";
+  const repositoryName = repository.name ?? repositorySlug;
+  const branch = pullRequest.source?.branch?.name;
+  const jiraIssueKey = extractJiraIssueKey(
+    pullRequest.title,
+    pullRequest.description,
+    branch,
+    pullRequest.destination?.branch?.name
+  );
+
+  const commitsByDate = new Map<string, BitbucketCommit[]>();
+  for (const commit of commits) {
+    if (!sameUser(commit.author?.user, currentUser) || !commit.date) {
+      continue;
+    }
+    const date = new Date(commit.date);
+    if (Number.isNaN(date.getTime()) || date < weekStart || date >= weekEndExclusive) {
+      continue;
+    }
+    const dateKey = toDateKey(date);
+    const dayCommits = commitsByDate.get(dateKey) ?? [];
+    dayCommits.push(commit);
+    commitsByDate.set(dateKey, dayCommits);
+  }
+
+  const groups: BitbucketCommitGroup[] = [];
+  for (const [dateKey, dayCommits] of commitsByDate) {
+    const sorted = [...dayCommits].sort(
+      (a, b) => new Date(a.date ?? 0).getTime() - new Date(b.date ?? 0).getTime()
+    );
+    groups.push({
+      id: `${workspace}/${repositorySlug}#${pullRequest.id}:commits:${dateKey}`,
+      workspace,
+      repositorySlug,
+      repositoryName,
+      branch,
+      jiraIssueKey,
+      pullRequestId: pullRequest.id,
+      dateKey,
+      commitCount: sorted.length,
+      firstCommitISO: new Date(sorted[0].date ?? "").toISOString(),
+      lastCommitISO: new Date(sorted[sorted.length - 1].date ?? "").toISOString(),
+      estimatedSeconds: estimateCommitSeconds(sorted),
+      primaryMessage: cleanCommitSubject(sorted[0].message),
+      confidence: commitGroupConfidence(sorted, jiraIssueKey)
+    });
+  }
+
+  return groups;
+};
+
 export const syncBitbucketReviewSessions = async (
   request: BitbucketReviewSyncRequest
 ): Promise<BitbucketReviewSyncResult> => {
@@ -479,6 +622,7 @@ export const syncBitbucketReviewSessions = async (
   const user = await fetchCurrentUser(settings);
 
   const sessions: BitbucketReviewSession[] = [];
+  const commitGroups: BitbucketCommitGroup[] = [];
   let pullRequestCount = 0;
   let repositoryCount = 0;
 
@@ -506,10 +650,27 @@ export const syncBitbucketReviewSessions = async (
           weekEndExclusive
         })
       );
+
+      // Your own coding work: collect commits from PRs you authored.
+      if (sameUser(pullRequest.author, user)) {
+        const commits = await fetchPullRequestCommits(settings, workspace, repositorySlug, pullRequest.id);
+        commitGroups.push(
+          ...buildCommitGroupsForPullRequest({
+            workspace,
+            repository,
+            pullRequest,
+            commits,
+            currentUser: user,
+            weekStart,
+            weekEndExclusive
+          })
+        );
+      }
     }
   }
 
   sessions.sort((a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime());
+  commitGroups.sort((a, b) => new Date(a.firstCommitISO).getTime() - new Date(b.firstCommitISO).getTime());
 
   return {
     weekKey,
@@ -522,6 +683,7 @@ export const syncBitbucketReviewSessions = async (
     repositoryCount,
     pullRequestCount,
     sessionCount: sessions.length,
-    sessions
+    sessions,
+    commitGroups
   };
 };
