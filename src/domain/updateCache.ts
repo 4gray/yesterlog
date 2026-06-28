@@ -3,6 +3,15 @@ import type { AppUpdateInfo } from "../../shared/types";
 export const UPDATE_INFO_CACHE_KEY = "timebro-update-info";
 export const AUTO_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
+/**
+ * How often a long-running app re-checks GitHub for a new release while it stays
+ * open. Without this a session that is never restarted (and never opens Settings)
+ * would only ever learn about updates from the single check at launch. The poll
+ * forces a real fetch, so it is deliberately less frequent than a quick manual
+ * check but frequent enough to surface a release within a working day.
+ */
+export const AUTO_UPDATE_POLL_INTERVAL_MS = 3 * 60 * 60 * 1000;
+
 /** A cached check is reusable only while it is younger than the auto-check window. */
 export const isRecentUpdateInfo = (info: AppUpdateInfo, now = Date.now()) => {
   const checkedAt = Date.parse(info.checkedAt);
