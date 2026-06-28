@@ -56,6 +56,35 @@ describe("AddTimeModal", () => {
     expect(markup).toContain("21 JUN");
   });
 
+  it("preserves a hidden weekend date when editing a local note", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 5, 21, 10, 30)}
+        dateOptions={["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        editingPersonalNote={{
+          id: "note-weekend",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-21",
+          text: "Weekend coverage",
+          timeSpentSeconds: 60 * 60,
+          startedISO: "2026-06-21T10:00:00.000Z",
+          createdAt: "2026-06-21T10:00:00.000Z",
+          updatedAt: "2026-06-21T10:00:00.000Z"
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onUpdatePersonalNote={async () => true}
+      />
+    );
+
+    expect(markup).toContain("SUN");
+    expect(markup).toContain("21 JUN");
+    expect(markup).toContain('aria-checked="true" class="modal-day-option active"><span>SUN</span><strong>21 JUN');
+  });
+
   it("opens in local note edit mode with the saved note text", () => {
     const markup = renderToStaticMarkup(
       <AddTimeModal
