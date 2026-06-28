@@ -1,6 +1,6 @@
 {
   "name": "timebro",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "TimeBro is a local Electron assistant for weekly Jira time tracking.",
   "author": "fourgray <fourgray@proton.me>",
