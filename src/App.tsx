@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppShellFrame } from "./app/AppShellFrame";
@@ -44,6 +44,25 @@ export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
   const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view, isDemo });
   const { settings, setSettings, settingsDraft, setSettingsDraft } = useAppSettingsState({ demoScenario });
+  const isSettingsDirty = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(settingsDraft),
+    [settings, settingsDraft]
+  );
+
+  // Quit/reload guard: unsaved settings edits live only in memory (settingsDraft),
+  // so the one moment they are truly lost is closing or reloading the app. In
+  // Electron this triggers the main-process will-prevent-unload confirm dialog.
+  useEffect(() => {
+    if (!isSettingsDirty || isDemo) {
+      return;
+    }
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isSettingsDirty, isDemo]);
   const { weekStart, setWeekStart, monthAnchor, setMonthAnchor, weekOverride, setWeekOverride } = useAppCalendarState({
     currentDate,
     demoScenario
@@ -387,6 +406,7 @@ export const App = () => {
       syncLabel={syncLabel}
       syncState={syncState}
       showReview={isBitbucketReady}
+      settingsDirty={isSettingsDirty}
       overlays={
         <AppOverlays
           addModalDate={addModalDate}
@@ -433,6 +453,7 @@ export const App = () => {
         touchedNotLogged={touchedNotLogged}
         settings={settings}
         settingsDraft={settingsDraft}
+        isSettingsDirty={isSettingsDirty}
         weekState={weekState}
         syncResult={syncResult}
         monthState={monthState}

@@ -46,6 +46,8 @@ export interface RecurringEventDraft {
 interface SettingsViewProps {
   draft: AppSettings;
   onDraftChange: (settings: AppSettings) => void;
+  /** True when the draft differs from the last-saved settings. */
+  isDirty: boolean;
   onSave: () => void;
   onTestConnection: () => void;
   onTestBitbucketConnection: () => void;
@@ -80,6 +82,18 @@ export type SettingsSection =
   | "appearance"
   | "data"
   | "about";
+
+/**
+ * Sections whose fields feed the global settings draft and therefore need the
+ * "Save settings" button. Appearance applies instantly, Recurring/Data have
+ * their own actions, and About is read-only — so they hide the button.
+ */
+const SAVEABLE_SECTIONS: ReadonlySet<SettingsSection> = new Set([
+  "jira",
+  "bitbucket",
+  "reconstruct",
+  "tracking"
+]);
 
 const OLLAMA_DOWNLOAD_URL = "https://ollama.com/download";
 
@@ -244,6 +258,7 @@ const ChainStep = ({ label, done }: { label: string; done: boolean }) => (
 export const SettingsView = ({
   draft,
   onDraftChange,
+  isDirty,
   onSave,
   onTestConnection,
   onTestBitbucketConnection,
@@ -1183,10 +1198,17 @@ export const SettingsView = ({
           <div className="settings-subtitle">{active.subtitle}</div>
         </div>
 
-        <button className="primary-button" type="button" onClick={onSave}>
-          <Save size={16} />
-          Save settings
-        </button>
+        {SAVEABLE_SECTIONS.has(activeSection) && (
+          <div className="settings-save">
+            <button className="primary-button" type="button" onClick={onSave} disabled={!isDirty}>
+              <Save size={16} />
+              Save settings
+            </button>
+            <span className={`settings-save-hint ${isDirty ? "is-dirty" : ""}`}>
+              {isDirty ? "Unsaved changes" : "All changes saved"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="settings-body">

@@ -96,6 +96,7 @@ const baseProps = (): AppMainViewProps => ({
   touchedNotLogged: [],
   settings,
   settingsDraft: settings,
+  isSettingsDirty: false,
   weekState,
   syncResult: undefined,
   monthState,

@@ -39,6 +39,7 @@ const noop = () => undefined;
 const baseProps = (): AppShellFrameProps => ({
   isDemo: true,
   isBooting: false,
+  settingsDirty: false,
   theme: "dark",
   view: "week",
   sidebarCollapsed: false,

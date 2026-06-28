@@ -15,6 +15,7 @@ export interface AppShellFrameProps {
   syncLabel: string;
   syncState: AppSyncState;
   showReview: boolean;
+  settingsDirty: boolean;
 }
 
 export const AppShellFrame = ({
@@ -29,7 +30,8 @@ export const AppShellFrame = ({
   onToggleSidebarCollapsed,
   syncLabel,
   syncState,
-  showReview
+  showReview,
+  settingsDirty
 }: AppShellFrameProps) => (
   <div
     className="app-shell"
@@ -47,6 +49,7 @@ export const AppShellFrame = ({
         syncLabel={syncLabel}
         syncState={syncState}
         showReview={showReview}
+        settingsDirty={settingsDirty}
       />
 
       {children}

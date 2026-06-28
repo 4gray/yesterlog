@@ -15,6 +15,25 @@
   border-bottom: 1px solid var(--line);
 }
 
+.settings-save {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.settings-save-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--dim-2);
+}
+
+.settings-save-hint.is-dirty {
+  color: var(--amber);
+}
+
 .settings-body {
   flex: 1;
   min-height: 0;
@@ -622,6 +641,16 @@ input:focus {
 
 .primary-button:hover {
   filter: brightness(1.08);
+}
+
+.primary-button:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.primary-button:disabled:hover {
+  filter: none;
 }
 
 .secondary-button {

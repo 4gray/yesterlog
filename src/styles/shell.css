@@ -78,6 +78,7 @@
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -88,6 +89,17 @@
   color: var(--dim-2);
   white-space: nowrap;
   transition: color 120ms ease, background 120ms ease;
+}
+
+.nav-dot {
+  position: absolute;
+  top: 7px;
+  left: 27px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 0 2px var(--bg-sidebar);
 }
 
 .nav-item svg {

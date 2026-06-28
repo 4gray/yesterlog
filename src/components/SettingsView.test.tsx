@@ -40,6 +40,7 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
     <SettingsView
       draft={settings}
       onDraftChange={() => undefined}
+      isDirty={false}
       onSave={() => undefined}
       onTestConnection={() => undefined}
       onTestBitbucketConnection={() => undefined}

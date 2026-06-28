@@ -7,6 +7,7 @@ export interface AppSettingsRouteProps {
   initialSection?: SettingsViewProps["initialSection"];
   settingsDraft: SettingsViewProps["draft"];
   setSettingsDraft: SettingsViewProps["onDraftChange"];
+  isDirty: SettingsViewProps["isDirty"];
   handleSaveSettings: SettingsViewProps["onSave"];
   handleTestConnection: SettingsViewProps["onTestConnection"];
   handleTestBitbucketConnection: SettingsViewProps["onTestBitbucketConnection"];
@@ -34,6 +35,7 @@ export const AppSettingsRoute = ({
   initialSection,
   settingsDraft,
   setSettingsDraft,
+  isDirty,
   handleSaveSettings,
   handleTestConnection,
   handleTestBitbucketConnection,
@@ -60,6 +62,7 @@ export const AppSettingsRoute = ({
     initialSection={initialSection}
     draft={settingsDraft}
     onDraftChange={setSettingsDraft}
+    isDirty={isDirty}
     onSave={handleSaveSettings}
     onTestConnection={handleTestConnection}
     onTestBitbucketConnection={handleTestBitbucketConnection}

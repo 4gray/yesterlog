@@ -31,6 +31,7 @@ export interface AppMainViewProps {
   touchedNotLogged: AppTodayRouteProps["touchedNotLogged"];
   settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
+  isSettingsDirty: boolean;
   weekState: AppWeekRouteProps["weekState"];
   syncResult: AppWeekRouteProps["syncResult"];
   monthState: AppMonthRouteProps["monthState"];
@@ -114,6 +115,7 @@ export const AppMainView = ({
   touchedNotLogged,
   settings,
   settingsDraft,
+  isSettingsDirty,
   weekState,
   syncResult,
   monthState,
@@ -312,6 +314,7 @@ export const AppMainView = ({
         initialSection={settingsSection}
         settingsDraft={settingsDraft}
         setSettingsDraft={setSettingsDraft}
+        isDirty={isSettingsDirty}
         handleSaveSettings={handleSaveSettings}
         handleTestConnection={handleTestConnection}
         handleTestBitbucketConnection={handleTestBitbucketConnection}

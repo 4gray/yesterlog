@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import path from "node:path";
 import { syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
 import {
@@ -84,6 +84,25 @@ const createWindow = async () => {
     if (!url.startsWith(appUrl) && targetUrl.protocol.startsWith("http")) {
       event.preventDefault();
       shell.openExternal(url);
+    }
+  });
+
+  // Fired when the renderer's beforeunload guard tries to block a close/reload
+  // (active only while settings have unsaved changes). Confirm before letting
+  // the window go — calling preventDefault() here ALLOWS the unload to proceed.
+  mainWindow.webContents.on("will-prevent-unload", (event) => {
+    const choice = dialog.showMessageBoxSync(mainWindow!, {
+      type: "warning",
+      buttons: ["Leave", "Stay"],
+      defaultId: 1,
+      cancelId: 1,
+      title: "Unsaved settings changes",
+      message: "Leave with unsaved settings?",
+      detail: "Your settings changes haven't been saved yet and will be lost if you leave."
+    });
+
+    if (choice === 0) {
+      event.preventDefault();
     }
   });
 

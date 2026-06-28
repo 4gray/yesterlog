@@ -71,6 +71,7 @@ const noop = () => undefined;
 const baseProps = (): AppSettingsRouteProps => ({
   settingsDraft,
   setSettingsDraft: noop,
+  isDirty: false,
   handleSaveSettings: noop,
   handleTestConnection: noop,
   handleTestBitbucketConnection: noop,

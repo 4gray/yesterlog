@@ -31,6 +31,7 @@ interface SidebarProps {
   syncLabel: string;
   syncState: "synced" | "stale" | "syncing";
   showReview: boolean;
+  settingsDirty: boolean;
 }
 
 export const Sidebar = ({
@@ -40,7 +41,8 @@ export const Sidebar = ({
   onToggleCollapse,
   syncLabel,
   syncState,
-  showReview
+  showReview,
+  settingsDirty
 }: SidebarProps) => {
   const visibleNav = NAV.filter((item) => item.id !== "review" || showReview);
 
@@ -68,10 +70,11 @@ export const Sidebar = ({
         type="button"
         className={`nav-item ${view === "settings" ? "active" : ""}`}
         onClick={() => onViewChange("settings")}
-        title="Settings"
+        title={settingsDirty ? "Settings · unsaved changes" : "Settings"}
       >
         <Settings size={18} />
         <span className="nav-label">SETTINGS</span>
+        {settingsDirty && <span className="nav-dot" aria-label="Unsaved changes" />}
       </button>
 
       <button type="button" className="nav-item sb-collapse" onClick={onToggleCollapse} title="Collapse sidebar">
