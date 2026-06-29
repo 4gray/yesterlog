@@ -196,6 +196,12 @@ const localHourOf = (iso: string): number => {
   return Number.isFinite(hour) ? hour : 9;
 };
 
+const localMinuteOf = (iso: string): number => {
+  const date = new Date(iso);
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return Number.isFinite(minutes) ? minutes : 9 * 60;
+};
+
 const hourLabel = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
@@ -336,13 +342,9 @@ export const buildReconstructDay = (
   const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
     (a, b) => a.startHour - b.startHour
   );
-  const localEntries = input.localEntries ?? [];
-  const hasActivity =
-    input.worklogs.length > 0 || localEntries.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
   const workingDay = isWorkingDay(input);
 
   const loggedMinutes = input.worklogs.reduce((sum, w) => sum + Math.round(w.timeSpentSeconds / 60), 0);
-  const localMinutes = localEntries.reduce((sum, entry) => sum + Math.round(entry.timeSpentSeconds / 60), 0);
 
   // ---- "now" cap for today: never reconstruct hours that haven't happened ----
   const dayStartMinutes = WORKING_HOURS[0] * 60;
@@ -351,6 +353,12 @@ export const buildReconstructDay = (
   const accountableMinutes = capNow
     ? Math.max(0, Math.min(input.targetMinutes, input.nowMinutes! - dayStartMinutes))
     : input.targetMinutes;
+  const localEntries = (input.localEntries ?? []).filter(
+    (entry) => !capNow || localMinuteOf(entry.startedISO) <= input.nowMinutes!
+  );
+  const localMinutes = localEntries.reduce((sum, entry) => sum + Math.round(entry.timeSpentSeconds / 60), 0);
+  const hasActivity =
+    input.worklogs.length > 0 || localEntries.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
 
   // ---- day kind -----------------------------------------------------------
   let kind: ReconstructDayKind;

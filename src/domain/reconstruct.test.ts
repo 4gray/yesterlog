@@ -290,6 +290,29 @@ describe("buildReconstructDay", () => {
     expect(getReconstructSummary(day).footerTail).toBe("unaccounted so far");
   });
 
+  it("does not count confirmed local entries from future hours on today", () => {
+    const day = buildReconstructDay(
+      input({
+        isToday: true,
+        nowMinutes: 12 * 60,
+        localEntries: [
+          localEntry({
+            id: "future-meeting",
+            source: "recurring",
+            title: "Weekly Team Sync",
+            startedISO: "2026-06-15T15:00:00",
+            timeSpentSeconds: 30 * 60
+          })
+        ]
+      })
+    );
+
+    expect(day.localMinutes).toBe(0);
+    expect(day.gapMinutes).toBe(180);
+    expect(day.rows.some((row) => row.title === "Weekly Team Sync")).toBe(false);
+    expect(day.rows.filter((row) => row.kind === "empty").map((row) => row.hour)).not.toContain("15:00");
+  });
+
   it("still renders the full 09–18 grid for a finished past day", () => {
     const day = buildReconstructDay(input({ isToday: false, worklogs: [], reviewSessions: [] }));
     const emptyHours = day.rows.filter((r) => r.kind === "empty").map((r) => r.hour);

@@ -173,4 +173,27 @@ describe("ReconstructView", () => {
     expect(markup).toContain("Everything is logged");
     expect(markup).toContain("already in Jira");
   });
+
+  it("does not call a local-only complete day Jira-logged", () => {
+    const day = buildReconstructDay(
+      baseInput({
+        worklogs: [],
+        reviewSessions: [],
+        localEntries: [
+          {
+            id: "note-1",
+            source: "personal-note",
+            title: "Private focus day",
+            startedISO: "2026-06-17T09:00:00",
+            timeSpentSeconds: 480 * 60,
+            note: "Local-only time"
+          }
+        ]
+      })
+    );
+    const markup = render({ day });
+    expect(markup).toContain("Everything is accounted");
+    expect(markup).toContain("Jira worklogs and local/private rows cover the target.");
+    expect(markup).not.toContain("logged in Jira");
+  });
 });

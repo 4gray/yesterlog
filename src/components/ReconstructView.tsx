@@ -149,6 +149,7 @@ export const ReconstructView = ({
   const isActive = !isWeekend && !isComplete;
   const showTimeline = isActive || isComplete;
   const isSyncing = syncState === "syncing";
+  const completeHasLocalTime = isComplete && day.localMinutes > 0;
 
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   const [railDragOver, setRailDragOver] = useState(false);
@@ -269,8 +270,11 @@ export const ReconstructView = ({
         <div className="recon-banner is-complete">
           <CheckCircle2 size={16} strokeWidth={2} />
           <span>
-            This day already adds up to <strong>{formatReconDuration(day.targetMinutes)}</strong> — every block is
-            logged in Jira. Nothing to reconstruct. Use <span className="mono">‹ ›</span> to pick another day.
+            This day already adds up to <strong>{formatReconDuration(day.targetMinutes)}</strong> —{" "}
+            {completeHasLocalTime
+              ? "Jira worklogs and local/private rows cover the target."
+              : "every block is logged in Jira."}{" "}
+            Nothing to reconstruct. Use <span className="mono">‹ ›</span> to pick another day.
           </span>
         </div>
       )}

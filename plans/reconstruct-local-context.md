@@ -17,6 +17,11 @@ private notes and confirmed recurring local events/meetings.
 
 - Commit, push, open PR, inspect checks/review, and merge if green.
 
+## Follow-Up Review Fixes
+
+- Filter confirmed local entries out of today's reconstruction until their local start time has elapsed.
+- Make the complete-day banner distinguish local/private accounted time from Jira-logged time.
+
 ## Verification
 
 - `npm run test -- src/domain/reconstruct.test.ts src/domain/enhancePrompt.test.ts src/components/ReconstructView.test.tsx src/app/AppReconRoute.test.tsx src/app/AppMainView.test.tsx` passed.
@@ -24,3 +29,8 @@ private notes and confirmed recurring local events/meetings.
 - `npm run build` passed.
 - Rendered demo QA passed on `http://127.0.0.1:5173/?demo=1&view=week&today=2026-06-18&seed=local-context-qa`:
   confirmed a recurring local event, opened Reconstruction, stepped to the day, and verified the row renders as `local event · 15m` with a `local` badge and `15m local/private` in the accounted-time notice.
+- Follow-up review fixes:
+  - `npm run test -- src/domain/reconstruct.test.ts src/components/ReconstructView.test.tsx` passed.
+  - `npm run test` passed.
+  - `npm run build` passed.
+  - Rendered smoke QA passed on `http://127.0.0.1:5173/?demo=1&view=recon&today=2026-06-18&seed=review-fixes-qa`.
