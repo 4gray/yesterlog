@@ -177,11 +177,12 @@ export const AddTimeModal = ({
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
   const initialDateKey = toLocalDateKey(initialStart);
+  const shouldPreserveInitialDate = isEditingWorklog || isEditingPersonalNote;
   const selectableDateOptions =
-    isEditingPersonalNote && !dateOptions.includes(initialDateKey)
+    shouldPreserveInitialDate && !dateOptions.includes(initialDateKey)
       ? [...dateOptions, initialDateKey].sort()
       : dateOptions;
-  const preferredDateKey = isEditingPersonalNote
+  const preferredDateKey = shouldPreserveInitialDate
     ? initialDateKey
     : chooseWorkingDateKey(initialDateKey, selectableDateOptions);
   const dateOptionsKey = selectableDateOptions.join("|");
@@ -346,7 +347,7 @@ export const AddTimeModal = ({
     setTicketCustomAmount(customHoursAmount(seconds));
     setTicketCustomUnit("h");
     const startDateKey = toLocalDateKey(start);
-    setDateStr(editingPersonalNote ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
+    setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
     setNote(editingWorklog?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");

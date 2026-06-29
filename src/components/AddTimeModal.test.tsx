@@ -85,6 +85,33 @@ describe("AddTimeModal", () => {
     expect(markup).toContain('aria-checked="true" class="modal-day-option active"><span>SUN</span><strong>21 JUN');
   });
 
+  it("preserves a hidden weekend date when editing a Jira worklog", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 5, 20, 10, 30)}
+        dateOptions={["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        editingWorklog={{
+          id: "wl-weekend",
+          issueId: ticket.id,
+          issueKey: ticket.key,
+          issueSummary: ticket.summary,
+          authorAccountId: "account-1",
+          started: "2026-06-20T10:00:00.000Z",
+          timeSpentSeconds: 60 * 60
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+      />
+    );
+
+    expect(markup).toContain("SAT");
+    expect(markup).toContain("20 JUN");
+    expect(markup).toContain('aria-checked="true" class="modal-day-option active"><span>SAT</span><strong>20 JUN');
+  });
+
   it("opens in local note edit mode with the saved note text", () => {
     const markup = renderToStaticMarkup(
       <AddTimeModal
