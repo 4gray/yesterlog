@@ -62,9 +62,13 @@ export const buildIssueMetadata = ({
   const hoursByKey: Record<string, number> = {};
   const issueUrlsByKey: Record<string, string> = {};
   const issueTypesByKey: Record<string, JiraIssueTypeInfo> = {};
+  const visibleDayKeys = new Set(weekState.days.map((day) => day.dateKey));
 
   if (visibleSyncResult) {
-    for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
+    for (const [dateKey, bucket] of Object.entries(visibleSyncResult.daySummaries)) {
+      if (!visibleDayKeys.has(dateKey)) {
+        continue;
+      }
       for (const issue of bucket.issues) {
         hoursByKey[issue.key] = (hoursByKey[issue.key] ?? 0) + issue.loggedSeconds / 3600;
         if (issue.url) {
