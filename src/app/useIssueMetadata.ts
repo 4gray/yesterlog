@@ -66,11 +66,11 @@ export const buildIssueMetadata = ({
 
   if (visibleSyncResult) {
     for (const [dateKey, bucket] of Object.entries(visibleSyncResult.daySummaries)) {
-      if (!visibleDayKeys.has(dateKey)) {
-        continue;
-      }
+      const shouldCountHours = visibleDayKeys.has(dateKey);
       for (const issue of bucket.issues) {
-        hoursByKey[issue.key] = (hoursByKey[issue.key] ?? 0) + issue.loggedSeconds / 3600;
+        if (shouldCountHours) {
+          hoursByKey[issue.key] = (hoursByKey[issue.key] ?? 0) + issue.loggedSeconds / 3600;
+        }
         if (issue.url) {
           issueUrlsByKey[issue.key] = issue.url;
         }

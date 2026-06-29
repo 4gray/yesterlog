@@ -239,7 +239,7 @@ describe("issue metadata", () => {
     });
   });
 
-  it("scopes issue hour badges to visible week days", () => {
+  it("scopes issue hour badges to visible week days while preserving synced metadata", () => {
     const syncResult = buildSyncResult({
       daySummaries: {
         "2026-06-16": buildBucket({
@@ -273,9 +273,11 @@ describe("issue metadata", () => {
       "TB-2": 1
     });
     expect(metadata.issueUrlsByKey).toEqual({
+      "TB-1": "https://jira.example/browse/TB-1-hidden",
       "TB-2": "https://jira.example/browse/TB-2-visible"
     });
     expect(metadata.issueTypesByKey).toEqual({
+      "TB-1": issueType("Bug"),
       "TB-2": issueType("Story")
     });
   });
