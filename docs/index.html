@@ -52,6 +52,33 @@
   .gx-shoot{ position:absolute; top:20%; left:6%; width:58px; height:2px; border-radius:2px; z-index:-1; pointer-events:none; background:linear-gradient(90deg,transparent,#dfeaff 55%,#fff); filter:drop-shadow(0 0 5px rgba(180,210,255,.9)); opacity:0; animation:gx-shoot 5s ease-in infinite; }
   .gx-shoot.s2{ top:64%; left:0; animation-duration:6.6s; animation-delay:2.6s; }
   @media (prefers-reduced-motion:reduce){ .gx-stars,.gx-shoot{ animation:none !important; } .gx-shoot{ opacity:0; } }
+
+  /* ===================== RESPONSIVE ===================== */
+  /* Let grid items shrink below their content width so a wide child can't blow out the track */
+  .tb-hero-grid>*, .tb-grid2>*{ min-width:0; }
+  /* Tablet / small laptop: stack the two-column layouts, drop the hero overlay chips */
+  @media (max-width:1000px){
+    .tb-hero-grid{ grid-template-columns:1fr !important; gap:38px !important; }
+    .tb-hero-copy{ order:1; }
+    .tb-hero-shot{ order:2; max-width:600px; margin:0 auto; width:100%; }
+    .tb-chip{ display:none !important; }                 /* "78% logged", "2-click logging", "drag onto any day" */
+    .tb-hero-pad{ padding-top:104px !important; padding-bottom:8px !important; }
+    .tb-grid2{ grid-template-columns:1fr !important; gap:42px !important; }
+    .tb-tour .tb-tcol-text{ order:0 !important; }         /* text always first when stacked */
+    .tb-tour .tb-tcol-shot{ order:1 !important; }
+    .tb-feat-grid{ grid-template-columns:repeat(2,1fr) !important; }
+    .tb-meet-art{ display:none !important; }              /* big floating app icon — drop on narrow */
+  }
+  /* Phone: single column everywhere, hide nav links, tighten gutters */
+  @media (max-width:640px){
+    .tb-nav-links{ display:none !important; }
+    .tb-feat-grid{ grid-template-columns:1fr !important; }
+    .tb-grid3{ grid-template-columns:1fr !important; }
+    .tb-wrap{ padding-left:20px !important; padding-right:20px !important; }
+    .tb-hero-pad{ padding-top:88px !important; }
+    .tb-recon-card{ padding:30px 22px !important; }
+    .tb-hero-badge{ white-space:normal !important; }      /* badge wraps instead of overflowing */
+  }
 </style>
 </head>
 <body>
@@ -60,13 +87,13 @@
 
   <!-- ===================== NAV ===================== -->
   <div style="position:sticky; top:0; z-index:50; background:transparent;">
-    <div style="max-width:1240px; margin:0 auto; padding:15px 36px; display:flex; align-items:center; gap:18px;">
+    <div class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:15px 36px; display:flex; align-items:center; gap:18px;">
       <div style="display:flex; align-items:center; gap:11px;">
         <img src="app-icon.svg" alt="TimeBro" width="30" height="30" style="display:block; flex:none; border-radius:7px;">
         <span style="font-weight:800; font-size:19px; letter-spacing:-.03em; color:#f5f3f0;">Time<span style="color:var(--accent);">Bro</span></span>
       </div>
       <div style="flex:1;"></div>
-      <div style="display:flex; align-items:center; gap:28px;">
+      <div class="tb-nav-links" style="display:flex; align-items:center; gap:28px;">
         <a href="#features" class="tb-link" style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.06em; color:#9d9b95; text-transform:uppercase;">Features</a>
         <a href="#tour" class="tb-link" style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.06em; color:#9d9b95; text-transform:uppercase;">Tour</a>
         <a href="#privacy" class="tb-link" style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.06em; color:#9d9b95; text-transform:uppercase;">Privacy</a>
@@ -87,13 +114,13 @@
       <span class="gx-shoot" style="top:46%; left:20%; animation-delay:3.4s;"></span>
       <div style="position:absolute; inset:0; background:radial-gradient(46% 50% at 84% 12%, rgba(79,124,255,.16), transparent 66%), radial-gradient(54% 56% at 80% 16%, rgba(58,44,128,.2), transparent 64%);"></div>
     </div>
-    <div style="position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:140px 36px 30px;">
+    <div class="tb-wrap tb-hero-pad" style="position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:140px 36px 30px;">
 
-      <div style="display:grid; grid-template-columns:1.04fr 1.04fr; gap:54px; align-items:center;">
+      <div class="tb-hero-grid" style="display:grid; grid-template-columns:1.04fr 1.04fr; gap:54px; align-items:center;">
 
         <!-- LEFT: copy -->
-        <div>
-          <div class="tb-rise" style="animation-delay:.05s; position:relative; isolation:isolate; overflow:hidden; display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border:1px solid #2a2740; border-radius:100px; background:linear-gradient(118deg, rgba(36,28,82,.42), rgba(18,18,38,.5)); white-space:nowrap; margin-bottom:26px;">
+        <div class="tb-hero-copy">
+          <div class="tb-rise tb-hero-badge" style="animation-delay:.05s; position:relative; isolation:isolate; overflow:hidden; display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border:1px solid #2a2740; border-radius:100px; background:linear-gradient(118deg, rgba(36,28,82,.42), rgba(18,18,38,.5)); white-space:nowrap; margin-bottom:26px;">
             <span class="gx-stars" style="opacity:.3; inset:-150%;"></span>
             <span style="position:relative; width:7px; height:7px; border-radius:50%; background:#3ecf8e; box-shadow:0 0 9px rgba(62,207,142,.7);"></span>
             <span style="position:relative; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; letter-spacing:.13em; color:#b3b5cb; text-transform:uppercase;">Built for Jira developers who log their own time</span>
@@ -119,7 +146,7 @@
         </div>
 
         <!-- RIGHT: product working -->
-        <div class="tb-shotwrap tb-rise-shot" style="animation-delay:.42s; position:relative;">
+        <div class="tb-shotwrap tb-rise-shot tb-hero-shot" style="animation-delay:.42s; position:relative;">
           <div style="position:absolute; inset:0; transform:translateY(28px) scale(.9); filter:blur(44px); background:radial-gradient(60% 60% at 58% 42%, rgba(79,124,255,.22), transparent 70%); pointer-events:none;"></div>
           <div class="tb-shot" style="position:relative; border:1px solid #2c2a26; border-radius:14px; overflow:hidden; box-shadow:0 40px 100px rgba(0,0,0,.55); background:#131210;">
             <div style="display:flex; align-items:center; gap:8px; padding:10px 14px; background:#131210; border-bottom:1px solid #221f1b;">
@@ -131,9 +158,9 @@
             <div style="position:relative;">
               <img src="screenshots/v1.4.0/dark-week.png" alt="TimeBro week cockpit" style="display:block; width:100%; height:auto;">
               <div style="position:absolute; inset:0; background:linear-gradient(180deg, transparent 72%, rgba(16,15,8,.55)); pointer-events:none;"></div>
-              <span style="position:absolute; left:4%; top:7%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.84); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">78% logged</span>
-              <span style="position:absolute; right:4%; top:6.5%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.84); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">2‑click logging →</span>
-              <span style="position:absolute; left:22%; bottom:6%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.88); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">drag onto any day</span>
+              <span class="tb-chip" style="position:absolute; left:4%; top:7%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.84); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">78% logged</span>
+              <span class="tb-chip" style="position:absolute; right:4%; top:6.5%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.84); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">2‑click logging →</span>
+              <span class="tb-chip" style="position:absolute; left:22%; bottom:6%; font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.02em; color:#f5f3f0; background:rgba(16,15,8,.88); backdrop-filter:blur(6px); border:1px solid var(--accent); border-radius:7px; padding:6px 9px; white-space:nowrap; box-shadow:0 8px 24px rgba(0,0,0,.45);">drag onto any day</span>
             </div>
           </div>
         </div>
@@ -158,8 +185,8 @@
       <span class="gx-shoot s2" style="top:72%; left:34%;"></span>
       <div style="position:absolute; inset:0; background:radial-gradient(56% 70% at 24% 52%, rgba(58,44,128,.2), transparent 70%);"></div>
     </div>
-    <div style="position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:108px 36px;">
-    <div style="display:grid; grid-template-columns:1.55fr .9fr; gap:64px; align-items:center;">
+    <div class="tb-wrap" style="position:relative; z-index:1; max-width:1240px; margin:0 auto; padding:108px 36px;">
+    <div class="tb-grid2" style="display:grid; grid-template-columns:1.55fr .9fr; gap:64px; align-items:center;">
       <div>
         <div style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.18em; color:#67645e; text-transform:uppercase; margin-bottom:26px;">Meet TimeBro</div>
         <p style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(31px,4vw,54px); line-height:1.12; letter-spacing:-.01em; color:#f5f3f0;">Your manager wants every minute logged as a KPI. TimeBro hands them clean worklogs — and hands you back the <span style="font-style:italic; color:var(--accent);">~3 hours a week</span> you spend reconstructing them.</p>
@@ -167,7 +194,7 @@
       </div>
 
       <!-- app icon floating in cosmos that blends into the page -->
-      <div style="display:flex; justify-content:center;">
+      <div class="tb-meet-art" style="display:flex; justify-content:center;">
         <div style="position:relative; isolation:isolate; width:360px; height:400px; display:flex; align-items:center; justify-content:center;">
           <div style="position:absolute; inset:0; z-index:-1; overflow:hidden; -webkit-mask-image:radial-gradient(closest-side at 54% 46%, #000 42%, transparent 86%); mask-image:radial-gradient(closest-side at 54% 46%, #000 42%, transparent 86%);">
             <span class="gx-stars" style="opacity:.6; inset:-30%;"></span>
@@ -185,13 +212,13 @@
 
   <!-- ===================== FEATURES ===================== -->
   <div id="features" style="border-top:1px solid #221f1b; background:#18160f;">
-    <div style="max-width:1240px; margin:0 auto; padding:96px 36px;">
+    <div class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:96px 36px;">
       <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:30px; margin-bottom:52px; flex-wrap:wrap;">
         <h2 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(36px,4.6vw,62px); line-height:1.04; letter-spacing:-.01em; color:#f5f3f0; max-width:18ch;">Eight things that turn the Friday worklog from an hour of archaeology into a <span style="font-style:italic; color:var(--accent);">two‑minute task.</span></h2>
         <p style="margin:0; font-size:15px; line-height:1.6; color:#75726c; max-width:34ch;">Eight small reliefs that add up to your week, handled.</p>
       </div>
 
-      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+      <div class="tb-feat-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
         <div class="tb-feat" style="border:1px solid #262320; border-radius:14px; background:#1c1a16; padding:24px 22px 26px; min-height:206px; display:flex; flex-direction:column;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:auto;">
             <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:12px; letter-spacing:.1em; color:#54514b;">01</span>
@@ -261,15 +288,15 @@
   </div>
 
   <!-- ===================== TOUR ===================== -->
-  <div id="tour" style="max-width:1240px; margin:0 auto; padding:104px 36px 40px;">
+  <div id="tour" class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:104px 36px 40px;">
     <div style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.18em; color:#67645e; text-transform:uppercase; margin-bottom:18px;">Take the tour</div>
     <h2 style="margin:0 0 70px; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(36px,4.6vw,62px); line-height:1.04; letter-spacing:-.01em; color:#f5f3f0; max-width:17ch;">Six screens, from an empty worklog to a CSV your manager <span style="font-style:italic;">signs off on.</span></h2>
 
     <div style="display:flex; flex-direction:column; gap:90px;">
 
       <!-- Today -->
-      <div style="display:grid; grid-template-columns:1fr 1.25fr; gap:54px; align-items:center;">
-        <div style="order:1;">
+      <div class="tb-grid2 tb-tour" style="display:grid; grid-template-columns:1fr 1.25fr; gap:54px; align-items:center;">
+        <div class="tb-tcol-text" style="order:1;">
           <div style="display:inline-flex; align-items:center; gap:9px; margin-bottom:18px;">
             <span style="font-size:18px;">☀️</span>
             <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase;">Today</span>
@@ -277,7 +304,7 @@
           <h3 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(28px,3.1vw,42px); line-height:1.1; letter-spacing:-.01em; color:#f5f3f0;">Log today in <span style="font-style:italic; color:var(--accent);">two clicks</span> — the 8‑hour bar shows what's left.</h3>
           <p style="margin:20px 0 0; font-size:16.5px; line-height:1.65; color:#9d9b95; max-width:46ch;">Pick a ticket, tap a duration preset, jot a note, done. A "touched today, not logged" rail nudges you about tickets you clearly worked on, and a target bar shows exactly how much is left in the day.</p>
         </div>
-        <div class="tb-shotwrap" style="order:2; position:relative;">
+        <div class="tb-shotwrap tb-tcol-shot" style="order:2; position:relative;">
           <div class="tb-shot" style="border:1px solid #2c2a26; border-radius:13px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,.45); background:#131210;">
             <div style="display:flex; align-items:center; gap:7px; padding:9px 13px; background:#131210; border-bottom:1px solid #221f1b;">
               <span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span>
@@ -288,8 +315,8 @@
       </div>
 
       <!-- Month -->
-      <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:54px; align-items:center;">
-        <div style="order:2;">
+      <div class="tb-grid2 tb-tour" style="display:grid; grid-template-columns:1.25fr 1fr; gap:54px; align-items:center;">
+        <div class="tb-tcol-text" style="order:2;">
           <div style="display:inline-flex; align-items:center; gap:9px; margin-bottom:18px;">
             <span style="font-size:18px;">🗓️</span>
             <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase;">Month</span>
@@ -297,7 +324,7 @@
           <h3 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(28px,3.1vw,42px); line-height:1.1; letter-spacing:-.01em; color:#f5f3f0;">Find every under‑target day this month, and jump straight to the <span style="font-style:italic; color:var(--accent);">next gap.</span></h3>
           <p style="margin:20px 0 0; font-size:16.5px; line-height:1.65; color:#9d9b95; max-width:46ch;">The whole month as a calendar, color‑coded by whether each day hit target. The "jump to next gap" button walks you straight to the days you forgot — backfilling a sloppy month takes minutes, not detective work.</p>
         </div>
-        <div class="tb-shotwrap" style="order:1; position:relative;">
+        <div class="tb-shotwrap tb-tcol-shot" style="order:1; position:relative;">
           <div class="tb-shot" style="border:1px solid #2c2a26; border-radius:13px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,.45); background:#131210;">
             <div style="display:flex; align-items:center; gap:7px; padding:9px 13px; background:#131210; border-bottom:1px solid #221f1b;">
               <span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span>
@@ -308,8 +335,8 @@
       </div>
 
       <!-- Review -->
-      <div style="display:grid; grid-template-columns:1fr 1.25fr; gap:54px; align-items:center;">
-        <div style="order:1;">
+      <div class="tb-grid2 tb-tour" style="display:grid; grid-template-columns:1fr 1.25fr; gap:54px; align-items:center;">
+        <div class="tb-tcol-text" style="order:1;">
           <div style="display:inline-flex; align-items:center; gap:9px; margin-bottom:18px;">
             <span style="font-size:18px;">👀</span>
             <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase;">Review</span>
@@ -317,7 +344,7 @@
           <h3 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(28px,3.1vw,42px); line-height:1.1; letter-spacing:-.01em; color:#f5f3f0;">Turn a week of Bitbucket PR reviews into logged Jira hours, in <span style="font-style:italic; color:var(--accent);">one batch.</span></h3>
           <p style="margin:20px 0 0; font-size:16.5px; line-height:1.65; color:#9d9b95; max-width:46ch;">Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each pull request. Tick the sessions you want, choose where they land, and log them all to Jira in one batch. Strictly read‑only on the Bitbucket side.</p>
         </div>
-        <div class="tb-shotwrap" style="order:2; position:relative;">
+        <div class="tb-shotwrap tb-tcol-shot" style="order:2; position:relative;">
           <div class="tb-shot" style="border:1px solid #2c2a26; border-radius:13px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,.45); background:#131210;">
             <div style="display:flex; align-items:center; gap:7px; padding:9px 13px; background:#131210; border-bottom:1px solid #221f1b;">
               <span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span>
@@ -328,8 +355,8 @@
       </div>
 
       <!-- Reports -->
-      <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:54px; align-items:center;">
-        <div style="order:2;">
+      <div class="tb-grid2 tb-tour" style="display:grid; grid-template-columns:1.25fr 1fr; gap:54px; align-items:center;">
+        <div class="tb-tcol-text" style="order:2;">
           <div style="display:inline-flex; align-items:center; gap:9px; margin-bottom:18px;">
             <span style="font-size:18px;">📊</span>
             <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11px; letter-spacing:.14em; color:var(--accent); text-transform:uppercase;">Reports</span>
@@ -337,7 +364,7 @@
           <h3 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(28px,3.1vw,42px); line-height:1.1; letter-spacing:-.01em; color:#f5f3f0;">Billable %, days on target, and per‑ticket hours — <span style="font-style:italic; color:var(--accent);">one click to CSV.</span></h3>
           <p style="margin:20px 0 0; font-size:16.5px; line-height:1.65; color:#9d9b95; max-width:46ch;">Daily average, days on target, tickets touched, billable percentage, an hours‑per‑day chart, and a per‑ticket breakdown. Browse previous weeks, then export to CSV for the inevitable "can you send me the spreadsheet?"</p>
         </div>
-        <div class="tb-shotwrap" style="order:1; position:relative;">
+        <div class="tb-shotwrap tb-tcol-shot" style="order:1; position:relative;">
           <div class="tb-shot" style="border:1px solid #2c2a26; border-radius:13px; overflow:hidden; box-shadow:0 30px 70px rgba(0,0,0,.45); background:#131210;">
             <div style="display:flex; align-items:center; gap:7px; padding:9px 13px; background:#131210; border-bottom:1px solid #221f1b;">
               <span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span><span style="width:9px; height:9px; border-radius:50%; background:#3a3731;"></span>
@@ -351,10 +378,10 @@
   </div>
 
   <!-- ===================== RECONSTRUCT ===================== -->
-  <div style="max-width:1240px; margin:0 auto; padding:60px 36px 104px;">
-    <div style="position:relative; border:1px solid #2c2a26; border-radius:20px; background:#1c1a16; overflow:hidden; padding:54px 52px;">
+  <div class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:60px 36px 104px;">
+    <div class="tb-recon-card" style="position:relative; border:1px solid #2c2a26; border-radius:20px; background:#1c1a16; overflow:hidden; padding:54px 52px;">
       <div style="position:absolute; top:-120px; right:-80px; width:520px; height:520px; background:radial-gradient(closest-side, rgba(189,166,245,.14), transparent 72%); pointer-events:none;"></div>
-      <div style="position:relative; display:grid; grid-template-columns:1.2fr 1fr; gap:54px; align-items:center;">
+      <div class="tb-grid2" style="position:relative; display:grid; grid-template-columns:1.2fr 1fr; gap:54px; align-items:center;">
         <div>
           <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid #3a3731; border-radius:100px; margin-bottom:22px;">
             <span style="font-size:14px;">🧩</span>
@@ -387,7 +414,7 @@
 
   <!-- ===================== PRIVACY ===================== -->
   <div id="privacy" style="border-top:1px solid #221f1b; border-bottom:1px solid #221f1b; background:#131210;">
-    <div style="max-width:1240px; margin:0 auto; padding:104px 36px; text-align:center;">
+    <div class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:104px 36px; text-align:center;">
       <div style="display:inline-flex; align-items:center; gap:9px; margin-bottom:28px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
         <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.16em; color:#67645e; text-transform:uppercase;">Local-first · no telemetry</span>
@@ -395,7 +422,7 @@
       <h2 style="margin:0 auto; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(38px,4.9vw,64px); line-height:1.06; letter-spacing:-.01em; color:#f5f3f0; max-width:18ch;">The only server TimeBro ever calls is <span style="font-style:italic; color:var(--accent);">the Jira site you typed in.</span></h2>
       <p style="margin:30px auto 0; font-size:18px; line-height:1.6; color:#9d9b95; max-width:58ch;">Your data lives on your machine in plain old IndexedDB, and the only thing TimeBro ever phones is the Jira site you point it at.</p>
 
-      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:54px; text-align:left;">
+      <div class="tb-grid3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:54px; text-align:left;">
         <div style="border:1px solid #262320; border-radius:14px; padding:26px 24px; background:#1a1813;">
           <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">No server, anywhere</div>
           <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Sync results, skipped days, favorites and personal notes stay on your laptop. There's nothing to breach.</div>
@@ -413,13 +440,13 @@
   </div>
 
   <!-- ===================== GET ===================== -->
-  <div id="get" style="max-width:1240px; margin:0 auto; padding:104px 36px;">
+  <div id="get" class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:104px 36px;">
     <div style="text-align:center; margin-bottom:54px;">
       <h2 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(40px,5vw,66px); line-height:1.04; letter-spacing:-.01em; color:#f5f3f0;">Paste three things — site, email, token — and log time in <span style="font-style:italic; color:var(--accent);">five minutes.</span></h2>
       <p style="margin:22px auto 0; font-size:17px; line-height:1.6; color:#9d9b95; max-width:50ch;">Grab the installer for your platform. Then head to <span style="color:#cfccc6; font-weight:600;">Settings → Jira</span>, paste your site, email and API token. That's the whole setup.</p>
     </div>
 
-    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:880px; margin:0 auto;">
+    <div class="tb-grid3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:880px; margin:0 auto;">
       <a href="https://github.com/4gray/time-bro/releases/latest" target="_blank" rel="noopener" class="tb-plat" style="text-decoration:none; border:1px solid #262320; border-radius:16px; background:#1c1a16; padding:34px 26px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px;">
         <span style="font-size:34px;">🍎</span>
         <span style="font-weight:700; font-size:18px; color:#f5f3f0; letter-spacing:-.02em;">macOS</span>
@@ -446,7 +473,7 @@
 
   <!-- ===================== FOOTER ===================== -->
   <div style="border-top:1px solid #221f1b; background:#131210;">
-    <div style="max-width:1240px; margin:0 auto; padding:54px 36px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+    <div class="tb-wrap" style="max-width:1240px; margin:0 auto; padding:54px 36px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
       <div style="display:flex; align-items:center; gap:11px;">
         <img src="app-icon.svg" alt="TimeBro" width="26" height="26" style="display:block; flex:none; border-radius:6px;">
         <span style="font-weight:800; font-size:16px; letter-spacing:-.03em; color:#f5f3f0;">Time<span style="color:var(--accent);">Bro</span></span>
