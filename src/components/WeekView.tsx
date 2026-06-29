@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, MessageSquare, Pencil, PenLine, Plus } from "lucide-react";
+import { Ban, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
 import type {
   DayTrackingSummary,
   JiraTicket,
@@ -182,24 +182,40 @@ const DayColumn = ({
           <div className="day-name">{day.isToday ? "TODAY" : day.weekdayName.slice(0, 3).toUpperCase()}</div>
           <div className="day-date">{date.getDate()}</div>
         </div>
-        {canAddTime && (
-          <button
-            type="button"
-            className={`day-add ${day.isToday ? "is-today" : ""}`}
-            onClick={() => onAddTime(date)}
-            title="Log time"
-            aria-label={`Log time for ${day.weekdayName}`}
-          >
-            <Plus size={14} strokeWidth={day.isToday ? 2.6 : 2.3} />
-          </button>
-        )}
+        <div className="day-head-actions">
+          {day.isConfiguredWorkingDay && (
+            <button
+              type="button"
+              className="day-skip"
+              onClick={() => onToggleSkipped(day.dateKey)}
+              aria-pressed={day.isSkipped}
+              title={day.isSkipped ? "Restore day" : "Mark as vacation"}
+              aria-label={
+                day.isSkipped ? `Restore ${day.weekdayName}` : `Mark ${day.weekdayName} as vacation`
+              }
+            >
+              {day.isSkipped ? <Undo2 size={14} strokeWidth={2.1} /> : <Palmtree size={14} strokeWidth={2.1} />}
+            </button>
+          )}
+          {canAddTime && (
+            <button
+              type="button"
+              className={`day-add ${day.isToday ? "is-today" : ""}`}
+              onClick={() => onAddTime(date)}
+              title="Log time"
+              aria-label={`Log time for ${day.weekdayName}`}
+            >
+              <Plus size={14} strokeWidth={day.isToday ? 2.6 : 2.3} />
+            </button>
+          )}
+        </div>
       </div>
 
       {day.isSkipped ? (
-        <>
-          <div className="day-vacation">OFF · VACATION</div>
-          <div className="day-spacer" />
-        </>
+        <div className="day-vacation">
+          <Palmtree className="day-vacation-icon" size={48} strokeWidth={1.4} aria-hidden />
+          <span className="day-vacation-label">OFF · VACATION</span>
+        </div>
       ) : (
         <>
           <div className="day-hours">
@@ -333,17 +349,6 @@ const DayColumn = ({
             <div className="day-spacer" />
           )}
         </>
-      )}
-
-      {day.isConfiguredWorkingDay && (
-        <button
-          type="button"
-          className="day-skip"
-          onClick={() => onToggleSkipped(day.dateKey)}
-          aria-pressed={day.isSkipped}
-        >
-          {day.isSkipped ? "↩ Restore day" : "+ Mark vacation"}
-        </button>
       )}
 
       {activeEntry &&
