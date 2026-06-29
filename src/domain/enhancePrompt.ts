@@ -58,7 +58,15 @@ const neighbourContext = (day: ReconstructDay, gap: { hour: string }, _first: bo
   const after = day.rows.slice(index + 1).find((row) => row.kind !== "empty");
   return [before, after]
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
-    .map((row) => `${row.hour} ${row.key} ${row.title}`.trim())
+    .map((row) => {
+      if (row.lockedSource === "personal-note") {
+        return `${row.hour} local private note`;
+      }
+      if (row.lockedSource === "recurring") {
+        return `${row.hour} local event ${row.title}`.trim();
+      }
+      return `${row.hour} ${row.key} ${row.title}`.trim();
+    })
     .join(" → ");
 };
 

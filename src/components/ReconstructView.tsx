@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  FileText,
   GitCommit,
   GitPullRequest,
   LineChart,
@@ -453,15 +454,29 @@ export const ReconstructView = ({
                 <i className="recon-swatch" />
                 in Jira
               </span>
+              <span style={{ "--accent": "var(--accent)" } as CSSProperties}>
+                <i className="recon-swatch" />
+                local
+              </span>
             </div>
           </div>
 
-          {isActive && day.loggedMinutes > 0 && (
+          {isActive && (day.loggedMinutes > 0 || day.localMinutes > 0) && (
             <div className="recon-logged-note">
               <Lock size={15} strokeWidth={1.9} />
               <span>
-                <span className="mono recon-teal">{formatReconDuration(day.loggedMinutes)}</span> already in Jira — read
-                via <span className="mono">worklogDate</span>, never offered twice.
+                {day.loggedMinutes > 0 && (
+                  <>
+                    <span className="mono recon-teal">{formatReconDuration(day.loggedMinutes)}</span> already in Jira
+                  </>
+                )}
+                {day.loggedMinutes > 0 && day.localMinutes > 0 && " · "}
+                {day.localMinutes > 0 && (
+                  <>
+                    <span className="mono recon-teal">{formatReconDuration(day.localMinutes)}</span> local/private
+                  </>
+                )}{" "}
+                — counted before filling gaps, never offered twice.
               </span>
             </div>
           )}
@@ -520,7 +535,7 @@ export const ReconstructView = ({
                   className="recon-send-btn"
                   onClick={onLogTime}
                   disabled={isComplete}
-                  title={isComplete ? "Everything is logged" : "Open the Add Time flow to log these entries"}
+                  title={isComplete ? summary.sendBtnLabel : "Open the Add Time flow to log these entries"}
                 >
                   <Send size={15} strokeWidth={2.2} />
                   {summary.sendBtnLabel}
@@ -564,6 +579,7 @@ const TimelineRowView = ({
   const showAiDraft = aiOn && Boolean(row.aiDraft);
   const showAiGap = aiOn && Boolean(row.gapText) && row.kind === "empty";
   const isDraggable = row.kind === "filled" && Boolean(row.signalId);
+  const lockedBadge = row.lockedSource === "jira" ? "in Jira" : "local";
 
   return (
     <div className="recon-tl-row">
@@ -623,14 +639,22 @@ const TimelineRowView = ({
         {row.kind === "locked" && (
           <>
             <span className="recon-bar is-locked" />
-            <span className="recon-icon-tile is-locked">
-              <Lock size={15} strokeWidth={1.9} />
+            <span className={`recon-icon-tile is-locked ${row.lockedSource === "jira" ? "" : "is-local"}`}>
+              {row.lockedSource === "personal-note" ? (
+                <FileText size={15} strokeWidth={1.9} />
+              ) : row.lockedSource === "recurring" ? (
+                <Calendar size={15} strokeWidth={1.9} />
+              ) : (
+                <Lock size={15} strokeWidth={1.9} />
+              )}
             </span>
             <div className="recon-tl-main">
               <div className="recon-tl-title is-muted">{row.title}</div>
               <div className="recon-tl-sub">{row.sub}</div>
             </div>
-            <span className="recon-tl-dur is-jira">in Jira</span>
+            <span className={`recon-tl-dur is-locked ${row.lockedSource === "jira" ? "is-jira" : "is-local"}`}>
+              {lockedBadge}
+            </span>
           </>
         )}
 

@@ -1,18 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AppSettings, BitbucketReviewSyncResult, SyncResult } from "../../shared/types";
+import type {
+  AppSettings,
+  BitbucketReviewSyncResult,
+  PersonalNote,
+  RecurringEvent,
+  RecurringOccurrence,
+  SyncResult,
+  WeekdayNumber
+} from "../../shared/types";
 import { computeAiDrafts, probeOllama } from "../api/ollama";
 import { applyAiDrafts, type AiDrafts } from "../domain/enhancePrompt";
 import type {
   PlacementMap,
   ReconstructCommitGroup,
   ReconstructDay,
+  ReconstructLocalEntry,
   ReconstructReviewSession,
   ReconstructWorklog
 } from "../domain/reconstruct";
+import { buildDayRecurring, indexOccurrences } from "../domain/recurring";
 import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../domain/reconstruct";
 import type { ReconstructDateLabels } from "../components/ReconstructView";
 import {
   getBitbucketReviewResult,
+  getPersonalNotes,
+  getRecurringOccurrences,
   getReconstructAiDrafts,
   getReconstructDraft,
   getSyncResult,
@@ -29,6 +41,10 @@ interface UseReconstructOptions {
   settings: AppSettings;
   syncResult?: SyncResult;
   reviewResult?: BitbucketReviewSyncResult;
+  localWeekKey: string;
+  personalNotes: PersonalNote[];
+  recurringEvents: RecurringEvent[];
+  recurringOccurrences: RecurringOccurrence[];
   dailyTargetHours: number;
 }
 
@@ -72,6 +88,10 @@ export const useReconstruct = ({
   settings,
   syncResult,
   reviewResult,
+  localWeekKey,
+  personalNotes,
+  recurringEvents,
+  recurringOccurrences,
   dailyTargetHours
 }: UseReconstructOptions) => {
   const todayKey = toLocalDateKey(currentDate);
@@ -99,7 +119,9 @@ export const useReconstruct = ({
   const [loaded, setLoaded] = useState<{
     sync: Record<string, SyncResult>;
     review: Record<string, BitbucketReviewSyncResult>;
-  }>({ sync: {}, review: {} });
+    personalNotes: Record<string, PersonalNote[]>;
+    recurringOccurrences: Record<string, RecurringOccurrence[]>;
+  }>({ sync: {}, review: {}, personalNotes: {}, recurringOccurrences: {} });
 
   useEffect(() => {
     let cancelled = false;
@@ -107,15 +129,24 @@ export const useReconstruct = ({
     void (async () => {
       const sync: Record<string, SyncResult> = {};
       const review: Record<string, BitbucketReviewSyncResult> = {};
+      const personalNotes: Record<string, PersonalNote[]> = {};
+      const recurringOccurrences: Record<string, RecurringOccurrence[]> = {};
       await Promise.all(
         keys.map(async (key) => {
-          const [s, r] = await Promise.all([getSyncResult(key), getBitbucketReviewResult(key)]);
+          const [s, r, notes, occurrences] = await Promise.all([
+            getSyncResult(key),
+            getBitbucketReviewResult(key),
+            getPersonalNotes(key),
+            getRecurringOccurrences(key)
+          ]);
           if (s) sync[key] = s;
           if (r) review[key] = r;
+          personalNotes[key] = notes;
+          recurringOccurrences[key] = occurrences;
         })
       );
       if (!cancelled) {
-        setLoaded({ sync, review });
+        setLoaded({ sync, review, personalNotes, recurringOccurrences });
       }
     })();
     return () => {
@@ -167,6 +198,9 @@ export const useReconstruct = ({
     const weekKey = weekKeyOf(selDateKey);
     const sync = syncResult?.weekKey === weekKey ? syncResult : loaded.sync[weekKey];
     const review = reviewResult?.weekKey === weekKey ? reviewResult : loaded.review[weekKey];
+    const notesForWeek = weekKey === localWeekKey ? personalNotes : loaded.personalNotes[weekKey] ?? [];
+    const occurrencesForWeek =
+      weekKey === localWeekKey ? recurringOccurrences : loaded.recurringOccurrences[weekKey] ?? [];
 
     const worklogs: ReconstructWorklog[] = (sync?.daySummaries?.[selDateKey]?.worklogs ?? []).map((w) => ({
       issueKey: w.issueKey,
@@ -206,6 +240,34 @@ export const useReconstruct = ({
         estimatedSeconds: group.estimatedSeconds,
         confidence: group.confidence
       }));
+    const localNoteEntries: ReconstructLocalEntry[] = notesForWeek
+      .filter((note) => note.dateKey === selDateKey)
+      .map((note) => ({
+        id: note.id,
+        source: "personal-note",
+        title: note.title?.trim() || note.text.trim() || "Private note",
+        startedISO: note.startedISO,
+        timeSpentSeconds: note.timeSpentSeconds,
+        note: note.text
+      }));
+    const recurring = buildDayRecurring(
+      recurringEvents,
+      indexOccurrences(occurrencesForWeek),
+      selDateKey,
+      selWeekdayIso as WeekdayNumber,
+      {
+        isWorkingDay: settings.workingDays.includes(selWeekdayIso as WeekdayNumber),
+        isPastOrToday: selDateKey <= todayKey
+      }
+    );
+    const recurringEntries: ReconstructLocalEntry[] = recurring.entries.map((entry) => ({
+      id: `recurring:${entry.eventId}:${entry.dateKey}`,
+      source: "recurring",
+      title: entry.title,
+      startedISO: `${entry.dateKey}T${entry.localTime}:00`,
+      timeSpentSeconds: entry.timeSpentSeconds,
+      note: entry.note
+    }));
 
     return buildReconstructDay(
       {
@@ -215,6 +277,7 @@ export const useReconstruct = ({
         workingDays: settings.workingDays,
         targetMinutes,
         worklogs,
+        localEntries: [...localNoteEntries, ...recurringEntries],
         reviewSessions,
         commits,
         nowMinutes
@@ -225,15 +288,20 @@ export const useReconstruct = ({
   }, [
     durations,
     loaded,
+    localWeekKey,
     nowMinutes,
     placements,
+    personalNotes,
+    recurringEvents,
+    recurringOccurrences,
     reviewResult,
     selDateKey,
     selIsToday,
     selWeekdayIso,
     settings.workingDays,
     syncResult,
-    targetMinutes
+    targetMinutes,
+    todayKey
   ]);
 
   // Latest coreDay without making callbacks/effects depend on placement edits.

@@ -8,6 +8,7 @@ import {
   getReconstructSummary,
   type ReconstructCommitGroup,
   type ReconstructInput,
+  type ReconstructLocalEntry,
   type ReconstructReviewSession,
   type ReconstructWorklog
 } from "./reconstruct";
@@ -46,6 +47,16 @@ const worklog = (overrides: Partial<ReconstructWorklog> = {}): ReconstructWorklo
   issueSummary: "Daily standup",
   startedISO: "2026-06-15T13:00:00",
   timeSpentSeconds: 75 * 60,
+  ...overrides
+});
+
+const localEntry = (overrides: Partial<ReconstructLocalEntry> = {}): ReconstructLocalEntry => ({
+  id: "note-1",
+  source: "personal-note",
+  title: "Private planning",
+  startedISO: "2026-06-15T10:00:00",
+  timeSpentSeconds: 45 * 60,
+  note: "Planning without a Jira ticket",
   ...overrides
 });
 
@@ -183,6 +194,39 @@ describe("buildReconstructDay", () => {
     expect(day.reconstructedMinutes).toBe(95);
   });
 
+  it("counts private notes and confirmed local events as locked local time", () => {
+    const day = buildReconstructDay(
+      input({
+        worklogs: [worklog()],
+        reviewSessions: [review()],
+        localEntries: [
+          localEntry(),
+          localEntry({
+            id: "recurring:standup:2026-06-15",
+            source: "recurring",
+            title: "Daily Standup",
+            startedISO: "2026-06-15T11:00:00",
+            timeSpentSeconds: 30 * 60,
+            note: "Team sync"
+          })
+        ]
+      })
+    );
+
+    expect(day.loggedMinutes).toBe(75);
+    expect(day.localMinutes).toBe(75);
+    expect(day.reconstructedMinutes).toBe(40);
+    expect(day.gapMinutes).toBe(290);
+    expect(day.sendCount).toBe(1);
+    expect(day.rows.filter((row) => row.lockedSource === "personal-note")).toHaveLength(1);
+    expect(day.rows.filter((row) => row.lockedSource === "recurring")).toHaveLength(1);
+    expect(getReconstructSummary(day)).toMatchObject({
+      sub: "· 3h 10m of 8h accounted",
+      gapLabel: "4h 50m",
+      sendBtnLabel: "Log 1 entry in Jira"
+    });
+  });
+
   it("combines commits and reviews into one signal list", () => {
     const day = buildReconstructDay(
       input({ worklogs: [], reviewSessions: [review()], commits: [commit()] })
@@ -278,6 +322,24 @@ describe("buildReconstructDay", () => {
     expect(day.loggedMinutes).toBe(480);
     expect(day.rows.every((row) => row.kind === "locked")).toBe(true);
     expect(getReconstructSummary(day)).toMatchObject({ bigLabel: "8h", bigWord: "logged", sendBtnLabel: "Everything is logged" });
+  });
+
+  it("treats a fully accounted local-only day as complete without saying it was Jira-logged", () => {
+    const day = buildReconstructDay(
+      input({
+        localEntries: [localEntry({ timeSpentSeconds: 480 * 60 })]
+      })
+    );
+
+    expect(day.kind).toBe("complete");
+    expect(day.loggedMinutes).toBe(0);
+    expect(day.localMinutes).toBe(480);
+    expect(day.rows.every((row) => row.lockedSource === "personal-note")).toBe(true);
+    expect(getReconstructSummary(day)).toMatchObject({
+      bigLabel: "8h",
+      bigWord: "accounted",
+      sendBtnLabel: "Everything is accounted"
+    });
   });
 
   it("labels a fully-logged current day as TODAY, not PAST DAY", () => {

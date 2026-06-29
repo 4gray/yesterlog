@@ -455,6 +455,7 @@ export const App = () => {
         settingsDraft={settingsDraft}
         isSettingsDirty={isSettingsDirty}
         weekState={weekState}
+        personalNotes={personalNotes}
         syncResult={syncResult}
         monthState={monthState}
         visibleBitbucketReviewResult={visibleBitbucketReviewResult}
@@ -478,6 +479,7 @@ export const App = () => {
         updateInfo={updateInfo}
         isCheckingUpdates={isCheckingUpdates}
         recurringEvents={recurringEvents}
+        recurringOccurrences={recurringOccurrences}
         isImportingPersonalNotes={isImportingPersonalNotes}
         handleAddWorklog={handleAddWorklog}
         handleAddPersonalNote={handleAddPersonalNote}

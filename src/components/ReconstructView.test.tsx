@@ -128,6 +128,30 @@ describe("ReconstructView", () => {
     expect(markup).toContain("Sync now");
   });
 
+  it("renders local locked rows as local accounted time, not Jira time", () => {
+    const day = buildReconstructDay(
+      baseInput({
+        worklogs: [],
+        reviewSessions: [],
+        localEntries: [
+          {
+            id: "note-1",
+            source: "personal-note",
+            title: "Planning without a ticket",
+            startedISO: "2026-06-17T10:00:00",
+            timeSpentSeconds: 45 * 60,
+            note: "Private planning notes"
+          }
+        ]
+      })
+    );
+    const markup = render({ day });
+    expect(markup).toContain("Planning without a ticket");
+    expect(markup).toContain("private note · 45m");
+    expect(markup).toContain(">local<");
+    expect(markup).toContain("45m</span> local/private");
+  });
+
   it("renders a calm weekend rest state with a log-anyway escape hatch", () => {
     const day = buildReconstructDay(baseInput({ weekdayIso: 6, worklogs: [], reviewSessions: [] }));
     const markup = render({ day });

@@ -40,12 +40,15 @@ export interface ReconstructSignal {
 }
 
 export type TimelineRowKind = "filled" | "locked" | "empty";
+export type LockedRowSource = "jira" | "personal-note" | "recurring";
 
 export interface TimelineRow {
   /** "09:00" … "17:00". */
   hour: string;
   kind: TimelineRowKind;
   signalKind?: SignalKind;
+  /** Source for locked rows: Jira worklog or local-only time. */
+  lockedSource?: LockedRowSource;
   /** Source signal id for a placed (filled-from-signal) row — used for drag/drop. */
   signalId?: string;
   key: string;
@@ -80,8 +83,10 @@ export interface ReconstructDay {
   accountableMinutes: number;
   /** Sum of proposed (filled) row durations. */
   reconstructedMinutes: number;
-  /** Sum of already-logged (locked) row durations — read via worklogDate. */
+  /** Sum of already-logged Jira worklog row durations — read via worklogDate. */
   loggedMinutes: number;
+  /** Sum of locked local-only row durations (private notes + confirmed recurring events). */
+  localMinutes: number;
   /** Unaccounted minutes against {@link accountableMinutes} (never negative). */
   gapMinutes: number;
   /** Number of proposed entries that could be sent to Jira. */
@@ -102,6 +107,16 @@ export interface ReconstructWorklog {
   startedISO: string;
   timeSpentSeconds: number;
   comment?: string;
+}
+
+/** Local-only time that should account for the day without becoming Jira-sendable. */
+export interface ReconstructLocalEntry {
+  id: string;
+  source: Exclude<LockedRowSource, "jira">;
+  title: string;
+  startedISO: string;
+  timeSpentSeconds: number;
+  note?: string;
 }
 
 /** Narrowed Bitbucket review-session shape — only what the engine needs. */
@@ -149,6 +164,7 @@ export interface ReconstructInput {
   workingDays: WeekdayNumber[];
   targetMinutes: number;
   worklogs: ReconstructWorklog[];
+  localEntries?: ReconstructLocalEntry[];
   reviewSessions: ReconstructReviewSession[];
   /** The user's own commit runs for the day (their coding work). */
   commits?: ReconstructCommitGroup[];
@@ -320,10 +336,13 @@ export const buildReconstructDay = (
   const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
     (a, b) => a.startHour - b.startHour
   );
-  const hasActivity = input.worklogs.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
+  const localEntries = input.localEntries ?? [];
+  const hasActivity =
+    input.worklogs.length > 0 || localEntries.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
   const workingDay = isWorkingDay(input);
 
   const loggedMinutes = input.worklogs.reduce((sum, w) => sum + Math.round(w.timeSpentSeconds / 60), 0);
+  const localMinutes = localEntries.reduce((sum, entry) => sum + Math.round(entry.timeSpentSeconds / 60), 0);
 
   // ---- "now" cap for today: never reconstruct hours that haven't happened ----
   const dayStartMinutes = WORKING_HOURS[0] * 60;
@@ -339,8 +358,9 @@ export const buildReconstructDay = (
     kind = "weekend";
   } else {
     const proposable = signals.filter((s) => !s.isMarker && s.durationMinutes > 0);
-    const fullyLogged = proposable.length === 0 && loggedMinutes >= input.targetMinutes;
-    if (fullyLogged && input.worklogs.length > 0) {
+    const lockedMinutes = loggedMinutes + localMinutes;
+    const fullyLogged = proposable.length === 0 && lockedMinutes >= input.targetMinutes;
+    if (fullyLogged && (input.worklogs.length > 0 || localEntries.length > 0)) {
       kind = "complete";
     } else if (input.isToday) {
       kind = "today";
@@ -360,6 +380,7 @@ export const buildReconstructDay = (
       accountableMinutes: 0,
       reconstructedMinutes: 0,
       loggedMinutes: 0,
+      localMinutes: 0,
       gapMinutes: 0,
       sendCount: 0,
       placements: {},
@@ -373,6 +394,7 @@ export const buildReconstructDay = (
     const row: TimelineRow = {
       hour: "",
       kind: "locked",
+      lockedSource: "jira",
       key: worklog.issueKey,
       title: worklog.issueSummary || worklog.issueKey,
       sub: `already in Jira · ${formatReconDuration(minutes)}`,
@@ -380,6 +402,21 @@ export const buildReconstructDay = (
       naiveDescription: worklog.comment?.trim() || worklog.issueSummary || ""
     };
     return { hour: localHourOf(worklog.startedISO), value: { kind: "locked" as const, row, minutes } };
+  });
+
+  const localItems = localEntries.map((entry) => {
+    const minutes = Math.round(entry.timeSpentSeconds / 60);
+    const row: TimelineRow = {
+      hour: "",
+      kind: "locked",
+      lockedSource: entry.source,
+      key: "",
+      title: entry.title.trim() || (entry.source === "personal-note" ? "Private note" : "Local event"),
+      sub: `${entry.source === "personal-note" ? "private note" : "local event"} · ${formatReconDuration(minutes)}`,
+      durationMinutes: minutes,
+      naiveDescription: entry.note?.trim() || entry.title.trim() || ""
+    };
+    return { hour: localHourOf(entry.startedISO), value: { kind: "locked" as const, row, minutes } };
   });
 
   const placeable = signals.filter((signal) => !signal.isMarker && signal.durationMinutes > 0);
@@ -410,7 +447,7 @@ export const buildReconstructDay = (
     .filter((signal) => typeof effective[signal.id] !== "number")
     .map((signal) => signal.id);
 
-  const { placed, overflow } = placeByHour<PlacedContent>([...lockedItems, ...filledItems]);
+  const { placed, overflow } = placeByHour<PlacedContent>([...lockedItems, ...localItems, ...filledItems]);
 
   // Every placed filled item is rendered (placed or overflow), so totals match the timeline.
   const reconstructedMinutes = filledItems.reduce((sum, item) => sum + item.value.minutes, 0);
@@ -442,7 +479,7 @@ export const buildReconstructDay = (
     rows.push({ ...item.value.row, hour: `${pad2(item.hour)}:00` });
   }
 
-  const gapMinutes = Math.max(0, accountableMinutes - reconstructedMinutes - loggedMinutes);
+  const gapMinutes = Math.max(0, accountableMinutes - reconstructedMinutes - loggedMinutes - localMinutes);
 
   return {
     dateKey: input.dateKey,
@@ -454,6 +491,7 @@ export const buildReconstructDay = (
     accountableMinutes,
     reconstructedMinutes,
     loggedMinutes,
+    localMinutes,
     gapMinutes,
     sendCount: filledItems.length,
     placements: effective,
@@ -475,6 +513,7 @@ export interface ReconstructSummary {
 /** Pure header/footer label derivation, kept here so it is unit-testable. */
 export const getReconstructSummary = (day: ReconstructDay): ReconstructSummary => {
   const target = day.targetMinutes;
+  const lockedMinutes = day.loggedMinutes + day.localMinutes;
   if (day.kind === "weekend") {
     return {
       bigLabel: "Weekend",
@@ -488,18 +527,19 @@ export const getReconstructSummary = (day: ReconstructDay): ReconstructSummary =
     };
   }
   if (day.kind === "complete") {
+    const hasLocalTime = day.localMinutes > 0;
     return {
-      bigLabel: formatReconDuration(day.loggedMinutes),
-      bigWord: "logged",
-      sub: `· ${formatReconDuration(day.loggedMinutes)} of ${formatReconDuration(target)} · on target`,
+      bigLabel: formatReconDuration(lockedMinutes),
+      bigWord: hasLocalTime ? "accounted" : "logged",
+      sub: `· ${formatReconDuration(lockedMinutes)} of ${formatReconDuration(target)} · on target`,
       gapLabel: "0m",
-      footerTail: "fully reconstructed · nothing left",
-      sendBtnLabel: "Everything is logged",
+      footerTail: "fully accounted · nothing left",
+      sendBtnLabel: hasLocalTime ? "Everything is accounted" : "Everything is logged",
       unplacedLabel: "0 unplaced",
       dayTag: day.isToday ? "TODAY" : "PAST DAY"
     };
   }
-  const accounted = day.reconstructedMinutes + day.loggedMinutes;
+  const accounted = day.reconstructedMinutes + day.loggedMinutes + day.localMinutes;
   return {
     bigLabel: formatReconDuration(day.reconstructedMinutes),
     bigWord: "reconstructed",
@@ -556,7 +596,7 @@ export const autoDistribute = (day: ReconstructDay): ReconstructDay => {
     ...day,
     rows,
     reconstructedMinutes,
-    gapMinutes: Math.max(0, day.accountableMinutes - reconstructedMinutes - day.loggedMinutes),
+    gapMinutes: Math.max(0, day.accountableMinutes - reconstructedMinutes - day.loggedMinutes - day.localMinutes),
     sendCount: rows.filter((row) => row.kind === "filled").length
   };
 };

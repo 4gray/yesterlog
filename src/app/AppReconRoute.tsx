@@ -1,4 +1,11 @@
-import type { AppSettings, BitbucketReviewSyncResult, SyncResult } from "../../shared/types";
+import type {
+  AppSettings,
+  BitbucketReviewSyncResult,
+  PersonalNote,
+  RecurringEvent,
+  RecurringOccurrence,
+  SyncResult
+} from "../../shared/types";
 import { ReconstructView } from "../components/ReconstructView";
 import { useReconstruct } from "./useReconstruct";
 
@@ -7,6 +14,10 @@ export interface AppReconRouteProps {
   settings: AppSettings;
   syncResult?: SyncResult;
   reviewResult?: BitbucketReviewSyncResult;
+  localWeekKey: string;
+  personalNotes: PersonalNote[];
+  recurringEvents: RecurringEvent[];
+  recurringOccurrences: RecurringOccurrence[];
   dailyTargetHours: number;
   syncState: "synced" | "stale" | "syncing";
   syncLabel: string;
@@ -20,6 +31,10 @@ export const AppReconRoute = ({
   settings,
   syncResult,
   reviewResult,
+  localWeekKey,
+  personalNotes,
+  recurringEvents,
+  recurringOccurrences,
   dailyTargetHours,
   syncState,
   syncLabel,
@@ -27,7 +42,17 @@ export const AppReconRoute = ({
   onOpenSettings,
   onLogTime
 }: AppReconRouteProps) => {
-  const vm = useReconstruct({ currentDate, settings, syncResult, reviewResult, dailyTargetHours });
+  const vm = useReconstruct({
+    currentDate,
+    settings,
+    syncResult,
+    reviewResult,
+    localWeekKey,
+    personalNotes,
+    recurringEvents,
+    recurringOccurrences,
+    dailyTargetHours
+  });
 
   return (
     <ReconstructView

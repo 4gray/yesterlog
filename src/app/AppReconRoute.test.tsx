@@ -29,6 +29,10 @@ const render = (overrides: Partial<ComponentProps<typeof AppReconRoute>> = {}) =
       settings={settings}
       syncResult={undefined}
       reviewResult={undefined}
+      localWeekKey="2026-06-15"
+      personalNotes={[]}
+      recurringEvents={[]}
+      recurringOccurrences={[]}
       dailyTargetHours={8}
       syncState="synced"
       syncLabel="SYNCED 6:47 PM"

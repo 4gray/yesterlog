@@ -11,6 +11,7 @@ import { AppTodayRoute } from "./AppTodayRoute";
 import { AppWeekRoute } from "./AppWeekRoute";
 
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
+type AppReconRouteProps = ComponentProps<typeof AppReconRoute>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
@@ -33,6 +34,7 @@ export interface AppMainViewProps {
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   isSettingsDirty: boolean;
   weekState: AppWeekRouteProps["weekState"];
+  personalNotes: AppReconRouteProps["personalNotes"];
   syncResult: AppWeekRouteProps["syncResult"];
   monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
@@ -56,6 +58,7 @@ export interface AppMainViewProps {
   updateInfo: AppSettingsRouteProps["updateInfo"];
   isCheckingUpdates: AppSettingsRouteProps["isCheckingUpdates"];
   recurringEvents: AppSettingsRouteProps["recurringEvents"];
+  recurringOccurrences: AppReconRouteProps["recurringOccurrences"];
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
   handleAddWorklog: AppTodayRouteProps["handleAddWorklog"] & AppWeekRouteProps["handleAddWorklog"];
   handleAddPersonalNote: AppTodayRouteProps["handleAddPersonalNote"];
@@ -118,6 +121,7 @@ export const AppMainView = ({
   settingsDraft,
   isSettingsDirty,
   weekState,
+  personalNotes,
   syncResult,
   monthState,
   visibleBitbucketReviewResult,
@@ -141,6 +145,7 @@ export const AppMainView = ({
   updateInfo,
   isCheckingUpdates,
   recurringEvents,
+  recurringOccurrences,
   isImportingPersonalNotes,
   handleAddWorklog,
   handleAddPersonalNote,
@@ -248,6 +253,10 @@ export const AppMainView = ({
         settings={settings}
         syncResult={syncResult}
         reviewResult={visibleBitbucketReviewResult}
+        localWeekKey={weekState.weekKey}
+        personalNotes={personalNotes}
+        recurringEvents={recurringEvents}
+        recurringOccurrences={recurringOccurrences}
         dailyTargetHours={weekState.dailyTargetHours}
         syncState={syncState}
         syncLabel={syncLabel}

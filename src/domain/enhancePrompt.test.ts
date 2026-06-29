@@ -39,6 +39,7 @@ const day = (): ReconstructDay => ({
   accountableMinutes: 480,
   reconstructedMinutes: 60,
   loggedMinutes: 30,
+  localMinutes: 0,
   gapMinutes: 390,
   sendCount: 1,
   placements: { "sig-1": 9 },
@@ -52,6 +53,37 @@ describe("buildEnhancePrompt", () => {
     expect(prompt).toContain('"id":"sig-1"');
     expect(prompt).toContain("fix npe; wip");
     expect(prompt).toContain('"hour":"10:00"');
+  });
+
+  it("uses local rows as gap context without leaking private note text", () => {
+    const base = day();
+    const prompt = buildEnhancePrompt({
+      ...base,
+      rows: [
+        row({
+          hour: "09:00",
+          kind: "locked",
+          lockedSource: "personal-note",
+          title: "Doctor appointment",
+          durationMinutes: 30,
+          naiveDescription: "Private doctor appointment details"
+        }),
+        row({ hour: "10:00", kind: "empty", gapText: "Gap.", gapCta: "Add" }),
+        row({
+          hour: "11:00",
+          kind: "locked",
+          lockedSource: "recurring",
+          title: "Daily Standup",
+          durationMinutes: 15,
+          naiveDescription: "Discussed blockers"
+        })
+      ]
+    });
+
+    expect(prompt).toContain("09:00 local private note");
+    expect(prompt).toContain("11:00 local event Daily Standup");
+    expect(prompt).not.toContain("Doctor appointment");
+    expect(prompt).not.toContain("Private doctor appointment details");
   });
 });
 
