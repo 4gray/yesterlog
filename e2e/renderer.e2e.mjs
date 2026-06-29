@@ -310,9 +310,12 @@ test("settings handles theme changes and update release notes", { timeout: 60_00
 
     await page.getByRole("button", { name: /About/i }).click();
     assert.ok(await page.getByText("v1.3.0 is available.").isVisible());
-    await page.getByRole("button", { name: "Release notes" }).click();
+    await page.getByRole("button", { name: "Current notes" }).click();
     await page.getByRole("dialog", { name: "Release notes" }).waitFor();
-    assert.ok(await page.getByText("TimeBro v1.3.0").isVisible());
+    assert.ok(await page.getByRole("heading", { name: "TimeBro v1.0.0" }).isVisible());
+    await page.locator(".release-notes-version-list").getByRole("button", { name: /v1.3.0/ }).click();
+    assert.ok(await page.getByRole("heading", { name: "Highlights" }).isVisible());
+    assert.ok(await page.locator(".release-notes-image").isVisible());
     await page.getByRole("button", { name: "Done" }).click();
   });
 });

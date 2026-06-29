@@ -2,6 +2,7 @@ import {
   GITHUB_REPOSITORY_NAME,
   GITHUB_REPOSITORY_OWNER,
   GITHUB_LATEST_RELEASE_API_URL,
+  GITHUB_RELEASES_API_URL,
   GITHUB_RELEASES_URL,
   getSafeReleaseAssetUrl,
   getSafeReleaseUrl,
@@ -13,6 +14,8 @@ import type {
   AppAutoUpdatePhase,
   AppAutoUpdateProgress,
   AppAutoUpdateState,
+  AppReleaseHistoryResult,
+  AppReleaseInfo,
   AppUpdateInfo
 } from "../shared/types";
 
@@ -23,6 +26,8 @@ interface GitHubReleaseResponse {
   body?: string | null;
   published_at?: string | null;
   assets?: GitHubReleaseAssetResponse[];
+  draft?: boolean;
+  prerelease?: boolean;
 }
 
 interface GitHubReleaseAssetResponse {
@@ -73,6 +78,17 @@ const unavailableUpdateInfo = (currentVersion: string, checkedAt: string, error:
   releasePageUrl: GITHUB_RELEASES_URL,
   checkedAt,
   updateAvailable: false,
+  error
+});
+
+const unavailableReleaseHistory = (
+  currentVersion: string,
+  checkedAt: string,
+  error: string
+): AppReleaseHistoryResult => ({
+  currentVersion,
+  checkedAt,
+  releases: [],
   error
 });
 
@@ -136,6 +152,34 @@ const selectPlatformDownloadAsset = (
     name: platformAsset.asset.name,
     url: safeUrl,
     platform: platformAsset.platform
+  };
+};
+
+const toAppReleaseInfo = (
+  release: GitHubReleaseResponse,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
+): AppReleaseInfo | undefined => {
+  if (release.draft || release.prerelease) {
+    return undefined;
+  }
+
+  const version = normalizeReleaseVersion(release.tag_name || release.name || "");
+  if (!version) {
+    return undefined;
+  }
+
+  const downloadAsset = selectPlatformDownloadAsset(release.assets, platform, env);
+
+  return {
+    version,
+    releaseName: release.name?.trim() || release.tag_name,
+    releaseNotes: release.body?.trim() || undefined,
+    releasePageUrl: getSafeReleaseUrl(release.html_url),
+    downloadUrl: downloadAsset?.url,
+    downloadName: downloadAsset?.name,
+    downloadPlatform: downloadAsset?.platform,
+    publishedAt: release.published_at ?? undefined
   };
 };
 
@@ -254,6 +298,46 @@ export const checkForAppUpdate = async (
       ...unavailableUpdateInfo(currentVersion, checkedAt, message),
       autoUpdate
     };
+  }
+};
+
+export const fetchAppReleaseHistory = async (
+  currentVersion: string,
+  fetchImpl: typeof fetch = fetch,
+  platform: NodeJS.Platform = process.platform,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<AppReleaseHistoryResult> => {
+  const checkedAt = new Date().toISOString();
+
+  try {
+    const response = await fetchImpl(GITHUB_RELEASES_API_URL, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "TimeBro"
+      }
+    });
+
+    if (response.status === 404) {
+      return unavailableReleaseHistory(currentVersion, checkedAt, "No published GitHub releases found.");
+    }
+
+    if (!response.ok) {
+      const message = await parseGitHubError(response);
+      return unavailableReleaseHistory(currentVersion, checkedAt, `GitHub release history failed: ${message}`);
+    }
+
+    const releases = (await response.json()) as GitHubReleaseResponse[];
+    return {
+      currentVersion,
+      checkedAt,
+      releases: releases.flatMap((release) => {
+        const appRelease = toAppReleaseInfo(release, platform, env);
+        return appRelease ? [appRelease] : [];
+      })
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to fetch GitHub release history.";
+    return unavailableReleaseHistory(currentVersion, checkedAt, message);
   }
 };
 

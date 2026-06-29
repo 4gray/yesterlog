@@ -468,13 +468,103 @@
 }
 
 .release-notes-panel {
-  width: min(720px, calc(100vw - 32px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(920px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
 }
 
 .release-notes-body {
   display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
   gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.release-notes-versions {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 0;
+}
+
+.release-notes-version-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+}
+
+.release-notes-version-list {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  max-height: min(430px, calc(100vh - 330px));
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.release-notes-version-list button,
+.release-notes-retry {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--line-soft);
+  color: var(--muted);
+  text-align: left;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.release-notes-version-list button:hover,
+.release-notes-version-list button.active,
+.release-notes-retry:hover {
+  color: var(--text-strong);
+  border-color: rgba(79, 124, 255, 0.42);
+  background: rgba(79, 124, 255, 0.08);
+}
+
+.release-notes-version-list strong {
+  overflow-wrap: anywhere;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+
+.release-notes-version-list span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.release-notes-retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.release-notes-content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -512,7 +602,7 @@
   font-size: 11px;
 }
 
-.release-notes-copy {
+.release-notes-markdown {
   min-height: 220px;
   max-height: min(430px, calc(100vh - 330px));
   margin: 0;
@@ -522,10 +612,100 @@
   border-radius: 8px;
   background: var(--bg);
   color: var(--text-strong);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.62;
   overflow-wrap: anywhere;
 }
 
+.release-notes-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.release-notes-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+.release-notes-markdown h1,
+.release-notes-markdown h2,
+.release-notes-markdown h3,
+.release-notes-markdown h4 {
+  margin: 18px 0 8px;
+  color: var(--text-bright);
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.release-notes-markdown p,
+.release-notes-markdown ul,
+.release-notes-markdown ol,
+.release-notes-markdown blockquote,
+.release-notes-markdown pre {
+  margin: 0 0 13px;
+}
+
+.release-notes-markdown ul,
+.release-notes-markdown ol {
+  padding-left: 19px;
+}
+
+.release-notes-markdown li + li {
+  margin-top: 5px;
+}
+
+.release-notes-markdown a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.release-notes-markdown a:hover {
+  text-decoration: underline;
+}
+
+.release-notes-markdown code {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.release-notes-markdown pre {
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--line-soft);
+}
+
+.release-notes-markdown pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.release-notes-markdown blockquote {
+  padding: 9px 12px;
+  border-left: 3px solid var(--blue);
+  background: var(--line-soft);
+  color: var(--dim);
+}
+
+.release-notes-markdown hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.release-notes-image {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: min(520px, 64vh);
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  object-fit: contain;
+}

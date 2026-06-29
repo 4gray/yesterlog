@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   AppAutoUpdateActionResult,
   AppAutoUpdateState,
+  AppReleaseHistoryResult,
+  AppReleaseInfo,
   AppUpdateInfo,
   OpenReleasePageResult
 } from "../../shared/types";
-import { GITHUB_RELEASES_URL } from "../../shared/releases";
+import { GITHUB_RELEASES_URL, isNewerReleaseVersion, normalizeReleaseVersion } from "../../shared/releases";
 import { nativeApi } from "../api/native";
 import {
   AUTO_UPDATE_POLL_INTERVAL_MS,
@@ -13,16 +15,48 @@ import {
   readCachedUpdateInfo,
   writeCachedUpdateInfo
 } from "../domain/updateCache";
-import { createDemoUpdateInfo, formatReleaseVersion } from "./appHelpers";
+import { createDemoReleaseHistory, createDemoUpdateInfo, formatReleaseVersion } from "./appHelpers";
 import type { SnackbarOptions } from "./useSnackbars";
 
 export interface ReleaseUpdateClient {
   getUpdateInfo(): Promise<AppUpdateInfo>;
+  getReleaseHistory(): Promise<AppReleaseHistoryResult>;
   downloadUpdate(): Promise<AppAutoUpdateActionResult>;
   installUpdate(): Promise<AppAutoUpdateActionResult>;
   onAutoUpdateState?: (callback: (state: AppAutoUpdateState) => void) => () => void;
   openReleasePage(url?: string): Promise<OpenReleasePageResult>;
 }
+
+const sameReleaseVersion = (left?: string, right?: string) =>
+  Boolean(left && right && normalizeReleaseVersion(left) === normalizeReleaseVersion(right));
+
+const releaseFromUpdateInfo = (info: AppUpdateInfo): AppReleaseInfo | undefined => {
+  if (!info.latestVersion) {
+    return undefined;
+  }
+
+  return {
+    version: info.latestVersion,
+    releaseName: info.releaseName,
+    releaseNotes: info.releaseNotes,
+    releasePageUrl: info.releasePageUrl,
+    downloadUrl: info.downloadUrl,
+    downloadName: info.downloadName,
+    downloadPlatform: info.downloadPlatform,
+    publishedAt: info.publishedAt
+  };
+};
+
+const mergeReleases = (primary: AppReleaseInfo | undefined, releases: AppReleaseInfo[]) => {
+  if (!primary?.version) {
+    return releases;
+  }
+
+  const primaryKey = normalizeReleaseVersion(primary.version);
+  const hasPrimary = releases.some((release) => normalizeReleaseVersion(release.version) === primaryKey);
+
+  return hasPrimary ? releases : [primary, ...releases];
+};
 
 export interface CheckForUpdatesOptions {
   force?: boolean;
@@ -56,8 +90,15 @@ export const useReleaseUpdates = ({
   const [autoUpdateState, setAutoUpdateState] = useState<AppAutoUpdateState | undefined>(() => updateInfo?.autoUpdate);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [releaseNotesDialogInfo, setReleaseNotesDialogInfo] = useState<AppUpdateInfo | undefined>();
+  const [releaseHistory, setReleaseHistory] = useState<AppReleaseInfo[]>(() =>
+    isDemo ? createDemoReleaseHistory(demoUpdateAvailable) : []
+  );
+  const [isLoadingReleaseHistory, setIsLoadingReleaseHistory] = useState(false);
+  const [releaseHistoryError, setReleaseHistoryError] = useState<string | undefined>();
   const updateInfoRef = useRef(updateInfo);
   const autoUpdateStateRef = useRef(autoUpdateState);
+  const releaseHistoryRef = useRef(releaseHistory);
+  const releaseHistoryCheckedAtRef = useRef<string | undefined>(undefined);
   const updateSnackbarShownForRef = useRef<string | undefined>();
 
   const storeUpdateInfo = useCallback((next: AppUpdateInfo | undefined) => {
@@ -73,6 +114,13 @@ export const useReleaseUpdates = ({
     autoUpdateStateRef.current = next?.autoUpdate;
     setUpdateInfo(next);
     setAutoUpdateState(next?.autoUpdate);
+  }, []);
+
+  const storeReleaseHistory = useCallback((releases: AppReleaseInfo[], checkedAt?: string, error?: string) => {
+    releaseHistoryRef.current = releases;
+    releaseHistoryCheckedAtRef.current = checkedAt;
+    setReleaseHistory(releases);
+    setReleaseHistoryError(error);
   }, []);
 
   const storeAutoUpdateState = useCallback(
@@ -95,6 +143,81 @@ export const useReleaseUpdates = ({
     []
   );
 
+  const makeUpdateInfoFromRelease = useCallback(
+    (release: AppReleaseInfo): AppUpdateInfo => {
+      const currentVersion = updateInfoRef.current?.currentVersion ?? appVersion;
+      const selectedVersion = normalizeReleaseVersion(release.version);
+      const latestVersion = normalizeReleaseVersion(updateInfoRef.current?.latestVersion ?? "");
+      const updateAvailable = isNewerReleaseVersion(release.version, currentVersion);
+      const selectedIsLatestKnownUpdate = Boolean(updateAvailable && latestVersion && selectedVersion === latestVersion);
+
+      return {
+        currentVersion,
+        latestVersion: release.version,
+        releaseName: release.releaseName,
+        releaseNotes: release.releaseNotes,
+        releasePageUrl: release.releasePageUrl,
+        downloadUrl: release.downloadUrl,
+        downloadName: release.downloadName,
+        downloadPlatform: release.downloadPlatform,
+        publishedAt: release.publishedAt,
+        checkedAt: releaseHistoryCheckedAtRef.current ?? new Date().toISOString(),
+        updateAvailable,
+        autoUpdate: selectedIsLatestKnownUpdate ? autoUpdateStateRef.current : undefined
+      };
+    },
+    [appVersion]
+  );
+
+  const makeCurrentReleasePlaceholder = useCallback((): AppUpdateInfo => {
+    const currentVersion = updateInfoRef.current?.currentVersion ?? appVersion;
+
+    return {
+      currentVersion,
+      latestVersion: currentVersion,
+      releaseName: `TimeBro ${formatReleaseVersion(currentVersion)}`,
+      releasePageUrl: GITHUB_RELEASES_URL,
+      checkedAt: new Date().toISOString(),
+      updateAvailable: false
+    };
+  }, [appVersion]);
+
+  const loadReleaseHistory = useCallback(
+    async (force = false) => {
+      if (!force && releaseHistoryRef.current.length > 0) {
+        return releaseHistoryRef.current;
+      }
+
+      if (isDemo) {
+        const demoHistory = createDemoReleaseHistory(demoUpdateAvailable);
+        storeReleaseHistory(demoHistory, new Date().toISOString());
+        return demoHistory;
+      }
+
+      setIsLoadingReleaseHistory(true);
+
+      try {
+        const result = await client.getReleaseHistory();
+        storeReleaseHistory(result.releases, result.checkedAt, result.error);
+        return result.releases;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to fetch GitHub release history.";
+        storeReleaseHistory(releaseHistoryRef.current, releaseHistoryCheckedAtRef.current, message);
+        return releaseHistoryRef.current;
+      } finally {
+        setIsLoadingReleaseHistory(false);
+      }
+    },
+    [client, demoUpdateAvailable, isDemo, storeReleaseHistory]
+  );
+
+  const selectReleaseNotesVersion = useCallback(
+    (release: AppReleaseInfo) => {
+      setReleaseNotesDialogInfo(makeUpdateInfoFromRelease(release));
+    },
+    [makeUpdateInfoFromRelease]
+  );
+
   const openReleasePage = useCallback(
     (url?: string) => {
       void client.openReleasePage(url ?? GITHUB_RELEASES_URL).catch((error) => {
@@ -113,8 +236,9 @@ export const useReleaseUpdates = ({
       }
 
       setReleaseNotesDialogInfo(releaseInfo);
+      void loadReleaseHistory();
     },
-    [showError]
+    [loadReleaseHistory, showError]
   );
 
   const closeReleaseNotes = useCallback(() => {
@@ -264,7 +388,9 @@ export const useReleaseUpdates = ({
     async (options: CheckForUpdatesOptions = {}) => {
       if (isDemo) {
         const demoUpdateInfo = createDemoUpdateInfo(demoUpdateAvailable);
+        const demoHistory = createDemoReleaseHistory(demoUpdateAvailable);
         storeUpdateInfo(demoUpdateInfo);
+        storeReleaseHistory(demoHistory, new Date().toISOString());
 
         if (demoUpdateInfo.updateAvailable) {
           showUpdateAvailable(demoUpdateInfo);
@@ -341,6 +467,7 @@ export const useReleaseUpdates = ({
       showError,
       showSuccess,
       showUpdateAvailable,
+      storeReleaseHistory,
       storeUpdateInfo,
       updateStoredInfo
     ]
@@ -394,8 +521,22 @@ export const useReleaseUpdates = ({
   }, [checkForUpdates]);
 
   const openCurrentReleaseNotes = useCallback(() => {
-    openReleaseNotes(updateInfoRef.current);
-  }, [openReleaseNotes]);
+    const currentVersion = updateInfoRef.current?.currentVersion ?? appVersion;
+    const knownCurrentRelease = releaseHistoryRef.current.find((release) =>
+      sameReleaseVersion(release.version, currentVersion)
+    );
+
+    setReleaseNotesDialogInfo(
+      knownCurrentRelease ? makeUpdateInfoFromRelease(knownCurrentRelease) : makeCurrentReleasePlaceholder()
+    );
+
+    void loadReleaseHistory().then((releases) => {
+      const currentRelease = releases.find((release) => sameReleaseVersion(release.version, currentVersion));
+      if (currentRelease) {
+        setReleaseNotesDialogInfo(makeUpdateInfoFromRelease(currentRelease));
+      }
+    });
+  }, [appVersion, loadReleaseHistory, makeCurrentReleasePlaceholder, makeUpdateInfoFromRelease]);
 
   const downloadCurrentUpdateFromSettings = useCallback(() => {
     downloadCurrentUpdate(updateInfoRef.current);
@@ -405,16 +546,25 @@ export const useReleaseUpdates = ({
     installDownloadedUpdate();
   }, [installDownloadedUpdate]);
 
+  const refreshReleaseHistory = useCallback(() => {
+    void loadReleaseHistory(true);
+  }, [loadReleaseHistory]);
+
   return {
     updateInfo,
     autoUpdateState,
     isCheckingUpdates,
     releaseNotesDialogInfo,
+    releaseHistory: mergeReleases(releaseNotesDialogInfo ? releaseFromUpdateInfo(releaseNotesDialogInfo) : undefined, releaseHistory),
+    isLoadingReleaseHistory,
+    releaseHistoryError,
     checkForUpdates,
     checkForUpdatesFromSettings,
     openReleasePage,
     openReleaseNotes,
     openCurrentReleaseNotes,
+    selectReleaseNotesVersion,
+    refreshReleaseHistory,
     closeReleaseNotes,
     openUpdateDownload,
     downloadCurrentUpdate: downloadCurrentUpdateFromSettings,

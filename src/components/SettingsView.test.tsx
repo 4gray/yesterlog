@@ -102,7 +102,7 @@ describe("SettingsView", () => {
     expect(markup).toContain("v1.1.0");
     expect(markup).toContain("v1.1.0 is available.");
     expect(markup).toContain("GitHub Releases");
-    expect(markup).toContain("Release notes");
+    expect(markup).toContain("Current notes");
     expect(markup).toContain("Download");
   });
 

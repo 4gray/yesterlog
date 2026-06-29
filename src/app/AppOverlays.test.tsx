@@ -21,17 +21,22 @@ vi.mock("../components/TimeEntryModalLayer", () => ({
 vi.mock("../components/ReleaseNotesDialog", () => ({
   ReleaseNotesDialog: ({
     updateInfo,
+    releaseHistory,
     onClose,
     onDownload,
-    onOpenReleasePage
+    onOpenReleasePage,
+    onSelectRelease
   }: {
     updateInfo: AppUpdateInfo;
+    releaseHistory: AppOverlaysProps["releaseHistory"];
     onClose: () => void;
     onDownload: (info: AppUpdateInfo) => void;
     onOpenReleasePage: (url?: string) => void;
+    onSelectRelease: AppOverlaysProps["onSelectReleaseNotesVersion"];
   }) => (
     <section data-testid="release-notes-dialog">
       <span>{updateInfo.latestVersion}</span>
+      <span>{releaseHistory.length}</span>
       <button type="button" onClick={onClose}>
         close
       </button>
@@ -41,6 +46,11 @@ vi.mock("../components/ReleaseNotesDialog", () => ({
       <button type="button" onClick={() => onOpenReleasePage(updateInfo.releasePageUrl)}>
         github
       </button>
+      {releaseHistory[0] ? (
+        <button type="button" onClick={() => onSelectRelease(releaseHistory[0])}>
+          select
+        </button>
+      ) : null}
     </section>
   )
 }));
@@ -99,9 +109,14 @@ const baseProps = (): AppOverlaysProps => ({
   getRecurringCandidates: () => [],
   onLogRecurring: asyncFalse,
   releaseNotesDialogInfo: undefined,
+  releaseHistory: [],
+  isLoadingReleaseHistory: false,
+  releaseHistoryError: undefined,
   onCloseReleaseNotes: noop,
   onDownloadUpdate: noop,
   onOpenReleasePage: noop,
+  onSelectReleaseNotesVersion: noop,
+  onRefreshReleaseHistory: noop,
   notifications: [],
   onDismissNotification: noop
 });
@@ -139,11 +154,19 @@ describe("AppOverlays", () => {
     const onCloseReleaseNotes = vi.fn();
     const onDownloadUpdate = vi.fn();
     const onOpenReleasePage = vi.fn();
+    const onSelectReleaseNotesVersion = vi.fn();
     renderOverlays({
       releaseNotesDialogInfo: updateInfo,
+      releaseHistory: [
+        {
+          version: "1.3.0",
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+        }
+      ],
       onCloseReleaseNotes,
       onDownloadUpdate,
-      onOpenReleasePage
+      onOpenReleasePage,
+      onSelectReleaseNotesVersion
     });
 
     expect(container.querySelector("[data-testid='release-notes-dialog']")?.textContent).toContain("1.4.0");
@@ -152,11 +175,16 @@ describe("AppOverlays", () => {
       container.querySelectorAll("button")[0]?.click();
       container.querySelectorAll("button")[1]?.click();
       container.querySelectorAll("button")[2]?.click();
+      container.querySelectorAll("button")[3]?.click();
     });
 
     expect(onCloseReleaseNotes).toHaveBeenCalledTimes(1);
     expect(onDownloadUpdate).toHaveBeenCalledWith(updateInfo);
     expect(onOpenReleasePage).toHaveBeenCalledWith(updateInfo.releasePageUrl);
+    expect(onSelectReleaseNotesVersion).toHaveBeenCalledWith({
+      version: "1.3.0",
+      releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+    });
   });
 
   it("passes notifications to the snackbar stack", () => {

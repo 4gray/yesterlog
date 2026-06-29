@@ -421,6 +421,51 @@
     padding: 18px;
   }
 
+  .release-notes-body {
+    grid-template-columns: 1fr;
+  }
+
+  .release-notes-version-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(132px, 1fr);
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 2px;
+  }
+
+  .release-notes-markdown {
+    max-height: min(340px, calc(100vh - 510px));
+  }
+
+  .release-notes-panel .modal-foot {
+    display: grid;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .release-notes-panel .modal-foot-hint {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .release-notes-panel .modal-foot-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .release-notes-panel .modal-foot-actions .primary-button {
+    grid-column: 1 / -1;
+  }
+
+  .release-notes-panel .modal-foot-actions button {
+    justify-content: center;
+    min-width: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
   .inline-actions {
     display: grid;
     grid-template-columns: 1fr;

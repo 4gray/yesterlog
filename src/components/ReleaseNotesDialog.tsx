@@ -1,12 +1,19 @@
-import { Download, ExternalLink, FileText, RefreshCw, X } from "lucide-react";
-import { useEffect } from "react";
-import type { AppUpdateInfo } from "../../shared/types";
+import { Download, ExternalLink, FileText, Loader2, RefreshCw, X } from "lucide-react";
+import { useEffect, useMemo } from "react";
+import { normalizeReleaseVersion } from "../../shared/releases";
+import type { AppReleaseInfo, AppUpdateInfo } from "../../shared/types";
+import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
 
 interface ReleaseNotesDialogProps {
   updateInfo: AppUpdateInfo;
+  releaseHistory: AppReleaseInfo[];
+  isLoadingReleaseHistory: boolean;
+  releaseHistoryError?: string;
   onClose: () => void;
   onDownload: (info: AppUpdateInfo) => void;
   onOpenReleasePage: (url?: string) => void;
+  onSelectRelease: (release: AppReleaseInfo) => void;
+  onRefreshReleaseHistory: () => void;
 }
 
 const formatReleaseVersion = (version?: string) => {
@@ -25,11 +32,33 @@ const formatPublishedAt = (publishedAt?: string) => {
   }).format(new Date(publishedAt));
 };
 
+const releaseFromUpdateInfo = (info: AppUpdateInfo): AppReleaseInfo | undefined => {
+  if (!info.latestVersion) {
+    return undefined;
+  }
+
+  return {
+    version: info.latestVersion,
+    releaseName: info.releaseName,
+    releaseNotes: info.releaseNotes,
+    releasePageUrl: info.releasePageUrl,
+    downloadUrl: info.downloadUrl,
+    downloadName: info.downloadName,
+    downloadPlatform: info.downloadPlatform,
+    publishedAt: info.publishedAt
+  };
+};
+
 export const ReleaseNotesDialog = ({
   updateInfo,
+  releaseHistory,
+  isLoadingReleaseHistory,
+  releaseHistoryError,
   onClose,
   onDownload,
-  onOpenReleasePage
+  onOpenReleasePage,
+  onSelectRelease,
+  onRefreshReleaseHistory
 }: ReleaseNotesDialogProps) => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -42,8 +71,34 @@ export const ReleaseNotesDialog = ({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  const releaseVersions = useMemo(() => {
+    const selectedRelease = releaseFromUpdateInfo(updateInfo);
+    const byVersion = new Map<string, AppReleaseInfo>();
+
+    for (const release of releaseHistory) {
+      if (!release?.version) {
+        continue;
+      }
+      const key = normalizeReleaseVersion(release.version);
+      if (!byVersion.has(key)) {
+        byVersion.set(key, release);
+      }
+    }
+
+    if (selectedRelease?.version) {
+      const selectedKey = normalizeReleaseVersion(selectedRelease.version);
+      if (!byVersion.has(selectedKey)) {
+        byVersion.set(selectedKey, selectedRelease);
+      }
+    }
+
+    return [...byVersion.values()];
+  }, [releaseHistory, updateInfo]);
+
   const notes = updateInfo.releaseNotes?.trim() || "No release notes were published for this release.";
   const releaseTitle = updateInfo.releaseName?.trim() || `TimeBro ${formatReleaseVersion(updateInfo.latestVersion)}`;
+  const selectedVersion = normalizeReleaseVersion(updateInfo.latestVersion ?? "");
+  const canDownload = Boolean(updateInfo.updateAvailable && (updateInfo.downloadUrl || updateInfo.autoUpdate?.supported));
   const downloadLabel = updateInfo.autoUpdate?.supported
     ? updateInfo.autoUpdate.phase === "downloaded"
       ? "Restart"
@@ -65,14 +120,47 @@ export const ReleaseNotesDialog = ({
         </div>
 
         <div className="modal-body release-notes-body">
-          <div className="release-notes-meta">
-            <FileText size={17} />
-            <div>
-              <strong>{releaseTitle}</strong>
-              <span>{formatPublishedAt(updateInfo.publishedAt)}</span>
+          <aside className="release-notes-versions" aria-label="Release versions">
+            <div className="release-notes-version-heading">
+              <span>Versions</span>
+              {isLoadingReleaseHistory ? <Loader2 className="spin" size={13} /> : null}
             </div>
-          </div>
-          <pre className="release-notes-copy">{notes}</pre>
+            <div className="release-notes-version-list">
+              {releaseVersions.map((release) => {
+                const version = normalizeReleaseVersion(release.version);
+                const isSelected = version === selectedVersion;
+                return (
+                  <button
+                    key={version}
+                    type="button"
+                    className={isSelected ? "active" : undefined}
+                    aria-pressed={isSelected}
+                    onClick={() => onSelectRelease(release)}
+                  >
+                    <strong>{formatReleaseVersion(release.version)}</strong>
+                    <span>{release.releaseName?.trim() || formatPublishedAt(release.publishedAt)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {releaseHistoryError ? (
+              <button type="button" className="release-notes-retry" onClick={onRefreshReleaseHistory}>
+                <RefreshCw size={13} />
+                Retry
+              </button>
+            ) : null}
+          </aside>
+
+          <section className="release-notes-content">
+            <div className="release-notes-meta">
+              <FileText size={17} />
+              <div>
+                <strong>{releaseTitle}</strong>
+                <span>{formatPublishedAt(updateInfo.publishedAt)}</span>
+              </div>
+            </div>
+            <ReleaseNotesMarkdown markdown={notes} />
+          </section>
         </div>
 
         <div className="modal-foot">
@@ -85,7 +173,7 @@ export const ReleaseNotesDialog = ({
               <ExternalLink size={16} />
               GitHub
             </button>
-            {updateInfo.downloadUrl || updateInfo.autoUpdate?.supported ? (
+            {canDownload ? (
               <button type="button" className="primary-button" onClick={() => onDownload(updateInfo)}>
                 {updateInfo.autoUpdate?.phase === "downloaded" ? <RefreshCw size={16} /> : <Download size={16} />}
                 {downloadLabel}

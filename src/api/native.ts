@@ -3,6 +3,7 @@ import type {
   AddWorklogResult,
   AppAutoUpdateActionResult,
   AppAutoUpdateState,
+  AppReleaseHistoryResult,
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
@@ -223,6 +224,21 @@ export const nativeApi = {
     }
 
     return bridge.getUpdateInfo();
+  },
+
+  getReleaseHistory(): Promise<AppReleaseHistoryResult> {
+    const bridge = getNativeBridgeWithMethod("getReleaseHistory");
+
+    if (!bridge) {
+      return Promise.resolve({
+        currentVersion: rendererPreviewVersion,
+        checkedAt: new Date().toISOString(),
+        releases: [],
+        error: "Open the Electron app to fetch GitHub release history."
+      });
+    }
+
+    return bridge.getReleaseHistory();
   },
 
   downloadUpdate(): Promise<AppAutoUpdateActionResult> {

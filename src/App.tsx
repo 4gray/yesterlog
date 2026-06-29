@@ -85,9 +85,14 @@ export const App = () => {
     updateInfo,
     isCheckingUpdates,
     releaseNotesDialogInfo,
+    releaseHistory,
+    isLoadingReleaseHistory,
+    releaseHistoryError,
     openReleasePage,
     checkForUpdatesFromSettings,
     openCurrentReleaseNotes,
+    selectReleaseNotesVersion,
+    refreshReleaseHistory,
     closeReleaseNotes,
     downloadCurrentUpdate,
     installDownloadedUpdate
@@ -436,6 +441,11 @@ export const App = () => {
           onCloseReleaseNotes={closeReleaseNotes}
           onDownloadUpdate={downloadCurrentUpdate}
           onOpenReleasePage={openReleasePage}
+          releaseHistory={releaseHistory}
+          isLoadingReleaseHistory={isLoadingReleaseHistory}
+          releaseHistoryError={releaseHistoryError}
+          onSelectReleaseNotesVersion={selectReleaseNotesVersion}
+          onRefreshReleaseHistory={refreshReleaseHistory}
           notifications={snackbars}
           onDismissNotification={dismissSnackbar}
         />

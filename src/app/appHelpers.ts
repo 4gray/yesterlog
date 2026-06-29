@@ -1,4 +1,12 @@
-import type { AppSettings, AppUpdateInfo, JiraTicket, PersonalNote, SyncResult, TicketSortMode } from "../../shared/types";
+import type {
+  AppReleaseInfo,
+  AppSettings,
+  AppUpdateInfo,
+  JiraTicket,
+  PersonalNote,
+  SyncResult,
+  TicketSortMode
+} from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 
 export const isJiraConfigured = (settings: AppSettings) =>
@@ -141,3 +149,92 @@ export const createDemoUpdateInfo = (updateAvailable = false): AppUpdateInfo => 
     updateAvailable
   };
 };
+
+export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInfo[] => [
+  {
+    version: updateAvailable ? "1.3.0" : "1.0.0",
+    releaseName: updateAvailable ? "TimeBro v1.3.0" : "TimeBro v1.0.0",
+    releaseNotes: updateAvailable
+      ? [
+          "## Highlights",
+          "",
+          "- Added **markdown** release notes in the app.",
+          "- Added direct platform downloads from GitHub release assets.",
+          "- Kept screenshots at their natural size inside the release dialog.",
+          "",
+          "![Dark Today screenshot](screenshots/v1.4.0/dark-today.png)"
+        ].join("\n")
+      : [
+          "## TimeBro v1.0.0",
+          "",
+          "- First stable desktop release.",
+          "- Local Jira weekly time tracking with no backend server.",
+          "- CSV export for weekly summaries."
+        ].join("\n"),
+    releasePageUrl: updateAvailable
+      ? "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+      : "https://github.com/4gray/time-bro/releases/tag/v1.0.0",
+    downloadUrl: updateAvailable
+      ? "https://github.com/4gray/time-bro/releases/download/v1.3.0/TimeBro-1.3.0-arm64.dmg"
+      : undefined,
+    downloadName: updateAvailable ? "TimeBro-1.3.0-arm64.dmg" : undefined,
+    downloadPlatform: updateAvailable ? "macos" : undefined,
+    publishedAt: updateAvailable ? "2026-06-24T09:00:00.000Z" : "2026-06-17T09:00:00.000Z"
+  },
+  ...(updateAvailable
+    ? [
+        {
+          version: "1.2.0",
+          releaseName: "TimeBro v1.2.0",
+          releaseNotes: [
+            "## Changed",
+            "",
+            "- Added Review view polish.",
+            "- Improved ticket search feedback.",
+            "- Tightened renderer screenshot checks."
+          ].join("\n"),
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.2.0",
+          publishedAt: "2026-06-21T09:00:00.000Z"
+        },
+        {
+          version: "1.1.0",
+          releaseName: "TimeBro v1.1.0",
+          releaseNotes: [
+            "## Fixed",
+            "",
+            "- Preserved worklog comments from Jira ADF.",
+            "- Added safer update download links.",
+            "- Improved settings copy for API tokens."
+          ].join("\n"),
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          publishedAt: "2026-06-19T09:00:00.000Z"
+        },
+        {
+          version: "1.0.0",
+          releaseName: "TimeBro v1.0.0",
+          releaseNotes: [
+            "## TimeBro v1.0.0",
+            "",
+            "- First stable desktop release.",
+            "- Local Jira weekly time tracking with no backend server.",
+            "- CSV export for weekly summaries."
+          ].join("\n"),
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.0.0",
+          publishedAt: "2026-06-17T09:00:00.000Z"
+        }
+      ]
+    : [
+        {
+          version: "0.9.0",
+          releaseName: "TimeBro v0.9.0",
+          releaseNotes: [
+            "## Beta",
+            "",
+            "- Added the first local settings flow.",
+            "- Added Jira connection checks."
+          ].join("\n"),
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v0.9.0",
+          publishedAt: "2026-06-10T09:00:00.000Z"
+        }
+      ])
+];

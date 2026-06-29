@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { GITHUB_RELEASES_URL } from "../shared/releases";
-import { checkForAppUpdate, createAppAutoUpdater, getAutoUpdateCapability, type AppAutoUpdaterAdapter } from "./updates";
+import {
+  checkForAppUpdate,
+  createAppAutoUpdater,
+  fetchAppReleaseHistory,
+  getAutoUpdateCapability,
+  type AppAutoUpdaterAdapter
+} from "./updates";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -144,6 +150,52 @@ describe("checkForAppUpdate", () => {
     expect(result.releasePageUrl).toBe(GITHUB_RELEASES_URL);
     expect(result.updateAvailable).toBe(false);
     expect(result.error).toContain("rate limit");
+  });
+});
+
+describe("fetchAppReleaseHistory", () => {
+  it("returns published release notes and safe platform assets", async () => {
+    const result = await fetchAppReleaseHistory(
+      "1.3.2",
+      async () =>
+        jsonResponse([
+          {
+            tag_name: "v1.4.0",
+            name: "TimeBro v1.4.0",
+            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+            body: "## Added\n\n![Week](screenshots/v1.4.0/dark-week.png)",
+            published_at: "2026-06-24T12:00:00Z",
+            assets: [
+              {
+                name: "TimeBro-1.4.0-arm64.dmg",
+                browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro-1.4.0-arm64.dmg"
+              }
+            ]
+          },
+          {
+            tag_name: "v1.5.0-beta.1",
+            prerelease: true,
+            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.5.0-beta.1"
+          },
+          {
+            tag_name: "v1.3.2",
+            draft: true,
+            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.3.2"
+          }
+        ]),
+      "darwin"
+    );
+
+    expect(result.currentVersion).toBe("1.3.2");
+    expect(result.releases).toHaveLength(1);
+    expect(result.releases[0]).toMatchObject({
+      version: "1.4.0",
+      releaseName: "TimeBro v1.4.0",
+      releaseNotes: expect.stringContaining("dark-week.png"),
+      releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+      downloadName: "TimeBro-1.4.0-arm64.dmg",
+      downloadPlatform: "macos"
+    });
   });
 });
 

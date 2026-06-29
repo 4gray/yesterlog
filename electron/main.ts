@@ -16,6 +16,7 @@ import { scheduleReminder } from "./reminders";
 import {
   checkForAppUpdate,
   createAppAutoUpdater,
+  fetchAppReleaseHistory,
   getAutoUpdateCapability,
   type AppAutoUpdaterAdapter,
   type AppAutoUpdaterService
@@ -198,6 +199,10 @@ ipcMain.handle("app:get-update-info", () => {
   return checkForAppUpdate(app.getVersion(), fetch, process.platform, updater.getState(), process.env).then((info) =>
     updater.decorateUpdateInfo(info)
   );
+});
+
+ipcMain.handle("app:get-release-history", () => {
+  return fetchAppReleaseHistory(app.getVersion(), fetch, process.platform, process.env);
 });
 
 ipcMain.handle("app:download-update", () => {

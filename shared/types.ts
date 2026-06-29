@@ -421,6 +421,26 @@ export interface ReminderScheduleResult {
   message?: string;
 }
 
+export type AppReleaseDownloadPlatform = "linux" | "macos" | "windows";
+
+export interface AppReleaseInfo {
+  version: string;
+  releaseName?: string;
+  releaseNotes?: string;
+  releasePageUrl: string;
+  downloadUrl?: string;
+  downloadName?: string;
+  downloadPlatform?: AppReleaseDownloadPlatform;
+  publishedAt?: string;
+}
+
+export interface AppReleaseHistoryResult {
+  currentVersion: string;
+  checkedAt: string;
+  releases: AppReleaseInfo[];
+  error?: string;
+}
+
 export interface AppUpdateInfo {
   currentVersion: string;
   latestVersion?: string;
@@ -429,7 +449,7 @@ export interface AppUpdateInfo {
   releasePageUrl: string;
   downloadUrl?: string;
   downloadName?: string;
-  downloadPlatform?: "linux" | "macos" | "windows";
+  downloadPlatform?: AppReleaseDownloadPlatform;
   publishedAt?: string;
   checkedAt: string;
   updateAvailable: boolean;

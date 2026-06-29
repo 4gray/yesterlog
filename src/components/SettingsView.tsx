@@ -1028,12 +1028,12 @@ export const SettingsView = ({
           <ExternalLink size={16} />
           GitHub Releases
         </button>
+        <button className="secondary-button" type="button" onClick={onShowReleaseNotes}>
+          <FileText size={16} />
+          Current notes
+        </button>
         {updateInfo?.updateAvailable ? (
           <>
-            <button className="secondary-button" type="button" onClick={onShowReleaseNotes}>
-              <FileText size={16} />
-              Release notes
-            </button>
             {updateInfo.autoUpdate?.supported ? (
               updateInfo.autoUpdate.phase === "downloaded" ? (
                 <button className="primary-button" type="button" onClick={onInstallUpdate}>

@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppUpdateInfo, OpenReleasePageResult } from "../../shared/types";
+import type { AppReleaseHistoryResult, AppUpdateInfo, OpenReleasePageResult } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 import { AUTO_UPDATE_POLL_INTERVAL_MS, UPDATE_INFO_CACHE_KEY } from "../domain/updateCache";
 import type { SnackbarOptions } from "./useSnackbars";
@@ -28,6 +28,7 @@ let container: HTMLDivElement;
 let root: Root;
 let api: ReleaseUpdatesApi | undefined;
 let getUpdateInfo: ReturnType<typeof vi.fn<() => Promise<AppUpdateInfo>>>;
+let getReleaseHistory: ReturnType<typeof vi.fn<() => Promise<AppReleaseHistoryResult>>>;
 let downloadUpdate: ReturnType<typeof vi.fn<ReleaseUpdateClient["downloadUpdate"]>>;
 let installUpdate: ReturnType<typeof vi.fn<ReleaseUpdateClient["installUpdate"]>>;
 let openReleasePage: ReturnType<typeof vi.fn<(url?: string) => Promise<OpenReleasePageResult>>>;
@@ -83,6 +84,11 @@ beforeEach(() => {
   api = undefined;
   localStorage.clear();
   getUpdateInfo = vi.fn();
+  getReleaseHistory = vi.fn(async () => ({
+    currentVersion: APP_VERSION,
+    checkedAt: new Date().toISOString(),
+    releases: []
+  }));
   downloadUpdate = vi.fn(async () => ({
     ok: true,
     message: "Update downloaded. Restart TimeBro to install it.",
@@ -105,7 +111,7 @@ beforeEach(() => {
     ok: true,
     url: url ?? GITHUB_RELEASES_URL
   }));
-  client = { getUpdateInfo, downloadUpdate, installUpdate, openReleasePage };
+  client = { getUpdateInfo, getReleaseHistory, downloadUpdate, installUpdate, openReleasePage };
   showSnackbar = vi.fn();
   showSuccess = vi.fn();
   showError = vi.fn();
@@ -232,9 +238,67 @@ describe("useReleaseUpdates", () => {
 
     act(() => getApi().openReleaseNotes());
     expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: "1.4.0" });
+    expect(getReleaseHistory).toHaveBeenCalledTimes(1);
 
     act(() => getApi().openUpdateDownload());
     expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);
+  });
+
+  it("opens current-version release notes from GitHub history", async () => {
+    const update = makeInfo({
+      currentVersion: "1.3.2",
+      latestVersion: "1.4.0",
+      releaseNotes: "## Latest",
+      updateAvailable: true
+    });
+    getUpdateInfo.mockResolvedValue(update);
+    getReleaseHistory.mockResolvedValue({
+      currentVersion: "1.3.2",
+      checkedAt: "2026-06-24T12:00:00.000Z",
+      releases: [
+        {
+          version: "1.4.0",
+          releaseName: "TimeBro v1.4.0",
+          releaseNotes: "## Latest",
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+          publishedAt: "2026-06-24T12:00:00.000Z"
+        },
+        {
+          version: "1.3.2",
+          releaseName: "TimeBro v1.3.2",
+          releaseNotes: "## Current\n\n![Week](screenshots/v1.3.0/dark-week.png)",
+          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.2",
+          publishedAt: "2026-06-20T12:00:00.000Z"
+        }
+      ]
+    });
+    renderHarness();
+
+    await act(async () => {
+      await getApi().checkForUpdates({ force: true });
+    });
+
+    act(() => getApi().openCurrentReleaseNotes());
+    expect(getApi().releaseNotesDialogInfo).toMatchObject({
+      latestVersion: "1.3.2",
+      releaseName: "TimeBro v1.3.2",
+      updateAvailable: false
+    });
+
+    await flushAsync();
+
+    expect(getReleaseHistory).toHaveBeenCalledTimes(1);
+    expect(getApi().releaseHistory).toHaveLength(2);
+    expect(getApi().releaseNotesDialogInfo).toMatchObject({
+      latestVersion: "1.3.2",
+      releaseNotes: expect.stringContaining("dark-week.png")
+    });
+
+    act(() => getApi().selectReleaseNotesVersion(getApi().releaseHistory[0]));
+    expect(getApi().releaseNotesDialogInfo).toMatchObject({
+      latestVersion: "1.4.0",
+      updateAvailable: true
+    });
   });
 
   it("downloads and installs automatic updates through the native client", async () => {
@@ -409,8 +473,12 @@ describe("useReleaseUpdates", () => {
     expect(getApi().updateInfo).toMatchObject({ latestVersion: "1.4.0", updateAvailable: true });
     expect(getApi().isCheckingUpdates).toBe(false);
 
-    act(() => getApi().openCurrentReleaseNotes());
-    expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: "1.4.0" });
+    await act(async () => {
+      getApi().openCurrentReleaseNotes();
+      await Promise.resolve();
+    });
+    await flushAsync();
+    expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: APP_VERSION });
 
     act(() => getApi().downloadCurrentUpdate());
     expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);

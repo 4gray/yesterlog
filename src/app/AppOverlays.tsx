@@ -9,18 +9,28 @@ type SnackbarStackProps = ComponentProps<typeof SnackbarStack>;
 
 export interface AppOverlaysProps extends TimeEntryModalLayerProps {
   releaseNotesDialogInfo?: ReleaseNotesDialogProps["updateInfo"];
+  releaseHistory: ReleaseNotesDialogProps["releaseHistory"];
+  isLoadingReleaseHistory: ReleaseNotesDialogProps["isLoadingReleaseHistory"];
+  releaseHistoryError?: ReleaseNotesDialogProps["releaseHistoryError"];
   onCloseReleaseNotes: ReleaseNotesDialogProps["onClose"];
   onDownloadUpdate: ReleaseNotesDialogProps["onDownload"];
   onOpenReleasePage: ReleaseNotesDialogProps["onOpenReleasePage"];
+  onSelectReleaseNotesVersion: ReleaseNotesDialogProps["onSelectRelease"];
+  onRefreshReleaseHistory: ReleaseNotesDialogProps["onRefreshReleaseHistory"];
   notifications: SnackbarStackProps["notifications"];
   onDismissNotification: SnackbarStackProps["onDismiss"];
 }
 
 export const AppOverlays = ({
   releaseNotesDialogInfo,
+  releaseHistory,
+  isLoadingReleaseHistory,
+  releaseHistoryError,
   onCloseReleaseNotes,
   onDownloadUpdate,
   onOpenReleasePage,
+  onSelectReleaseNotesVersion,
+  onRefreshReleaseHistory,
   notifications,
   onDismissNotification,
   ...timeEntryModalLayerProps
@@ -31,9 +41,14 @@ export const AppOverlays = ({
     {releaseNotesDialogInfo && (
       <ReleaseNotesDialog
         updateInfo={releaseNotesDialogInfo}
+        releaseHistory={releaseHistory}
+        isLoadingReleaseHistory={isLoadingReleaseHistory}
+        releaseHistoryError={releaseHistoryError}
         onClose={onCloseReleaseNotes}
         onDownload={onDownloadUpdate}
         onOpenReleasePage={onOpenReleasePage}
+        onSelectRelease={onSelectReleaseNotesVersion}
+        onRefreshReleaseHistory={onRefreshReleaseHistory}
       />
     )}
 

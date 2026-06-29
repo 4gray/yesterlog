@@ -4,6 +4,7 @@ import type {
   AddWorklogResult,
   AppAutoUpdateActionResult,
   AppAutoUpdateState,
+  AppReleaseHistoryResult,
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
@@ -68,6 +69,9 @@ const timeBroApi = {
   },
   getUpdateInfo: (): Promise<AppUpdateInfo> => {
     return ipcRenderer.invoke("app:get-update-info");
+  },
+  getReleaseHistory: (): Promise<AppReleaseHistoryResult> => {
+    return ipcRenderer.invoke("app:get-release-history");
   },
   downloadUpdate: (): Promise<AppAutoUpdateActionResult> => {
     return ipcRenderer.invoke("app:download-update");
