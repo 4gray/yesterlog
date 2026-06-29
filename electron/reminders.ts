@@ -1,5 +1,6 @@
 import { Notification } from "electron";
 import type { ReminderSchedulePayload, ReminderScheduleResult, WeekdayNumber } from "../shared/types";
+import { normalizeWorkingDays } from "../shared/weekdays";
 
 let reminderTimer: NodeJS.Timeout | undefined;
 let reminderFireAt: Date | undefined;
@@ -17,9 +18,9 @@ const toDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const isoWeekday = (date: Date): WeekdayNumber | 6 | 7 => {
+const isoWeekday = (date: Date): WeekdayNumber => {
   const day = date.getDay();
-  return (day === 0 ? 7 : day) as WeekdayNumber | 6 | 7;
+  return (day === 0 ? 7 : day) as WeekdayNumber;
 };
 
 const weekKeyForDate = (date: Date) => {
@@ -97,6 +98,7 @@ const showReminderNotification = (payload: ReminderSchedulePayload) => {
 
 const nextReminderDate = (payload: ReminderSchedulePayload, now = new Date()) => {
   const reminderMinutes = minutesFromTime(payload.settings.reminderTime);
+  const workingDays = normalizeWorkingDays(payload.settings.workingDays);
 
   for (let offset = 0; offset < 8; offset += 1) {
     const candidate = new Date(now);
@@ -108,7 +110,7 @@ const nextReminderDate = (payload: ReminderSchedulePayload, now = new Date()) =>
 
     const weekday = isoWeekday(candidate);
     const dateKey = toDateKey(candidate);
-    const isWorking = weekday <= 5 && payload.settings.workingDays.includes(weekday as WeekdayNumber);
+    const isWorking = workingDays.includes(weekday);
     const isSkipped = payload.skippedDates.includes(dateKey);
 
     if (isWorking && !isSkipped && candidate > now) {

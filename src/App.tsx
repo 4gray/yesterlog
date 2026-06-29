@@ -219,6 +219,7 @@ export const App = () => {
     issueUrlsByKey,
     issueTypesByKey,
     todayKey,
+    todaySummary,
     todayWorklogs,
     todayPersonalNotes,
     todayTrackedHours,
@@ -228,6 +229,7 @@ export const App = () => {
     weekState,
     syncResult,
     bitbucketReviewResult,
+    personalNotes,
     tickets,
     selectedTicket
   });
@@ -450,6 +452,7 @@ export const App = () => {
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
         todayTrackedHours={todayTrackedHours}
+        todayDailyTargetHours={todaySummary?.targetHours ?? 0}
         touchedNotLogged={touchedNotLogged}
         settings={settings}
         settingsDraft={settingsDraft}

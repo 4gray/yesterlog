@@ -5,6 +5,7 @@ import type {
   JiraConnectionResult,
   SyncResult
 } from "../../shared/types";
+import { normalizeWorkingDays } from "../../shared/weekdays";
 import { nativeApi } from "../api/native";
 import { getBitbucketRepositorySlugs } from "../domain/bitbucketReview";
 import { DEFAULT_SETTINGS } from "../domain/week";
@@ -43,7 +44,7 @@ const cleanSettingsDraft = (settingsDraft: AppSettings): AppSettings => ({
   bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", "),
   bitbucketReviewBucketIssueKey: settingsDraft.bitbucketReviewBucketIssueKey.trim().toUpperCase(),
   weeklyTargetHours: Math.max(Number(settingsDraft.weeklyTargetHours) || 40, 1),
-  workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : [1, 2, 3, 4, 5]
+  workingDays: normalizeWorkingDays(settingsDraft.workingDays)
 });
 
 const cleanWelcomeSettings = (settingsDraft: AppSettings, payload: WelcomeConnectPayload): AppSettings => ({
@@ -52,7 +53,7 @@ const cleanWelcomeSettings = (settingsDraft: AppSettings, payload: WelcomeConnec
   jiraBaseUrl: normalizeJiraSiteInput(payload.jiraBaseUrl),
   jiraEmail: payload.jiraEmail.trim(),
   weeklyTargetHours: settingsDraft.weeklyTargetHours || DEFAULT_SETTINGS.weeklyTargetHours,
-  workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : DEFAULT_SETTINGS.workingDays
+  workingDays: normalizeWorkingDays(settingsDraft.workingDays)
 });
 
 const cleanBitbucketSettings = (settingsDraft: AppSettings): AppSettings => ({

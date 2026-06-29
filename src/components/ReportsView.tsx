@@ -17,7 +17,9 @@ const clampPct = (value: number) => `${Math.min(Math.max(value, 0), 100)}%`;
 export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWeek }: ReportsViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
-  const dailyTarget = weekState.dailyTargetHours || 8;
+  const dailyTarget = weekState.dailyTargetHours;
+  const chartTarget = dailyTarget || 8;
+  const targetDayCount = weekState.days.length;
 
   const stats = useMemo(() => {
     const activeDays = weekState.days.filter((day) => day.trackedHours > 0);
@@ -148,7 +150,7 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
         <div className="kpi">
           <div className="kpi-label">DAYS ON TARGET</div>
           <div className="kpi-value">
-            {stats.completeDayCount} <span className="unit">/ 5</span>
+            {stats.completeDayCount} <span className="unit">/ {targetDayCount}</span>
           </div>
           <div className={`kpi-note ${stats.completeDayCount > 0 ? "is-green" : ""}`}>
             {stats.firstCompleteName ? `${stats.firstCompleteName} hit target` : "No full days yet"}
@@ -182,7 +184,7 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
             {weekState.days.map((day) => {
               const isComplete = day.targetHours > 0 && day.trackedHours >= day.targetHours;
               const isEmpty = day.trackedHours <= 0;
-              const heightPct = clampPct((day.trackedHours / dailyTarget) * 100);
+              const heightPct = clampPct((day.trackedHours / chartTarget) * 100);
               return (
                 <div className="chart-col" key={day.dateKey}>
                   <div

@@ -28,6 +28,7 @@ export interface AppMainViewProps {
   issueUrlsByKey: AppTodayRouteProps["issueUrlsByKey"];
   issueTypesByKey: AppReviewRouteProps["issueTypesByKey"];
   todayTrackedHours: AppTodayRouteProps["todayTrackedHours"];
+  todayDailyTargetHours: AppTodayRouteProps["dailyTargetHours"];
   touchedNotLogged: AppTodayRouteProps["touchedNotLogged"];
   settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
@@ -113,6 +114,7 @@ export const AppMainView = ({
   issueUrlsByKey,
   issueTypesByKey,
   todayTrackedHours,
+  todayDailyTargetHours,
   touchedNotLogged,
   settings,
   settingsDraft,
@@ -201,7 +203,7 @@ export const AppMainView = ({
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
         todayTrackedHours={todayTrackedHours}
-        dailyTargetHours={weekState.dailyTargetHours}
+        dailyTargetHours={todayDailyTargetHours}
         touchedNotLogged={touchedNotLogged}
         reminderTime={settings.reminderTime}
         remindersEnabled={settings.remindersEnabled}

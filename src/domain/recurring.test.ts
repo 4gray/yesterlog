@@ -60,6 +60,22 @@ describe("recurring domain", () => {
     expect(result.confirmedSeconds).toBe(0);
   });
 
+  it("supports weekend recurring events", () => {
+    const weekendSupport: RecurringEvent = {
+      ...standup,
+      id: "rec-weekend",
+      title: "Weekend support",
+      daysOfWeek: [6]
+    };
+
+    const result = buildDayRecurring([weekendSupport], new Map(), "2026-06-13", 6, {
+      isWorkingDay: true,
+      isPastOrToday: true
+    });
+
+    expect(result.pending.map((p) => p.eventId)).toEqual(["rec-weekend"]);
+  });
+
   it("never prompts on future days", () => {
     const result = buildDayRecurring([standup], new Map(), "2026-06-12", 5, {
       isWorkingDay: true,

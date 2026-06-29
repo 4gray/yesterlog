@@ -1,4 +1,5 @@
-import type { AppSettings, WeekState } from "../../shared/types";
+import type { AppSettings, WeekState, WeekdayNumber } from "../../shared/types";
+import { WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
 import {
   addDays,
   fromLocalDateKey,
@@ -44,6 +45,11 @@ export interface MonthWeek {
   deltaLabel: string;
 }
 
+export interface MonthDayColumn {
+  weekday: WeekdayNumber;
+  label: string;
+}
+
 export interface MonthState {
   monthKey: string;
   /** e.g. "JUNE 2026". */
@@ -58,10 +64,11 @@ export interface MonthState {
   weeksOnTarget: number;
   closedWeekCount: number;
   firstMetWeekLabel?: string;
-  /** Average total across closed, full (5-working-day) weeks. */
+  /** Average total across closed weeks that include every configured working day in the month. */
   averageFullWeekHours: number;
   fullWeekCount: number;
   gapThresholdHours: number;
+  dayColumns: MonthDayColumn[];
   weeks: MonthWeek[];
 }
 
@@ -115,10 +122,15 @@ export const buildMonthState = (
   settings: AppSettings,
   weekStates: WeekState[]
 ): MonthState => {
-  const dailyTarget = settings.weeklyTargetHours / Math.max(settings.workingDays.length, 1);
+  const configuredWorkingDays = normalizeWorkingDays(settings.workingDays);
+  const dailyTarget = settings.weeklyTargetHours / configuredWorkingDays.length;
   const gapThreshold = Math.max(1, dailyTarget - 1);
   const todayKey = toLocalDateKey(today);
   const monthStart = getMonthBounds(anchor).monthStart;
+  const dayColumns = configuredWorkingDays.map((weekday) => ({
+    weekday,
+    label: WEEKDAY_OPTIONS[weekday - 1].label
+  }));
 
   let trackedHours = 0;
   let targetHours = 0;
@@ -130,140 +142,146 @@ export const buildMonthState = (
   let fullWeekCount = 0;
   let firstMetWeekLabel: string | undefined;
 
-  const weeks: MonthWeek[] = weekStates.map((weekState) => {
-    const weekStart = fromLocalDateKey(weekState.weekKey);
-    const label = `W${getIsoWeekNumber(weekStart)}`;
+  const weeks = weekStates
+    .map((weekState): MonthWeek | undefined => {
+      const weekStart = fromLocalDateKey(weekState.weekKey);
+      const label = `W${getIsoWeekNumber(weekStart)}`;
 
-    let weekTracked = 0;
-    let weekTarget = 0;
-    let inMonthWorkingDays = 0;
-    let hasToday = false;
-    let allInMonthFuture = true;
-    const inMonthKeys: string[] = [];
+      let weekTracked = 0;
+      let weekTarget = 0;
+      let inMonthWorkingDays = 0;
+      let hasToday = false;
+      let allInMonthFuture = true;
+      const inMonthKeys: string[] = [];
 
-    const days: MonthDay[] = weekState.days.map((day) => {
-      const inMonth = isInMonth(day.dateKey, anchor);
-      const dayNumber = fromLocalDateKey(day.dateKey).getDate();
+      const days: MonthDay[] = weekState.days.map((day) => {
+        const inMonth = isInMonth(day.dateKey, anchor);
+        const dayNumber = fromLocalDateKey(day.dateKey).getDate();
 
-      if (!inMonth) {
+        if (!inMonth) {
+          return {
+            dateKey: day.dateKey,
+            dayNumber,
+            trackedHours: 0,
+            targetHours: 0,
+            status: "other",
+            fillPct: 0
+          };
+        }
+
+        inMonthKeys.push(day.dateKey);
+        const dayTarget = day.isConfiguredWorkingDay && !day.isSkipped ? dailyTarget : 0;
+        if (dayTarget > 0) {
+          inMonthWorkingDays += 1;
+          weekTarget += dayTarget;
+        }
+        weekTracked += day.trackedHours;
+
+        const isToday = day.dateKey === todayKey;
+        const isPast = day.dateKey < todayKey;
+        if (!isPast && !isToday) {
+          // still in the future
+        } else {
+          allInMonthFuture = false;
+        }
+
+        let status: MonthDayStatus;
+        if (isToday) {
+          hasToday = true;
+          allInMonthFuture = false;
+          status = "today";
+        } else if (!isPast) {
+          status = "future";
+        } else if (day.trackedHours >= dailyTarget) {
+          status = "full";
+        } else if (dayTarget > 0 && day.trackedHours < gapThreshold) {
+          status = "gap";
+        } else if (dayTarget > 0) {
+          status = "under";
+        } else {
+          // non-working past day with no target — treat as neutral/future styling
+          status = "future";
+        }
+
+        if (status === "gap") {
+          gapCount += 1;
+          hoursToFill += Math.max(dailyTarget - day.trackedHours, 0);
+        }
+
         return {
           dateKey: day.dateKey,
           dayNumber,
-          trackedHours: 0,
-          targetHours: 0,
-          status: "other",
-          fillPct: 0
+          trackedHours: day.trackedHours,
+          targetHours: dayTarget,
+          status,
+          fillPct: dailyTarget > 0 ? Math.min(100, Math.round((day.trackedHours / dailyTarget) * 100)) : 0
         };
+      });
+
+      if (inMonthKeys.length === 0) {
+        return undefined;
       }
 
-      inMonthKeys.push(day.dateKey);
-      const dayTarget = day.isConfiguredWorkingDay && !day.isSkipped ? dailyTarget : 0;
-      if (dayTarget > 0) {
-        inMonthWorkingDays += 1;
-        weekTarget += dayTarget;
-      }
-      weekTracked += day.trackedHours;
+      trackedHours += weekTracked;
+      targetHours += weekTarget;
 
-      const isToday = day.dateKey === todayKey;
-      const isPast = day.dateKey < todayKey;
-      if (!isPast && !isToday) {
-        // still in the future
+      const isPartialWeek = inMonthWorkingDays > 0 && inMonthWorkingDays < configuredWorkingDays.length;
+      const isClosed = !hasToday && !allInMonthFuture;
+
+      let status: MonthWeekStatus;
+      if (hasToday) {
+        status = "current";
+      } else if (allInMonthFuture) {
+        status = isPartialWeek ? "partial" : "future";
       } else {
-        allInMonthFuture = false;
+        status = weekTracked >= weekTarget && weekTarget > 0 ? "met" : "under";
       }
 
-      let status: MonthDayStatus;
-      if (isToday) {
-        hasToday = true;
-        allInMonthFuture = false;
-        status = "today";
-      } else if (!isPast) {
-        status = "future";
-      } else if (day.trackedHours >= dailyTarget) {
-        status = "full";
-      } else if (dayTarget > 0 && day.trackedHours < gapThreshold) {
-        status = "gap";
-      } else if (dayTarget > 0) {
-        status = "under";
-      } else {
-        // non-working past day with no target — treat as neutral/future styling
-        status = "future";
-      }
-
-      if (status === "gap") {
-        gapCount += 1;
-        hoursToFill += Math.max(dailyTarget - day.trackedHours, 0);
-      }
-
-      return {
-        dateKey: day.dateKey,
-        dayNumber,
-        trackedHours: day.trackedHours,
-        targetHours: dayTarget,
-        status,
-        fillPct: dailyTarget > 0 ? Math.min(100, Math.round((day.trackedHours / dailyTarget) * 100)) : 0
-      };
-    });
-
-    trackedHours += weekTracked;
-    targetHours += weekTarget;
-
-    const isPartialWeek = inMonthWorkingDays > 0 && inMonthWorkingDays < settings.workingDays.length;
-    const isClosed = !hasToday && !allInMonthFuture;
-
-    let status: MonthWeekStatus;
-    if (hasToday) {
-      status = "current";
-    } else if (allInMonthFuture) {
-      status = isPartialWeek ? "partial" : "future";
-    } else {
-      status = weekTracked >= weekTarget && weekTarget > 0 ? "met" : "under";
-    }
-
-    if (isClosed) {
-      closedWeekCount += 1;
-      if (status === "met") {
-        weeksOnTarget += 1;
-        if (!firstMetWeekLabel) {
-          firstMetWeekLabel = label;
+      if (isClosed) {
+        closedWeekCount += 1;
+        if (status === "met") {
+          weeksOnTarget += 1;
+          if (!firstMetWeekLabel) {
+            firstMetWeekLabel = label;
+          }
+        }
+        if (!isPartialWeek) {
+          fullWeekCount += 1;
+          fullWeekTotal += weekTracked;
         }
       }
-      if (!isPartialWeek) {
-        fullWeekCount += 1;
-        fullWeekTotal += weekTracked;
+
+      const remaining = weekTarget - weekTracked;
+      let deltaLabel: string;
+      if (status === "met") {
+        deltaLabel = "✓ met";
+      } else if (status === "current") {
+        deltaLabel = remaining > 0 ? `${formatHourValue(remaining)}h left` : "✓ met";
+      } else if (status === "under") {
+        deltaLabel = `-${formatHourValue(Math.max(remaining, 0))}h`;
+      } else if (status === "partial") {
+        deltaLabel = `${inMonthWorkingDays} day${inMonthWorkingDays === 1 ? "" : "s"}`;
+      } else {
+        deltaLabel = "upcoming";
       }
-    }
 
-    const remaining = weekTarget - weekTracked;
-    let deltaLabel: string;
-    if (status === "met") {
-      deltaLabel = "✓ met";
-    } else if (status === "current") {
-      deltaLabel = remaining > 0 ? `${formatHourValue(remaining)}h left` : "✓ met";
-    } else if (status === "under") {
-      deltaLabel = `-${formatHourValue(Math.max(remaining, 0))}h`;
-    } else if (status === "partial") {
-      deltaLabel = `${inMonthWorkingDays} day${inMonthWorkingDays === 1 ? "" : "s"}`;
-    } else {
-      deltaLabel = "upcoming";
-    }
+      const firstKey = inMonthKeys[0] ?? weekState.weekKey;
+      const lastKey = inMonthKeys[inMonthKeys.length - 1] ?? weekState.weekKey;
 
-    const firstKey = inMonthKeys[0] ?? weekState.weekKey;
-    const lastKey = inMonthKeys[inMonthKeys.length - 1] ?? weekState.weekKey;
-
-    return {
-      weekKey: weekState.weekKey,
-      label,
-      rangeLabel: formatRange(firstKey, lastKey),
-      status,
-      isCurrent: hasToday,
-      days,
-      trackedHours: weekTracked,
-      targetHours: weekTarget,
-      fillPct: weekTarget > 0 ? Math.min(100, Math.round((weekTracked / weekTarget) * 100)) : 0,
-      deltaLabel
-    };
-  });
+      return {
+        weekKey: weekState.weekKey,
+        label,
+        rangeLabel: formatRange(firstKey, lastKey),
+        status,
+        isCurrent: hasToday,
+        days,
+        trackedHours: weekTracked,
+        targetHours: weekTarget,
+        fillPct: weekTarget > 0 ? Math.min(100, Math.round((weekTracked / weekTarget) * 100)) : 0,
+        deltaLabel
+      };
+    })
+    .filter((week): week is MonthWeek => Boolean(week));
 
   const isCurrentMonth =
     today.getFullYear() === anchor.getFullYear() && today.getMonth() === anchor.getMonth();
@@ -283,6 +301,7 @@ export const buildMonthState = (
     averageFullWeekHours: fullWeekCount > 0 ? fullWeekTotal / fullWeekCount : 0,
     fullWeekCount,
     gapThresholdHours: Math.round(gapThreshold),
+    dayColumns,
     weeks
   };
 };

@@ -13,7 +13,6 @@ import {
   formatDuration,
   formatHours,
   fromLocalDateKey,
-  SHORT_WEEKDAY_LABELS,
   toLocalDateKey
 } from "../utils/date";
 import { ActiveWorkDock } from "./ActiveWorkDock";
@@ -531,7 +530,7 @@ export const WeekView = ({
         onNextWeek={onNextWeek}
       />
 
-      <div className="week-grid">
+      <div className={`week-grid ${weekState.days.length >= 6 ? "is-compact" : ""}`}>
         {weekState.days.map((day) => {
           const worklogsByKey = new Map<string, JiraWorklog[]>();
           for (const log of syncResult?.daySummaries[day.dateKey]?.worklogs ?? []) {

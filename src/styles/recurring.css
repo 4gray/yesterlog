@@ -41,6 +41,10 @@
   padding: 8px 10px;
 }
 
+.week-grid.is-compact .rec-pending {
+  padding: 8px;
+}
+
 .rec-pending-head {
   display: flex;
   align-items: center;
@@ -72,6 +76,12 @@
   margin-top: 7px;
 }
 
+.week-grid.is-compact .rec-pending-bar {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .rec-pending-meta {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -87,6 +97,10 @@
   flex: none;
 }
 
+.week-grid.is-compact .rec-pending-actions {
+  margin-left: 0;
+}
+
 .rec-icon-btn {
   width: 26px;
   height: 26px;
@@ -98,6 +112,11 @@
   background: transparent;
   color: var(--muted);
   transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.week-grid.is-compact .rec-icon-btn {
+  width: 24px;
+  height: 24px;
 }
 
 .rec-icon-btn:hover {
@@ -354,7 +373,7 @@
 
 .recurring-day-picker {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
   gap: 7px;
 }
 

@@ -154,6 +154,45 @@ describe("SettingsView", () => {
     expect(markup).toContain("Import CSV");
   });
 
+  it("renders all seven working-day toggles and protects the last selected day", () => {
+    const markup = renderSettings({
+      initialSection: "tracking",
+      draft: {
+        ...settings,
+        workingDays: [6]
+      }
+    });
+
+    for (const label of ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]) {
+      expect(markup).toContain(label);
+    }
+    expect(markup).toContain("disabled");
+    expect(markup).toContain("aria-pressed=\"true\"");
+  });
+
+  it("shows weekend days on recurring events", () => {
+    const markup = renderSettings({
+      initialSection: "recurring",
+      recurringEvents: [
+        {
+          id: "rec-weekend",
+          title: "Weekend support",
+          daysOfWeek: [6, 7],
+          localTime: "10:00",
+          durationMinutes: 60,
+          defaultNote: "Weekend coverage",
+          active: true,
+          createdAt: "2026-06-22T10:00:00.000Z",
+          updatedAt: "2026-06-22T10:00:00.000Z"
+        }
+      ]
+    });
+
+    expect(markup).toContain("Weekend support");
+    expect(markup).toContain("SAT");
+    expect(markup).toContain("SUN");
+  });
+
   it("exposes the optional Local AI subpage and frames it as not required", () => {
     const markup = renderSettings({ initialSection: "reconstruct" });
 

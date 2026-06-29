@@ -85,7 +85,7 @@ describe("add time modal state helpers", () => {
     const selectedDate = selectAddTimeDate({
       currentDate,
       requestedDate: new Date(2026, 5, 17),
-      weekState: buildWeek({ workingDays: [] })
+      weekState: buildWeek({}, ["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"])
     });
 
     expectSelectedDate(selectedDate, "2026-06-15");

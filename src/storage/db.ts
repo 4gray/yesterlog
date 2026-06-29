@@ -7,6 +7,7 @@ import type {
   SyncResult,
   WeekOverride
 } from "../../shared/types";
+import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
@@ -117,14 +118,16 @@ export const getSettings = async (): Promise<AppSettings> => {
   const { id: _id, ...settings } = stored ?? { id: SETTINGS_KEY, ...DEFAULT_SETTINGS };
   return {
     ...DEFAULT_SETTINGS,
-    ...settings
+    ...settings,
+    workingDays: normalizeWorkingDays(settings.workingDays)
   };
 };
 
 export const saveSettings = (settings: AppSettings) => {
   return writeStore("settings", {
     id: SETTINGS_KEY,
-    ...settings
+    ...settings,
+    workingDays: normalizeWorkingDays(settings.workingDays)
   });
 };
 

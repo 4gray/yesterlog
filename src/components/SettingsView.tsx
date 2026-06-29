@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import type { AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
+import { DEFAULT_WORKING_DAYS, WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
 import { probeOllama, type OllamaStatus } from "../api/ollama";
 import type { ThemeMode } from "./Sidebar";
 
@@ -111,7 +112,7 @@ const recurringMinutesLabel = (minutes: number) => {
 
 const EMPTY_RECURRING_FORM: RecurringEventDraft = {
   title: "",
-  daysOfWeek: [1, 2, 3, 4, 5],
+  daysOfWeek: [...DEFAULT_WORKING_DAYS],
   localTime: "09:15",
   durationMinutes: 15,
   defaultNote: ""
@@ -191,14 +192,6 @@ const SECTIONS: SectionMeta[] = [
     subtitle: "Check your version and look for updates.",
     icon: BadgeInfo
   }
-];
-
-const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
-  { value: 1, label: "MON" },
-  { value: 2, label: "TUE" },
-  { value: 3, label: "WED" },
-  { value: 4, label: "THU" },
-  { value: 5, label: "FRI" }
 ];
 
 const API_TOKEN_URL = "https://id.atlassian.com/manage-profile/security/api-tokens";
@@ -379,11 +372,16 @@ export const SettingsView = ({
   };
 
   const toggleWorkingDay = (day: WeekdayNumber) => {
-    const workingDays = draft.workingDays.includes(day)
-      ? draft.workingDays.filter((candidate) => candidate !== day)
-      : [...draft.workingDays, day].sort();
+    const current = normalizeWorkingDays(draft.workingDays);
+    if (current.includes(day) && current.length === 1) {
+      return;
+    }
 
-    updateField("workingDays", workingDays as WeekdayNumber[]);
+    const workingDays = current.includes(day)
+      ? current.filter((candidate) => candidate !== day)
+      : ([...current, day].sort((left, right) => left - right) as WeekdayNumber[]);
+
+    updateField("workingDays", workingDays);
   };
 
   const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -422,7 +420,7 @@ export const SettingsView = ({
     setRecurringForm((current) => {
       const daysOfWeek = current.daysOfWeek.includes(day)
         ? current.daysOfWeek.filter((value) => value !== day)
-        : ([...current.daysOfWeek, day].sort() as WeekdayNumber[]);
+        : ([...current.daysOfWeek, day].sort((left, right) => left - right) as WeekdayNumber[]);
       return { ...current, daysOfWeek };
     });
   };
@@ -852,16 +850,22 @@ export const SettingsView = ({
         <div className="field-group">
           <span>Working days</span>
           <div className="weekday-selector">
-            {WEEKDAYS.map((day) => (
-              <button
-                className={draft.workingDays.includes(day.value) ? "active" : ""}
-                key={day.value}
-                type="button"
-                onClick={() => toggleWorkingDay(day.value)}
-              >
-                {day.label}
-              </button>
-            ))}
+            {WEEKDAY_OPTIONS.map((day) => {
+              const workingDays = normalizeWorkingDays(draft.workingDays);
+              const active = workingDays.includes(day.value);
+              return (
+                <button
+                  className={active ? "active" : ""}
+                  key={day.value}
+                  type="button"
+                  aria-pressed={active}
+                  disabled={active && workingDays.length === 1}
+                  onClick={() => toggleWorkingDay(day.value)}
+                >
+                  {day.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1121,7 +1125,7 @@ export const SettingsView = ({
             <div className="recurring-field-block">
               <span className="recurring-field-label">DAYS OF WEEK</span>
               <div className="recurring-day-picker">
-                {WEEKDAYS.map((day) => (
+                {WEEKDAY_OPTIONS.map((day) => (
                   <button
                     key={day.value}
                     type="button"
@@ -1205,7 +1209,7 @@ export const SettingsView = ({
                     <span className="recurring-row-dur">{recurringMinutesLabel(event.durationMinutes)}</span>
                   </div>
                   <div className="recurring-row-days">
-                    {WEEKDAYS.map((day) => (
+                    {WEEKDAY_OPTIONS.map((day) => (
                       <span
                         key={day.value}
                         className={event.daysOfWeek.includes(day.value) ? "active" : ""}

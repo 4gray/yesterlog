@@ -94,4 +94,60 @@ describe("ReportsView", () => {
     expect(markup).toContain("Previous week");
     expect(markup).toContain("Next week");
   });
+
+  it("uses the configured day count in the days-on-target KPI", () => {
+    const threeDayState: WeekState = {
+      ...weekState,
+      weeklyTargetHours: 30,
+      trackedWeekHours: 10,
+      jiraTrackedWeekHours: 10,
+      personalNoteHours: 0,
+      remainingWeekHours: 20,
+      dailyTargetHours: 10,
+      activeWorkingDates: ["2026-06-15", "2026-06-17", "2026-06-21"],
+      days: [
+        {
+          ...weekState.days[0],
+          dateKey: "2026-06-15",
+          weekdayName: "Monday",
+          targetHours: 10,
+          trackedHours: 10,
+          issues: [],
+          personalNotes: []
+        },
+        {
+          ...weekState.days[0],
+          dateKey: "2026-06-17",
+          weekdayName: "Wednesday",
+          targetHours: 10,
+          trackedHours: 0,
+          issues: [],
+          personalNotes: []
+        },
+        {
+          ...weekState.days[0],
+          dateKey: "2026-06-21",
+          weekdayName: "Sunday",
+          targetHours: 10,
+          trackedHours: 0,
+          issues: [],
+          personalNotes: []
+        }
+      ]
+    };
+
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        weekState={threeDayState}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("/ 3");
+    expect(markup).toContain("MON");
+    expect(markup).toContain("WED");
+    expect(markup).toContain("SUN");
+  });
 });

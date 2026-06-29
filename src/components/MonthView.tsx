@@ -12,8 +12,6 @@ interface MonthViewProps {
   onNextMonth: () => void;
 }
 
-const COLUMN_LABELS = ["MON", "TUE", "WED", "THU", "FRI"];
-
 export const MonthView = ({
   monthState,
   onSelectWeek,
@@ -117,9 +115,9 @@ export const MonthView = ({
       <div className="month-colhead">
         <div className="month-colhead-spacer" />
         <div className="month-colhead-days">
-          {COLUMN_LABELS.map((label) => (
-            <span key={label} className="month-colhead-day">
-              {label}
+          {monthState.dayColumns.map((day) => (
+            <span key={day.weekday} className="month-colhead-day">
+              {day.label}
             </span>
           ))}
         </div>

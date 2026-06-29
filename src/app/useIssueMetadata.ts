@@ -22,6 +22,7 @@ export interface IssueMetadataOptions {
   weekState: WeekState;
   syncResult?: SyncResult;
   bitbucketReviewResult?: BitbucketReviewSyncResult;
+  personalNotes?: PersonalNote[];
   tickets?: TicketsResult;
   selectedTicket?: JiraTicket;
 }
@@ -49,6 +50,7 @@ export const buildIssueMetadata = ({
   weekState,
   syncResult,
   bitbucketReviewResult,
+  personalNotes = EMPTY_PERSONAL_NOTES,
   tickets,
   selectedTicket
 }: IssueMetadataOptions): IssueMetadata => {
@@ -60,11 +62,15 @@ export const buildIssueMetadata = ({
   const hoursByKey: Record<string, number> = {};
   const issueUrlsByKey: Record<string, string> = {};
   const issueTypesByKey: Record<string, JiraIssueTypeInfo> = {};
+  const visibleDayKeys = new Set(weekState.days.map((day) => day.dateKey));
 
   if (visibleSyncResult) {
-    for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
+    for (const [dateKey, bucket] of Object.entries(visibleSyncResult.daySummaries)) {
+      const shouldCountHours = visibleDayKeys.has(dateKey);
       for (const issue of bucket.issues) {
-        hoursByKey[issue.key] = (hoursByKey[issue.key] ?? 0) + issue.loggedSeconds / 3600;
+        if (shouldCountHours) {
+          hoursByKey[issue.key] = (hoursByKey[issue.key] ?? 0) + issue.loggedSeconds / 3600;
+        }
         if (issue.url) {
           issueUrlsByKey[issue.key] = issue.url;
         }
@@ -93,8 +99,10 @@ export const buildIssueMetadata = ({
   const todaySummary = weekState.days.find((day) => day.dateKey === todayKey);
   const todayBucket = visibleSyncResult?.daySummaries[todayKey];
   const todayWorklogs = todayBucket?.worklogs ?? EMPTY_WORKLOGS;
-  const todayPersonalNotes = todaySummary?.personalNotes ?? EMPTY_PERSONAL_NOTES;
-  const todayTrackedHours = todaySummary?.trackedHours ?? (todayBucket?.trackedSeconds ?? 0) / 3600;
+  const todayPersonalNotes =
+    todaySummary?.personalNotes ?? personalNotes.filter((note) => note.dateKey === todayKey);
+  const todayNoteSeconds = todayPersonalNotes.reduce((sum, note) => sum + note.timeSpentSeconds, 0);
+  const todayTrackedHours = todaySummary?.trackedHours ?? ((todayBucket?.trackedSeconds ?? 0) + todayNoteSeconds) / 3600;
   const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
   const touchedNotLogged = (tickets?.inProgress ?? EMPTY_TICKETS).filter((ticket) => !loggedKeys.has(ticket.key));
 
@@ -120,6 +128,7 @@ export const useIssueMetadata = (options: IssueMetadataOptions) =>
     [
       options.bitbucketReviewResult,
       options.currentDate,
+      options.personalNotes,
       options.selectedTicket,
       options.syncResult,
       options.tickets,

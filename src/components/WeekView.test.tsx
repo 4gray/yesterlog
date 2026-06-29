@@ -228,4 +228,37 @@ describe("WeekView", () => {
 
     expect(markup).not.toContain("Weekly Team Sync");
   });
+
+  it("renders one day column per configured working day in week state", () => {
+    const threeDayWeek: WeekState = {
+      ...weekState,
+      days: [
+        { ...weekState.days[0], dateKey: "2026-06-15", weekdayName: "Monday", issues: [], personalNotes: [] },
+        { ...weekState.days[0], dateKey: "2026-06-17", weekdayName: "Wednesday", issues: [], personalNotes: [] },
+        { ...weekState.days[0], dateKey: "2026-06-21", weekdayName: "Sunday", issues: [], personalNotes: [] }
+      ]
+    };
+
+    const markup = renderToStaticMarkup(
+      <WeekView
+        weekState={threeDayWeek}
+        syncResult={undefined}
+        isSyncing={false}
+        isConfigured={true}
+        onSync={() => undefined}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+        onAddTime={() => undefined}
+        onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
+        onToggleSkipped={() => undefined}
+      />
+    );
+
+    expect(markup.match(/data-drop-day=/g)).toHaveLength(3);
+    expect(markup).toContain("MON");
+    expect(markup).toContain("WED");
+    expect(markup).toContain("SUN");
+  });
 });

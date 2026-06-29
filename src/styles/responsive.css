@@ -220,6 +220,72 @@
     margin: 0;
   }
 
+  .week-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 14px 18px;
+    overflow: hidden;
+  }
+
+  .week-headline {
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .ring {
+    width: 68px;
+    height: 68px;
+  }
+
+  .week-meta {
+    min-width: 0;
+    padding-bottom: 0;
+  }
+
+  .week-headline .big-figure {
+    font-size: 48px;
+  }
+
+  .week-headline .big-figure .unit {
+    font-size: 22px;
+  }
+
+  .week-figure-sub,
+  .meter-text {
+    font-size: 11px;
+  }
+
+  .week-actions {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .sync-button,
+  .add-time-button {
+    flex: 1 1 132px;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .week-divider {
+    display: none;
+  }
+
+  .week-nav {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .pill {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+
   .settings-header {
     flex-direction: column;
     align-items: flex-start;
@@ -397,4 +463,3 @@
     grid-row: 1;
   }
 }
-

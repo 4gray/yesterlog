@@ -1,4 +1,4 @@
-export type WeekdayNumber = 1 | 2 | 3 | 4 | 5;
+export type WeekdayNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface AppSettings {
   jiraBaseUrl: string;
@@ -265,7 +265,7 @@ export interface PersonalNote {
 export interface RecurringEvent {
   id: string;
   title: string;
-  /** ISO weekdays the event recurs on (1 = Monday … 5 = Friday). */
+  /** ISO weekdays the event recurs on (1 = Monday … 7 = Sunday). */
   daysOfWeek: WeekdayNumber[];
   /** Local clock time the event happens at, "HH:MM". */
   localTime: string;

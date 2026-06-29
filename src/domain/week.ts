@@ -8,6 +8,7 @@ import type {
   WeekState,
   WeekdayNumber
 } from "../../shared/types";
+import { DEFAULT_WORKING_DAYS, normalizeWorkingDays } from "../../shared/weekdays";
 import {
   addDays,
   formatShortDate,
@@ -29,7 +30,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   bitbucketRepositories: "",
   bitbucketReviewBucketIssueKey: "",
   weeklyTargetHours: 40,
-  workingDays: [1, 2, 3, 4, 5],
+  workingDays: [...DEFAULT_WORKING_DAYS],
   reminderTime: "16:30",
   remindersEnabled: true,
   aiEnabled: false,
@@ -66,7 +67,8 @@ export const buildWeekState = (
   const occurrencesByKey = indexOccurrences(recurringOccurrences);
   const skippedDates = override.weekKey === weekKey ? override.skippedDates : [];
   const effectiveSyncResult = syncResult?.weekKey === weekKey ? syncResult : undefined;
-  const workDates = Array.from({ length: 5 }, (_value, index) => addDays(weekStart, index));
+  const configuredWorkingDays = normalizeWorkingDays(settings.workingDays);
+  const workDates = configuredWorkingDays.map((weekday) => addDays(weekStart, weekday - 1));
   const notesByDate = personalNotes.reduce<Record<string, PersonalNote[]>>((notes, note) => {
     if (!notes[note.dateKey]) {
       notes[note.dateKey] = [];
@@ -74,22 +76,22 @@ export const buildWeekState = (
     notes[note.dateKey].push(note);
     return notes;
   }, {});
-  const configuredWorkingDayCount = Math.max(settings.workingDays.length, 1);
+  const configuredWorkingDayCount = configuredWorkingDays.length;
   const dailyTargetHours = settings.weeklyTargetHours / configuredWorkingDayCount;
   const activeWorkingDates = workDates
     .filter((date) => {
       const weekday = isoWeekday(date) as WeekdayNumber;
-      return settings.workingDays.includes(weekday) && !skippedDates.includes(toLocalDateKey(date));
+      return configuredWorkingDays.includes(weekday) && !skippedDates.includes(toLocalDateKey(date));
     })
     .map(toLocalDateKey);
   const weeklyTargetHours = dailyTargetHours * activeWorkingDates.length;
 
   let recurringConfirmedSeconds = 0;
 
-  const days = workDates.map((date, index) => {
+  const days = workDates.map((date) => {
     const dateKey = toLocalDateKey(date);
     const weekday = isoWeekday(date) as WeekdayNumber;
-    const isConfiguredWorkingDay = settings.workingDays.includes(weekday);
+    const isConfiguredWorkingDay = configuredWorkingDays.includes(weekday);
     const isSkipped = skippedDates.includes(dateKey);
     const targetHours = isConfiguredWorkingDay && !isSkipped ? dailyTargetHours : 0;
     const bucket = effectiveSyncResult?.daySummaries[dateKey];
@@ -107,7 +109,7 @@ export const buildWeekState = (
     return {
       dateKey,
       dateLabel: formatShortDate(date),
-      weekdayName: WEEKDAY_LABELS[index],
+      weekdayName: WEEKDAY_LABELS[weekday - 1],
       isToday: dateKey === todayKey,
       isConfiguredWorkingDay,
       isSkipped,
@@ -121,10 +123,14 @@ export const buildWeekState = (
     };
   });
 
-  const jiraTrackedWeekHours = (effectiveSyncResult?.trackedSeconds ?? 0) / 3600;
-  const personalNoteHours = personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
+  const jiraTrackedWeekHours =
+    days.reduce((sum, day) => sum + (effectiveSyncResult?.daySummaries[day.dateKey]?.trackedSeconds ?? 0), 0) / 3600;
+  const personalNoteHours = days.reduce(
+    (sum, day) => sum + day.personalNotes.reduce((daySum, note) => daySum + note.timeSpentSeconds / 3600, 0),
+    0
+  );
   const recurringTrackedHours = recurringConfirmedSeconds / 3600;
-  const trackedWeekHours = jiraTrackedWeekHours + personalNoteHours + recurringTrackedHours;
+  const trackedWeekHours = days.reduce((sum, day) => sum + day.trackedHours, 0);
 
   return {
     weekKey,

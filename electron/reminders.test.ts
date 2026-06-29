@@ -168,4 +168,22 @@ describe("reminder scheduling", () => {
     });
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("schedules reminders on configured weekend working days", () => {
+    vi.setSystemTime(new Date(2026, 5, 27, 16, 0));
+    const fireAt = new Date(2026, 5, 27, 16, 30).toISOString();
+
+    expect(
+      scheduleReminder(
+        makePayload({
+          settings: { workingDays: [6, 7] },
+          todayDateKey: "2026-06-27"
+        })
+      )
+    ).toEqual({
+      scheduled: true,
+      fireAt,
+      reason: "scheduled"
+    });
+  });
 });

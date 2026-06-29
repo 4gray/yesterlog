@@ -176,8 +176,16 @@ export const AddTimeModal = ({
   const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
-  const preferredDateKey = chooseWorkingDateKey(toLocalDateKey(initialStart), dateOptions);
-  const dateOptionsKey = dateOptions.join("|");
+  const initialDateKey = toLocalDateKey(initialStart);
+  const shouldPreserveInitialDate = isEditingWorklog || isEditingPersonalNote;
+  const selectableDateOptions =
+    shouldPreserveInitialDate && !dateOptions.includes(initialDateKey)
+      ? [...dateOptions, initialDateKey].sort()
+      : dateOptions;
+  const preferredDateKey = shouldPreserveInitialDate
+    ? initialDateKey
+    : chooseWorkingDateKey(initialDateKey, selectableDateOptions);
+  const dateOptionsKey = selectableDateOptions.join("|");
   const [mode, setMode] = useState<"ticket" | "note" | "recurring">(isEditingPersonalNote ? "note" : "ticket");
   const [recSelectedId, setRecSelectedId] = useState<string | undefined>();
   const [recMinutes, setRecMinutes] = useState(15);
@@ -218,7 +226,7 @@ export const AddTimeModal = ({
         }
       : undefined);
   const selectedDate = fromLocalDateKey(dateStr);
-  const hasWorkingDate = dateOptions.includes(dateStr);
+  const hasWorkingDate = selectableDateOptions.includes(dateStr);
   const recurringTabEnabled = Boolean(getRecurringCandidates && onLogRecurring && !isEditing);
   const isRecurringView = mode === "recurring" && !isEditing;
   const isTicketView = (mode === "ticket" && !isEditingPersonalNote) || isEditingWorklog;
@@ -338,7 +346,8 @@ export const AddTimeModal = ({
     setTicketDurationMode(hasPreset ? "preset" : "custom");
     setTicketCustomAmount(customHoursAmount(seconds));
     setTicketCustomUnit("h");
-    setDateStr(chooseWorkingDateKey(toLocalDateKey(start), dateOptions));
+    const startDateKey = toLocalDateKey(start);
+    setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
     setNote(editingWorklog?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
@@ -531,7 +540,7 @@ export const AddTimeModal = ({
                 <div className="modal-col">
                   <div className="modal-label">STARTED</div>
                   <div className="modal-started">
-                    <DaySelector dateOptions={dateOptions} value={dateStr} onChange={setDateStr} />
+                    <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
                     <label className="input-chip">
                       <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
                       <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />
@@ -581,7 +590,7 @@ export const AddTimeModal = ({
                   <Calendar size={13} strokeWidth={1.8} />
                   DAY
                 </div>
-                <DaySelector dateOptions={dateOptions} value={dateStr} onChange={setDateStr} />
+                <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
                 <label className="input-chip personal-time-chip">
                   <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
                   <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />

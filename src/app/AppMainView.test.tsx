@@ -93,6 +93,7 @@ const baseProps = (): AppMainViewProps => ({
   issueUrlsByKey: {},
   issueTypesByKey: {},
   todayTrackedHours: 0,
+  todayDailyTargetHours: 8,
   touchedNotLogged: [],
   settings,
   settingsDraft: settings,

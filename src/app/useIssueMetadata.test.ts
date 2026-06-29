@@ -207,10 +207,17 @@ describe("issue metadata", () => {
       url: "https://jira.example/browse/TB-1-selected",
       issueType: issueType("Sub-task")
     });
+    const visibleWeekState = buildWeekState({
+      activeWorkingDates: ["2026-06-16", "2026-06-17"],
+      days: [
+        buildDay({ dateKey: "2026-06-16", weekdayName: "Tue", isToday: false }),
+        buildDay({ dateKey: "2026-06-17", weekdayName: "Wed", isToday: true })
+      ]
+    });
 
     const metadata = buildIssueMetadata({
       currentDate: new Date("2026-06-17T12:00:00.000Z"),
-      weekState: buildWeekState(),
+      weekState: visibleWeekState,
       syncResult,
       tickets,
       selectedTicket
@@ -229,6 +236,49 @@ describe("issue metadata", () => {
       "TB-1": issueType("Sub-task"),
       "TB-2": issueType("Bug"),
       "TB-3": issueType("Spike")
+    });
+  });
+
+  it("scopes issue hour badges to visible week days while preserving synced metadata", () => {
+    const syncResult = buildSyncResult({
+      daySummaries: {
+        "2026-06-16": buildBucket({
+          issues: [
+            buildIssue("TB-1", {
+              loggedSeconds: 7200,
+              url: "https://jira.example/browse/TB-1-hidden",
+              issueType: issueType("Bug")
+            })
+          ]
+        }),
+        "2026-06-17": buildBucket({
+          issues: [
+            buildIssue("TB-2", {
+              loggedSeconds: 3600,
+              url: "https://jira.example/browse/TB-2-visible",
+              issueType: issueType("Story")
+            })
+          ]
+        })
+      }
+    });
+
+    const metadata = buildIssueMetadata({
+      currentDate: new Date("2026-06-17T12:00:00.000Z"),
+      weekState: buildWeekState({ days: [buildDay({ dateKey: "2026-06-17" })] }),
+      syncResult
+    });
+
+    expect(metadata.hoursByKey).toEqual({
+      "TB-2": 1
+    });
+    expect(metadata.issueUrlsByKey).toEqual({
+      "TB-1": "https://jira.example/browse/TB-1-hidden",
+      "TB-2": "https://jira.example/browse/TB-2-visible"
+    });
+    expect(metadata.issueTypesByKey).toEqual({
+      "TB-1": issueType("Bug"),
+      "TB-2": issueType("Story")
     });
   });
 
@@ -283,5 +333,28 @@ describe("issue metadata", () => {
     expect(metadata.todayTrackedHours).toBe(1.5);
     expect(metadata.todayWorklogs).toEqual([]);
     expect(metadata.todayPersonalNotes).toEqual([]);
+  });
+
+  it("includes local notes when today is not a configured week column", () => {
+    const todayBucket = buildBucket({ trackedSeconds: 5400 });
+    const hiddenTodayNote = buildNote("hidden-today-note", {
+      dateKey: "2026-06-20",
+      timeSpentSeconds: 30 * 60
+    });
+
+    const metadata = buildIssueMetadata({
+      currentDate: new Date("2026-06-20T12:00:00.000Z"),
+      weekState: buildWeekState({ days: [buildDay({ dateKey: "2026-06-17" })] }),
+      syncResult: buildSyncResult({
+        daySummaries: {
+          "2026-06-20": todayBucket
+        }
+      }),
+      personalNotes: [hiddenTodayNote]
+    });
+
+    expect(metadata.todaySummary).toBeUndefined();
+    expect(metadata.todayPersonalNotes).toEqual([hiddenTodayNote]);
+    expect(metadata.todayTrackedHours).toBe(2);
   });
 });

@@ -167,6 +167,25 @@ describe("useSettingsActions", () => {
     expect(showSuccess).toHaveBeenCalledWith("Settings saved locally.");
   });
 
+  it("preserves configured weekend working days when saving settings", async () => {
+    renderHarness({
+      settingsDraft: {
+        ...settings,
+        workingDays: [7, 6, 6, 1]
+      }
+    });
+
+    await act(async () => {
+      await getApi().handleSaveSettings();
+    });
+
+    expect(saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workingDays: [1, 6, 7]
+      })
+    );
+  });
+
   it("updates demo settings without writing to storage", async () => {
     renderHarness({ settingsDraft: messySettings, isDemo: true });
 

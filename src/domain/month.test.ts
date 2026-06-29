@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SyncResult, WeekState } from "../../shared/types";
+import type { AppSettings, SyncResult, WeekState } from "../../shared/types";
 import { buildWeekState, DEFAULT_SETTINGS } from "./week";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts } from "./month";
 import { toLocalDateKey } from "../utils/date";
@@ -28,8 +28,13 @@ const trackedSyncResult = (weekKey: string, hoursByDate: Record<string, number>)
   };
 };
 
-const buildWeek = (weekStart: Date, today: Date, sync?: SyncResult): WeekState =>
-  buildWeekState(weekStart, DEFAULT_SETTINGS, { weekKey: toLocalDateKey(weekStart), skippedDates: [] }, sync, [], today);
+const buildWeek = (
+  weekStart: Date,
+  today: Date,
+  sync?: SyncResult,
+  settings = DEFAULT_SETTINGS
+): WeekState =>
+  buildWeekState(weekStart, settings, { weekKey: toLocalDateKey(weekStart), skippedDates: [] }, sync, [], today);
 
 describe("month calculations", () => {
   it("enumerates every Monday-week overlapping the month", () => {
@@ -88,5 +93,56 @@ describe("month calculations", () => {
 
     const todayCell = w25.days.find((day) => day.dateKey === "2026-06-17");
     expect(todayCell?.status).toBe("today");
+  });
+
+  it("uses configured working days for month columns and targets", () => {
+    const today = new Date(2026, 5, 17, 9);
+    const anchor = getMonthAnchor(today);
+    const starts = getMonthWeekStarts(anchor);
+    const settings: AppSettings = {
+      ...DEFAULT_SETTINGS,
+      weeklyTargetHours: 21,
+      workingDays: [1, 3, 7]
+    };
+
+    const weekStates = starts.map((start) => buildWeek(start, today, undefined, settings));
+    const month = buildMonthState(anchor, today, settings, weekStates);
+
+    expect(month.dayColumns.map((column) => column.label)).toEqual(["MON", "WED", "SUN"]);
+    expect(month.weeks.every((week) => week.days.length === 3)).toBe(true);
+    expect(month.targetHours).toBe(91); // 13 selected working days in June 2026 * 7h.
+
+    const finalWeek = month.weeks[4];
+    expect(finalWeek.days.map((day) => day.status)).toEqual(["future", "other", "other"]);
+  });
+
+  it("drops month rows whose configured days all fall outside the month", () => {
+    const today = new Date(2026, 4, 15, 9);
+    const anchor = getMonthAnchor(today);
+    const starts = getMonthWeekStarts(anchor);
+    const settings: AppSettings = {
+      ...DEFAULT_SETTINGS,
+      weeklyTargetHours: 8,
+      workingDays: [3]
+    };
+
+    const weekStates = starts.map((start) => buildWeek(start, today, undefined, settings));
+    const month = buildMonthState(anchor, today, settings, weekStates);
+
+    expect(starts.map(toLocalDateKey)).toEqual([
+      "2026-04-27",
+      "2026-05-04",
+      "2026-05-11",
+      "2026-05-18",
+      "2026-05-25"
+    ]);
+    expect(month.weeks.map((week) => week.weekKey)).toEqual([
+      "2026-05-04",
+      "2026-05-11",
+      "2026-05-18",
+      "2026-05-25"
+    ]);
+    expect(month.weeks.every((week) => week.days.length === 1)).toBe(true);
+    expect(month.targetHours).toBe(32);
   });
 });
