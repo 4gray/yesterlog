@@ -6,6 +6,33 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "http-server", "docs", "-p", "4399", "-c-1"],
       "port": 4399
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:renderer"],
+      "port": 5173
+    },
+    {
+      "name": "rings-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5191", "--strictPort"],
+      "port": 5191,
+      "autoPort": false
+    },
+    {
+      "name": "vacation-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5197", "--strictPort"],
+      "port": 5197,
+      "autoPort": false
+    },
+    {
+      "name": "cursor-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5193", "--strictPort"],
+      "port": 5193,
+      "autoPort": false
     }
   ]
 }
