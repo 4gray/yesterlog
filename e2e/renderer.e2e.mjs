@@ -252,7 +252,7 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
   await withDemoPage({ view: "week" }, async (page) => {
     await page.getByRole("button", { name: /Log time for Wednesday/i }).click();
     await page.getByRole("dialog", { name: "Log time" }).waitFor();
-    await page.getByRole("button", { name: "Personal note" }).click();
+    await page.getByRole("button", { name: "Personal note", exact: true }).click();
 
     await page.getByLabel("Personal note title").fill("E2E planning");
     await page.locator(".personal-note-form textarea.note-textarea").fill("Created before the App refactor.");
@@ -262,7 +262,10 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
     await page.getByText("E2E planning").waitFor();
     assert.ok(await page.getByText("Created before the App refactor.").isVisible());
 
-    await page.getByRole("button", { name: "Edit personal note" }).click();
+    await page
+      .locator(".day-note-row", { hasText: "E2E planning" })
+      .getByRole("button", { name: "Edit personal note" })
+      .click();
     await page.getByRole("dialog", { name: "Edit personal note" }).waitFor();
     await page.getByLabel("Personal note title").fill("E2E planning updated");
     await page.locator(".personal-note-form textarea.note-textarea").fill("Updated safely through the modal.");
@@ -272,7 +275,10 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
     await page.getByText("E2E planning updated").waitFor();
     assert.equal(await page.getByText("Created before the App refactor.").count(), 0);
 
-    await page.getByRole("button", { name: "Edit personal note" }).click();
+    await page
+      .locator(".day-note-row", { hasText: "E2E planning updated" })
+      .getByRole("button", { name: "Edit personal note" })
+      .click();
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Delete" }).click();
     await page.getByRole("dialog", { name: "Edit personal note" }).waitFor({ state: "detached" });
@@ -283,7 +289,7 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
 
 test("today composer saves a local note without Jira access", { timeout: 60_000 }, async () => {
   await withDemoPage({ view: "today" }, async (page) => {
-    await page.getByRole("button", { name: "Personal note" }).click();
+    await page.getByRole("button", { name: "Personal note", exact: true }).click();
     await page.getByLabel("Duration").fill("45m");
     await page.getByLabel("Personal note title").fill("Today E2E note");
     await page.locator(".composer textarea.note-textarea").fill("Local composer entry for refactor coverage.");
@@ -291,7 +297,9 @@ test("today composer saves a local note without Jira access", { timeout: 60_000 
 
     await page.getByText("Today E2E note").waitFor();
     assert.ok(await page.getByText("Local composer entry for refactor coverage.").isVisible());
-    await page.getByRole("button", { name: "Edit personal note" }).click();
+    const todayNoteRow = page.locator(".entry-local", { hasText: "Today E2E note" });
+    await todayNoteRow.hover();
+    await todayNoteRow.getByRole("button", { name: "Edit personal note" }).click();
     await page.getByRole("dialog", { name: "Edit personal note" }).waitFor();
     await page.getByRole("button", { name: "CANCEL" }).click();
   });

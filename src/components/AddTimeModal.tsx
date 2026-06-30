@@ -363,7 +363,12 @@ export const AddTimeModal = ({
     setPersonalDurationMode(hasPersonalPreset ? "preset" : "custom");
     setPersonalCustomAmount(customHoursAmount(localNoteSeconds));
     setPersonalCustomUnit("h");
-  }, [date, dateOptionsKey, editingPersonalNote?.id, editingWorklog?.id, ticketOptions]);
+    // Re-init only when the edit target or working day actually changes — keying on
+    // the date string (not the live-clock Date object) and dropping the ticketOptions
+    // reference avoids clobbering an in-progress edit on every parent re-render. The
+    // default ticket is set by the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toLocalDateKey(date), dateOptionsKey, editingPersonalNote?.id, editingWorklog?.id]);
 
   useEffect(() => {
     if (!isEditing && !activeKey && ticketOptions[0]) {
