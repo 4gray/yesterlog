@@ -92,16 +92,23 @@
   color: var(--green);
 }
 
-.reports-body {
-  flex: 1;
+.reports-main {
   display: flex;
+  align-items: flex-start;
   min-height: 320px;
 }
 
-.chart-panel {
+.reports-charts {
   flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chart-panel {
+  flex: none;
   padding: 26px 36px;
-  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
 }
@@ -124,13 +131,12 @@
 }
 
 .chart {
-  flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 26px;
   padding: 26px 4px 0;
   position: relative;
-  min-height: 200px;
+  height: 300px;
 }
 
 .chart-target-line {
@@ -148,7 +154,15 @@
   align-items: center;
   gap: 11px;
   height: 100%;
-  justify-content: flex-end;
+}
+
+.chart-bar-track {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .chart-bar {
@@ -190,6 +204,7 @@
 .ticket-panel {
   flex: 1;
   padding: 26px 36px;
+  border-left: 1px solid var(--line);
   display: flex;
   flex-direction: column;
 }
@@ -294,5 +309,316 @@
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--dim-2);
+}
+
+/* --- KPI week-over-week delta chips --- */
+.kpi-delta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi-delta-arrow {
+  font-size: 8px;
+  line-height: 1;
+}
+
+.kpi-delta.is-up {
+  color: var(--green);
+}
+
+.kpi-delta.is-down {
+  color: var(--amber);
+}
+
+.kpi-delta.is-flat {
+  color: var(--dim);
+}
+
+/* --- Trend + composition strips --- */
+.reports-trends.is-baseline {
+  padding: 26px 36px;
+}
+
+.trend-panel {
+  padding: 26px 36px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.comp-panel {
+  padding: 26px 36px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.trend-chart {
+  position: relative;
+  margin-top: 22px;
+}
+
+.trend-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.trend-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.trend-target {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.trend-dot {
+  stroke: var(--bg-card);
+  stroke-width: 2;
+}
+
+.trend-dot.is-on {
+  fill: var(--green);
+}
+
+.trend-dot.is-under {
+  fill: var(--amber);
+}
+
+.trend-dot.is-current {
+  stroke: var(--bg);
+  stroke-width: 3;
+}
+
+.trend-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.trend-guide {
+  stroke: var(--dim);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.trend-dot.is-hover {
+  stroke: var(--bg);
+  stroke-width: 3;
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, calc(-100% - 12px));
+  min-width: 150px;
+  padding: 9px 11px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.chart-tip-title {
+  color: var(--text-bright);
+  margin-bottom: 7px;
+}
+
+.chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  line-height: 1.9;
+}
+
+.chart-tip-row b {
+  font-weight: 500;
+  color: var(--text-bright);
+}
+
+.tip-label {
+  flex: 1;
+  color: var(--muted);
+  padding-right: 14px;
+}
+
+.tip-pct {
+  width: 34px;
+  text-align: right;
+  color: var(--dim);
+}
+
+.tip-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
+}
+
+.tip-swatch.is-tracked {
+  background: var(--blue);
+}
+
+.tip-swatch.is-target {
+  background: var(--border-strong);
+}
+
+.chart-tip-foot {
+  margin-top: 7px;
+  font-size: 10px;
+}
+
+.chart-tip-foot.is-on {
+  color: var(--green);
+}
+
+.chart-tip-foot.is-under {
+  color: var(--amber);
+}
+
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--dim-2);
+}
+
+.trend-axis .is-current {
+  color: var(--blue);
+}
+
+.comp-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.comp-toggle button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.comp-toggle button:hover {
+  color: var(--muted);
+}
+
+.comp-toggle button.is-active {
+  color: var(--text-bright);
+  border-color: var(--border-strong);
+  background: var(--bg-active);
+}
+
+.comp-chart {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+  min-height: 150px;
+}
+
+.comp-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.comp-bar {
+  width: 100%;
+  max-width: 26px;
+  height: 150px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+
+.comp-bar > span {
+  display: block;
+  width: 100%;
+}
+
+.comp-col.is-current .comp-bar,
+.comp-col.is-hover .comp-bar {
+  outline: 1.5px solid var(--blue-soft);
+  outline-offset: 1px;
+}
+
+.seg-ticket {
+  background: var(--blue);
+}
+
+.seg-meeting {
+  background: var(--amber);
+}
+
+.seg-fire {
+  background: var(--teal);
+}
+
+.comp-day {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--dim-2);
+}
+
+.comp-col.is-current .comp-day {
+  color: var(--blue);
+}
+
+.comp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.comp-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comp-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
 }
 

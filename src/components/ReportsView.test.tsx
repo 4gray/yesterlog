@@ -151,3 +151,71 @@ describe("ReportsView", () => {
     expect(markup).toContain("SUN");
   });
 });
+
+const trendWeek = (weekKey: string, overrides: Partial<WeekState>): WeekState => ({
+  ...weekState,
+  weekKey,
+  weekStartISO: `${weekKey}T00:00:00.000Z`,
+  weekEndExclusiveISO: `${weekKey}T00:00:00.000Z`,
+  weekRangeLabel: weekKey,
+  ...overrides
+});
+
+const populatedWeek = (weekKey: string, jira: number): WeekState =>
+  trendWeek(weekKey, {
+    jiraTrackedWeekHours: jira,
+    recurringTrackedHours: 4,
+    personalNoteHours: 2,
+    trackedWeekHours: jira + 6
+  });
+
+const emptyWeek = (weekKey: string): WeekState =>
+  trendWeek(weekKey, {
+    jiraTrackedWeekHours: 0,
+    recurringTrackedHours: 0,
+    personalNoteHours: 0,
+    trackedWeekHours: 0
+  });
+
+const renderReports = (current: WeekState, weekStates?: WeekState[]) =>
+  renderToStaticMarkup(
+    <ReportsView
+      weekState={current}
+      weekStates={weekStates}
+      onPreviousWeek={() => undefined}
+      onCurrentWeek={() => undefined}
+      onNextWeek={() => undefined}
+    />
+  );
+
+describe("ReportsView trend increment", () => {
+  it("renders trend, composition and delta chips once a baseline exists", () => {
+    const weeks = [populatedWeek("2026-06-01", 22), populatedWeek("2026-06-08", 18), populatedWeek("2026-06-15", 24)];
+    const markup = renderReports(weeks[2], weeks);
+
+    expect(markup).toContain("trend-svg");
+    expect(markup).toContain("trend-line");
+    expect(markup.match(/class="comp-bar"/g) ?? []).toHaveLength(3);
+    expect(markup).toContain("kpi-delta");
+    expect(markup).not.toContain("is-baseline");
+    // hours mode is active by default
+    expect(markup).toContain('class="is-active">HOURS');
+    expect(markup).toContain(">SHARE<");
+  });
+
+  it("shows a building-baseline note below the threshold", () => {
+    const weeks = [emptyWeek("2026-06-01"), emptyWeek("2026-06-08"), populatedWeek("2026-06-15", 24)];
+    const markup = renderReports(weeks[2], weeks);
+
+    expect(markup).toContain("reports-trends is-baseline");
+    expect(markup).toContain("Building baseline");
+    expect(markup).not.toContain("trend-svg");
+  });
+
+  it("omits trend sections and delta chips when no history is supplied", () => {
+    const markup = renderReports(populatedWeek("2026-06-15", 24));
+
+    expect(markup).not.toContain("reports-trends");
+    expect(markup).not.toContain("kpi-delta");
+  });
+});

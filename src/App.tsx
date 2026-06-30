@@ -26,6 +26,7 @@ import { useMonthState } from "./app/useMonthState";
 import { usePersonalNotes } from "./app/usePersonalNotes";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
+import { useReportsHistory } from "./app/useReportsHistory";
 import { useSettingsActions } from "./app/useSettingsActions";
 import { useSidebarState } from "./app/useSidebarState";
 import { useSnackbars } from "./app/useSnackbars";
@@ -175,6 +176,20 @@ export const App = () => {
     isMonthView: view === "month",
     isBooting,
     monthAnchor,
+    currentDate,
+    settings,
+    visibleWeekState: weekState,
+    recurringEvents,
+    recurringOccurrences,
+    demoWeekStart: demoScenario?.weekStart,
+    demoWeekOverride: demoScenario?.weekOverride,
+    demoSyncResult: demoScenario?.syncResult,
+    onError: showError
+  });
+
+  const reportsWeekStates = useReportsHistory({
+    isReportsView: view === "reports",
+    isBooting,
     currentDate,
     settings,
     visibleWeekState: weekState,
@@ -492,6 +507,7 @@ export const App = () => {
         settingsDraft={settingsDraft}
         isSettingsDirty={isSettingsDirty}
         weekState={weekState}
+        reportsWeekStates={reportsWeekStates}
         personalNotes={personalNotes}
         syncResult={syncResult}
         monthState={monthState}

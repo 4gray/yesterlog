@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import type { WeekState } from "../../shared/types";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView } from "../components/Sidebar";
 import { TicketDetailsProvider, type OpenTicketDetails } from "../components/TicketDetailsContext";
@@ -36,6 +37,7 @@ export interface AppMainViewProps {
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   isSettingsDirty: boolean;
   weekState: AppWeekRouteProps["weekState"];
+  reportsWeekStates?: WeekState[];
   personalNotes: AppReconRouteProps["personalNotes"];
   syncResult: AppWeekRouteProps["syncResult"];
   monthState: AppMonthRouteProps["monthState"];
@@ -125,6 +127,7 @@ export const AppMainView = ({
   settingsDraft,
   isSettingsDirty,
   weekState,
+  reportsWeekStates,
   personalNotes,
   syncResult,
   monthState,
@@ -319,6 +322,7 @@ export const AppMainView = ({
     content = (
       <AppReportsRoute
         weekState={weekState}
+        weekStates={reportsWeekStates}
         goToPreviousWeek={goToPreviousWeek}
         goToCurrentWeek={goToCurrentWeek}
         goToNextWeek={goToNextWeek}
