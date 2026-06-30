@@ -19,6 +19,7 @@ import type {
   OllamaGenerateResult,
   OllamaListModelsRequest,
   OllamaListModelsResult,
+  OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -91,6 +92,9 @@ const timeBroApi = {
   },
   openReleasePage: (url?: string): Promise<OpenReleasePageResult> => {
     return ipcRenderer.invoke("app:open-release-page", url);
+  },
+  openCursorPrompt: (url: string): Promise<OpenCursorPromptResult> => {
+    return ipcRenderer.invoke("app:open-cursor-prompt", url);
   }
 };
 

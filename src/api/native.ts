@@ -18,6 +18,7 @@ import type {
   OllamaGenerateResult,
   OllamaListModelsRequest,
   OllamaListModelsResult,
+  OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -307,5 +308,18 @@ export const nativeApi = {
     }
 
     return bridge.openReleasePage(releaseUrl);
+  },
+
+  openCursorPrompt(url: string): Promise<OpenCursorPromptResult> {
+    const bridge = getNativeBridgeWithMethod("openCursorPrompt");
+
+    if (!bridge) {
+      return Promise.resolve({
+        ok: false,
+        error: "Open the TimeBro desktop app to launch Cursor."
+      });
+    }
+
+    return bridge.openCursorPrompt(url);
   }
 };

@@ -20,6 +20,7 @@ import type {
   OllamaGenerateResult,
   OllamaListModelsRequest,
   OllamaListModelsResult,
+  OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -53,6 +54,7 @@ interface TimeBroNativeApi {
   installUpdate: () => Promise<AppAutoUpdateActionResult>;
   onAutoUpdateState?: (callback: (state: AppAutoUpdateState) => void) => () => void;
   openReleasePage: (url?: string) => Promise<OpenReleasePageResult>;
+  openCursorPrompt?: (url: string) => Promise<OpenCursorPromptResult>;
 }
 
 interface ImportMetaEnv {

@@ -473,7 +473,8 @@ export const App = () => {
                   weekWorklogCount: ticketDetails.weekWorklogCount,
                   weekRangeLabel: weekState.weekRangeLabel,
                   isLoading: ticketDetails.isLoading,
-                  error: ticketDetails.error
+                  error: ticketDetails.error,
+                  onOpenInCursor: ticketDetails.openInCursor
                 }
               : undefined
           }

@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { ExternalLink, Loader2, X } from "lucide-react";
-import type { JiraIssueDetails } from "../../shared/types";
+import type { JiraIssueDetails, OpenCursorPromptResult } from "../../shared/types";
 import { formatClock, formatShortDate } from "../utils/date";
 import { AdfRenderer } from "./AdfRenderer";
+import { CursorGlyph } from "./CursorGlyph";
 import { EpicPill } from "./EpicPill";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketStatusBadge } from "./TicketStatusBadge";
@@ -16,6 +18,8 @@ export interface TicketDetailsDialogProps {
   isLoading: boolean;
   error?: string;
   onClose: () => void;
+  /** Opens Cursor with the ticket title + description prefilled as a chat prompt. */
+  onOpenInCursor?: () => Promise<OpenCursorPromptResult>;
 }
 
 const formatCount = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`;
@@ -38,12 +42,43 @@ export const TicketDetailsDialog = ({
   weekRangeLabel,
   isLoading,
   error,
-  onClose
+  onClose,
+  onOpenInCursor
 }: TicketDetailsDialogProps) => {
   const issue = details ?? localDetails;
   const description = details?.description?.trim() || localDetails?.description?.trim();
   const myTotalLabel = details ? formatClock(details.myLoggedSecondsTotal) : isLoading ? "Loading" : "—";
   const myTotalMeta = details ? formatCount(details.myWorklogCount, "worklog") : "Jira worklogs";
+
+  const [isOpeningCursor, setIsOpeningCursor] = useState(false);
+  const [cursorError, setCursorError] = useState<string>();
+
+  // Reset the button's transient state whenever the dialog points at a new
+  // ticket, so a stale error or spinner never carries over between tickets.
+  useEffect(() => {
+    setCursorError(undefined);
+    setIsOpeningCursor(false);
+  }, [issueKey]);
+
+  const handleOpenInCursor = async () => {
+    if (!onOpenInCursor || isOpeningCursor) {
+      return;
+    }
+
+    setCursorError(undefined);
+    setIsOpeningCursor(true);
+
+    try {
+      const result = await onOpenInCursor();
+      if (!result.ok) {
+        setCursorError(result.error || "Couldn't open Cursor.");
+      }
+    } catch {
+      setCursorError("Couldn't open Cursor.");
+    } finally {
+      setIsOpeningCursor(false);
+    }
+  };
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={`Ticket details for ${issueKey}`}>
@@ -68,13 +103,29 @@ export const TicketDetailsDialog = ({
               <div className="ticket-details-key">{issue?.key ?? issueKey}</div>
               <h2>{issue?.summary ?? "Loading Jira issue..."}</h2>
             </div>
-            {issue?.url ? (
-              <a className="ticket-details-open" href={issue.url} target="_blank" rel="noreferrer">
-                Open in Jira
-                <ExternalLink size={14} strokeWidth={2} />
-              </a>
-            ) : null}
+            <div className="ticket-details-actions">
+              {onOpenInCursor && issue ? (
+                <button
+                  type="button"
+                  className="ticket-details-cursor"
+                  onClick={handleOpenInCursor}
+                  disabled={isOpeningCursor}
+                  title="Send the ticket title & description to Cursor as a chat prompt"
+                >
+                  {isOpeningCursor ? <Loader2 className="spin" size={14} /> : <CursorGlyph size={14} />}
+                  Open in Cursor
+                </button>
+              ) : null}
+              {issue?.url ? (
+                <a className="ticket-details-open" href={issue.url} target="_blank" rel="noreferrer">
+                  Open in Jira
+                  <ExternalLink size={14} strokeWidth={2} />
+                </a>
+              ) : null}
+            </div>
           </div>
+
+          {cursorError ? <div className="ticket-details-cursor-note">{cursorError}</div> : null}
 
           {error ? <div className="ticket-details-error">{error}</div> : null}
 

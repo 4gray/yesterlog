@@ -485,6 +485,8 @@ export interface OpenReleasePageResult {
   url: string;
 }
 
+export type OpenCursorPromptResult = { ok: true; url: string } | { ok: false; error: string };
+
 export type AppAutoUpdatePlatform = "macos" | "linux-appimage";
 
 export type AppAutoUpdatePhase =

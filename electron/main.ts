@@ -24,6 +24,7 @@ import {
 } from "./updates";
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
 import { getSafeReleaseUrl } from "../shared/releases";
+import { isCursorPromptDeeplink } from "../shared/cursorDeeplink";
 import type {
   AddWorklogRequest,
   AppSettings,
@@ -32,6 +33,7 @@ import type {
   IssueDetailsRequest,
   OllamaGenerateRequest,
   OllamaListModelsRequest,
+  OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   SearchTicketsRequest,
@@ -226,6 +228,24 @@ ipcMain.handle("app:open-release-page", async (_event, url?: string): Promise<Op
     ok: true,
     url: releaseUrl
   };
+});
+
+ipcMain.handle("app:open-cursor-prompt", async (_event, url: unknown): Promise<OpenCursorPromptResult> => {
+  // Only ever hand a genuine Cursor prompt deeplink to the OS — never an
+  // arbitrary scheme the renderer might have been tricked into passing.
+  if (!isCursorPromptDeeplink(url)) {
+    return { ok: false, error: "Not a valid Cursor deeplink." };
+  }
+
+  try {
+    await shell.openExternal(url);
+    return { ok: true, url };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to open Cursor."
+    };
+  }
 });
 
 app.whenReady().then(async () => {

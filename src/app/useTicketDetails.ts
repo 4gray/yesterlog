@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { AppSettings, IssueDetailsResult, JiraIssueDetails, JiraTicket, SyncResult, WeekState } from "../../shared/types";
+import type {
+  AppSettings,
+  IssueDetailsResult,
+  JiraIssueDetails,
+  JiraTicket,
+  OpenCursorPromptResult,
+  SyncResult,
+  WeekState
+} from "../../shared/types";
+import { buildCursorPromptDeeplink } from "../../shared/cursorDeeplink";
 import { nativeApi } from "../api/native";
 
 const EMPTY_TICKETS: JiraTicket[] = [];
@@ -160,6 +169,25 @@ export const useTicketDetails = ({
     [issueKey, syncResult, weekState]
   );
 
+  const openInCursor = useCallback((): Promise<OpenCursorPromptResult> => {
+    // Prefer freshly fetched Jira details (they carry the description); fall
+    // back to the locally-known ticket so the button still works offline.
+    const issue = details ?? localDetails;
+
+    if (!issue) {
+      return Promise.resolve({ ok: false, error: "Ticket details are still loading." });
+    }
+
+    const deeplink = buildCursorPromptDeeplink({
+      key: issue.key,
+      summary: issue.summary,
+      description: issue.description,
+      url: issue.url
+    });
+
+    return nativeApi.openCursorPrompt(deeplink);
+  }, [details, localDetails]);
+
   useEffect(() => {
     if (!issueKey || isDemo || !hasJiraSettings(settings)) {
       setDetails(undefined);
@@ -206,6 +234,7 @@ export const useTicketDetails = ({
     isLoading,
     error,
     openTicketDetails,
-    closeTicketDetails
+    closeTicketDetails,
+    openInCursor
   };
 };

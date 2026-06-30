@@ -474,6 +474,10 @@
     flex-direction: column;
   }
 
+  .ticket-details-actions {
+    flex-wrap: wrap;
+  }
+
   .ticket-details-hero h2 {
     max-width: none;
     font-size: 21px;
