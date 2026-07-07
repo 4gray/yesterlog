@@ -98,7 +98,7 @@ export interface AppMainViewProps {
   handleToggleRecurringEvent: AppSettingsRouteProps["handleToggleRecurringEvent"];
   setSelectedTicket: AppTodayRouteProps["setSelectedTicket"];
   searchTickets: AppTodayRouteProps["searchTickets"];
-  openAddTime: AppWeekRouteProps["openAddTime"];
+  openAddTime: AppReconRouteProps["onLogTime"];
   openEditWorklog: AppTodayRouteProps["openEditWorklog"] & AppWeekRouteProps["openEditWorklog"];
   openEditPersonalNote: AppTodayRouteProps["openEditPersonalNote"] & AppWeekRouteProps["openEditPersonalNote"];
   handleToggleSkipped: AppWeekRouteProps["handleToggleSkipped"];

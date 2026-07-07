@@ -3,6 +3,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AppSettings, JiraWorklog, PersonalNote, WeekState } from "../../shared/types";
+import type { AddTimePrefill } from "../components/AddTimeModal";
 import { buildWeekState, DEFAULT_SETTINGS } from "../domain/week";
 import { toLocalDateKey } from "../utils/date";
 import { useAddTimeModalActions } from "./useAddTimeModalActions";
@@ -57,6 +58,7 @@ let container: HTMLDivElement;
 let root: Root;
 let api: AddTimeModalActionsApi | undefined;
 let addModalDate: Date | undefined;
+let addTimePrefill: AddTimePrefill | undefined;
 let editingWorklog: JiraWorklog | undefined;
 let editingPersonalNote: PersonalNote | undefined;
 let weekStartState: Date;
@@ -69,6 +71,7 @@ interface HarnessProps {
   welcomeConnected?: boolean;
   isBooting?: boolean;
   initialAddModalDate?: Date;
+  initialAddTimePrefill?: AddTimePrefill;
   initialEditingWorklog?: JiraWorklog;
   initialEditingPersonalNote?: PersonalNote;
   initialWeekStart?: Date;
@@ -82,6 +85,7 @@ function Harness({
   welcomeConnected = false,
   isBooting = false,
   initialAddModalDate,
+  initialAddTimePrefill,
   initialEditingWorklog,
   initialEditingPersonalNote,
   initialWeekStart = weekStart,
@@ -89,6 +93,7 @@ function Harness({
 }: HarnessProps) {
   const [weekStartValue, setWeekStart] = useState(initialWeekStart);
   const [addModalDateValue, setAddModalDate] = useState<Date | undefined>(initialAddModalDate);
+  const [addTimePrefillValue, setAddTimePrefill] = useState<AddTimePrefill | undefined>(initialAddTimePrefill);
   const [editingWorklogValue, setEditingWorklog] = useState<JiraWorklog | undefined>(initialEditingWorklog);
   const [editingPersonalNoteValue, setEditingPersonalNote] = useState<PersonalNote | undefined>(
     initialEditingPersonalNote
@@ -97,6 +102,7 @@ function Harness({
 
   weekStartState = weekStartValue;
   addModalDate = addModalDateValue;
+  addTimePrefill = addTimePrefillValue;
   editingWorklog = editingWorklogValue;
   editingPersonalNote = editingPersonalNoteValue;
   logError = logErrorValue;
@@ -111,6 +117,7 @@ function Harness({
     editingPersonalNote: editingPersonalNoteValue,
     setWeekStart,
     setAddModalDate,
+    setAddTimePrefill,
     setEditingWorklog,
     setEditingPersonalNote,
     setLogError
@@ -135,6 +142,7 @@ const renderHarness = (props: HarnessProps = {}) => {
 beforeEach(() => {
   api = undefined;
   addModalDate = undefined;
+  addTimePrefill = undefined;
   editingWorklog = undefined;
   editingPersonalNote = undefined;
   weekStartState = weekStart;
@@ -167,6 +175,24 @@ describe("useAddTimeModalActions", () => {
     expect(logError).toBeUndefined();
   });
 
+  it("opens Add Time with an optional prefill and clears it on close", () => {
+    const prefill: AddTimePrefill = {
+      timeSpentSeconds: 40 * 60,
+      startedISO: "2026-06-17T09:00:00.000Z",
+      comment: "Reconstructed work"
+    };
+    renderHarness();
+
+    act(() => getApi().openAddTime(new Date(2026, 5, 17, 9, 0), prefill));
+
+    expect(addTimePrefill).toBe(prefill);
+
+    act(() => getApi().closeAddTime());
+
+    expect(addModalDate).toBeUndefined();
+    expect(addTimePrefill).toBeUndefined();
+  });
+
   it("opens the tracking shortcut on the current week and rounds to the minute", () => {
     const currentDate = new Date(2026, 6, 8, 16, 12, 44, 123);
     renderHarness({
@@ -179,6 +205,7 @@ describe("useAddTimeModalActions", () => {
 
     expect(toLocalDateKey(weekStartState)).toBe("2026-07-06");
     expect(addModalDate?.getTime()).toBe(new Date(2026, 6, 8, 16, 12, 0, 0).getTime());
+    expect(addTimePrefill).toBeUndefined();
     expect(editingWorklog).toBeUndefined();
     expect(editingPersonalNote).toBeUndefined();
     expect(logError).toBeUndefined();
@@ -238,6 +265,7 @@ describe("useAddTimeModalActions", () => {
     act(() => getApi().openEditWorklog(worklog));
 
     expect(addModalDate).toBeUndefined();
+    expect(addTimePrefill).toBeUndefined();
     expect(editingPersonalNote).toBeUndefined();
     expect(editingWorklog).toBe(worklog);
     expect(logError).toBeUndefined();
@@ -254,6 +282,7 @@ describe("useAddTimeModalActions", () => {
     act(() => getApi().openEditPersonalNote(personalNote));
 
     expect(addModalDate).toBeUndefined();
+    expect(addTimePrefill).toBeUndefined();
     expect(editingWorklog).toBeUndefined();
     expect(editingPersonalNote).toBe(personalNote);
     expect(logError).toBeUndefined();

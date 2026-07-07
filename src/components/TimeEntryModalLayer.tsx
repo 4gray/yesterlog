@@ -3,6 +3,7 @@ import { AddTimeModal, type AddTimeModalProps } from "./AddTimeModal";
 
 interface TimeEntryModalLayerProps {
   addModalDate?: Date;
+  addTimePrefill?: AddTimeModalProps["prefill"];
   editingWorklog?: JiraWorklog;
   editingPersonalNote?: PersonalNote;
   dateOptions: AddTimeModalProps["dateOptions"];
@@ -27,6 +28,7 @@ interface TimeEntryModalLayerProps {
 
 export const TimeEntryModalLayer = ({
   addModalDate,
+  addTimePrefill,
   editingWorklog,
   editingPersonalNote,
   dateOptions,
@@ -57,6 +59,7 @@ export const TimeEntryModalLayer = ({
         isConfigured={isConfigured}
         isLogging={isLogging}
         logError={logError}
+        prefill={addTimePrefill}
         onClose={onCloseAddTime}
         onLog={onAddWorklog}
         onSearchTickets={onSearchTickets}

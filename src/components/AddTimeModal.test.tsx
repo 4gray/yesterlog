@@ -16,7 +16,46 @@ const ticket: JiraTicket = {
   url: "https://elevait.atlassian.net/browse/FTDM-397"
 };
 
+const reconstructTicket: JiraTicket = {
+  id: "FTDM-426",
+  key: "FTDM-426",
+  summary: "Create mongo mock data for documents and folders",
+  projectKey: "FTDM",
+  projectName: "FTDM",
+  statusName: "Unknown",
+  statusCategory: "unknown",
+  loggedSecondsTotal: 0,
+  url: "https://elevait.atlassian.net/browse/FTDM-426"
+};
+
 describe("AddTimeModal", () => {
+  it("uses an Add Time prefill for reconstructed ticket logs", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 6, 7, 11, 56)}
+        dateOptions={["2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-10"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        prefill={{
+          ticket: reconstructTicket,
+          timeSpentSeconds: 40 * 60,
+          startedISO: "2026-07-07T09:00:00.000Z",
+          comment: "Create mongo mock data for documents and folders — 1 commit."
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onAddPersonalNote={async () => true}
+      />
+    );
+
+    expect(markup).toContain("FTDM-426");
+    expect(markup).toContain("Create mongo mock data for documents and folders");
+    expect(markup).toContain("40m");
+    expect(markup).toContain("Log 40m to FTDM-426");
+    expect(markup).not.toContain("2h 00m");
+  });
+
   it("falls back from a weekend date to the latest selectable working day", () => {
     const markup = renderToStaticMarkup(
       <AddTimeModal

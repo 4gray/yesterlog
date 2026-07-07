@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ComponentProps } from "react";
 import { describe, expect, it } from "vitest";
 import type { AppSettings } from "../../shared/types";
-import { AppReconRoute } from "./AppReconRoute";
+import { buildReconstructDay } from "../domain/reconstruct";
+import { AppReconRoute, buildReconstructAddTimePrefill } from "./AppReconRoute";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -55,5 +56,43 @@ describe("AppReconRoute", () => {
     const markup = render();
     expect(markup).toContain("Local AI is off");
     expect(markup).toContain("SET UP LOCAL AI");
+  });
+
+  it("builds an Add Time prefill from the first reconstructed row", () => {
+    const day = buildReconstructDay(
+      {
+        dateKey: "2026-07-07",
+        weekdayIso: 2,
+        isToday: false,
+        workingDays: [1, 2, 3, 4, 5],
+        targetMinutes: 480,
+        worklogs: [],
+        reviewSessions: [],
+        commits: [
+          {
+            id: "commit-ftdm-426",
+            jiraIssueKey: "FTDM-426",
+            repositoryName: "web-app",
+            primaryMessage: "Create mongo mock data for documents and folders",
+            commitCount: 1,
+            firstCommitISO: "2026-07-07T09:15:00.000Z",
+            lastCommitISO: "2026-07-07T09:55:00.000Z",
+            estimatedSeconds: 40 * 60,
+            confidence: "high"
+          }
+        ]
+      },
+      { "commit-ftdm-426": 10 },
+      { "commit-ftdm-426": 40 }
+    );
+
+    const prefill = buildReconstructAddTimePrefill(day, settings.jiraBaseUrl);
+
+    expect(prefill?.ticket?.key).toBe("FTDM-426");
+    expect(prefill?.ticket?.summary).toBe("Create mongo mock data for documents and folders");
+    expect(prefill?.ticket?.url).toBe("https://example.atlassian.net/browse/FTDM-426");
+    expect(prefill?.timeSpentSeconds).toBe(40 * 60);
+    expect(new Date(prefill?.startedISO ?? "").getHours()).toBe(10);
+    expect(prefill?.comment).toContain("Create mongo mock data for documents and folders");
   });
 });

@@ -82,7 +82,8 @@ export const App = () => {
   const { reviewTargetMode, setReviewTargetMode } = useAppReviewTargetState();
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
-  const { addModalDate, setAddModalDate, editingWorklog, setEditingWorklog } = useAppTimeEntryModalState();
+  const { addModalDate, setAddModalDate, addTimePrefill, setAddTimePrefill, editingWorklog, setEditingWorklog } =
+    useAppTimeEntryModalState();
   const { effectiveTheme, selectTheme } = useThemeMode({
     initialTheme: demoConfig?.theme,
     persist: !isDemo
@@ -446,6 +447,7 @@ export const App = () => {
     editingPersonalNote,
     setWeekStart,
     setAddModalDate,
+    setAddTimePrefill,
     setEditingWorklog,
     setEditingPersonalNote,
     setLogError
@@ -482,6 +484,7 @@ export const App = () => {
       overlays={
         <AppOverlays
           addModalDate={addModalDate}
+          addTimePrefill={addTimePrefill}
           editingWorklog={editingWorklog}
           editingPersonalNote={editingPersonalNote}
           dateOptions={addTimeDateOptions}

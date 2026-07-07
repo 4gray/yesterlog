@@ -1,5 +1,6 @@
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import type { JiraWorklog, PersonalNote, WeekState } from "../../shared/types";
+import type { AddTimePrefill } from "../components/AddTimeModal";
 import { getWeekBounds } from "../domain/week";
 import {
   canOpenTrackingShortcut,
@@ -18,6 +19,7 @@ interface UseAddTimeModalActionsOptions {
   editingPersonalNote?: PersonalNote;
   setWeekStart: Dispatch<SetStateAction<Date>>;
   setAddModalDate: Dispatch<SetStateAction<Date | undefined>>;
+  setAddTimePrefill: Dispatch<SetStateAction<AddTimePrefill | undefined>>;
   setEditingWorklog: Dispatch<SetStateAction<JiraWorklog | undefined>>;
   setEditingPersonalNote: Dispatch<SetStateAction<PersonalNote | undefined>>;
   setLogError: Dispatch<SetStateAction<string | undefined>>;
@@ -34,18 +36,20 @@ export const useAddTimeModalActions = ({
   editingPersonalNote,
   setWeekStart,
   setAddModalDate,
+  setAddTimePrefill,
   setEditingWorklog,
   setEditingPersonalNote,
   setLogError
 }: UseAddTimeModalActionsOptions) => {
   const openAddTime = useCallback(
-    (date?: Date) => {
+    (date?: Date, prefill?: AddTimePrefill) => {
       setEditingWorklog(undefined);
       setEditingPersonalNote(undefined);
       setLogError(undefined);
+      setAddTimePrefill(prefill);
       setAddModalDate(selectAddTimeDate({ currentDate, requestedDate: date, weekState }));
     },
-    [currentDate, setAddModalDate, setEditingPersonalNote, setEditingWorklog, setLogError, weekState]
+    [currentDate, setAddModalDate, setAddTimePrefill, setEditingPersonalNote, setEditingWorklog, setLogError, weekState]
   );
 
   const openTrackingShortcut = useCallback(() => {
@@ -66,6 +70,7 @@ export const useAddTimeModalActions = ({
     setEditingWorklog(undefined);
     setEditingPersonalNote(undefined);
     setLogError(undefined);
+    setAddTimePrefill(undefined);
     setAddModalDate(createTrackingShortcutDate(currentDate));
   }, [
     addModalDate,
@@ -75,6 +80,7 @@ export const useAddTimeModalActions = ({
     isBooting,
     isConfigured,
     setAddModalDate,
+    setAddTimePrefill,
     setEditingPersonalNote,
     setEditingWorklog,
     setLogError,
@@ -99,26 +105,29 @@ export const useAddTimeModalActions = ({
   const openEditWorklog = useCallback(
     (worklog: JiraWorklog) => {
       setAddModalDate(undefined);
+      setAddTimePrefill(undefined);
       setLogError(undefined);
       setEditingPersonalNote(undefined);
       setEditingWorklog(worklog);
     },
-    [setAddModalDate, setEditingPersonalNote, setEditingWorklog, setLogError]
+    [setAddModalDate, setAddTimePrefill, setEditingPersonalNote, setEditingWorklog, setLogError]
   );
 
   const openEditPersonalNote = useCallback(
     (note: PersonalNote) => {
       setAddModalDate(undefined);
+      setAddTimePrefill(undefined);
       setLogError(undefined);
       setEditingWorklog(undefined);
       setEditingPersonalNote(note);
     },
-    [setAddModalDate, setEditingPersonalNote, setEditingWorklog, setLogError]
+    [setAddModalDate, setAddTimePrefill, setEditingPersonalNote, setEditingWorklog, setLogError]
   );
 
   const closeAddTime = useCallback(() => {
     setAddModalDate(undefined);
-  }, [setAddModalDate]);
+    setAddTimePrefill(undefined);
+  }, [setAddModalDate, setAddTimePrefill]);
 
   const closeEditingWorklog = useCallback(() => {
     setEditingWorklog(undefined);

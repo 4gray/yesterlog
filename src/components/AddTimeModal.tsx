@@ -26,6 +26,13 @@ export interface LogPayload {
   comment?: string;
 }
 
+export interface AddTimePrefill {
+  ticket?: JiraTicket;
+  timeSpentSeconds?: number;
+  startedISO?: string;
+  comment?: string;
+}
+
 export interface AddTimeModalProps {
   date: Date;
   dateOptions: string[];
@@ -34,6 +41,7 @@ export interface AddTimeModalProps {
   isLogging: boolean;
   isDeleting?: boolean;
   logError?: string;
+  prefill?: AddTimePrefill;
   editingWorklog?: JiraWorklog;
   editingPersonalNote?: PersonalNote;
   onClose: () => void;
@@ -75,14 +83,26 @@ const PERSONAL_NOTE_PRESETS: DurationPreset[] = [
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
-const getInitialStart = (date: Date, editingWorklog?: JiraWorklog, editingPersonalNote?: PersonalNote) => {
+const getInitialStart = (
+  date: Date,
+  editingWorklog?: JiraWorklog,
+  editingPersonalNote?: PersonalNote,
+  prefill?: AddTimePrefill
+) => {
   const started = editingWorklog
     ? new Date(editingWorklog.started)
     : editingPersonalNote
       ? new Date(editingPersonalNote.startedISO)
-      : date;
+      : prefill?.startedISO
+        ? new Date(prefill.startedISO)
+        : date;
   return Number.isNaN(started.getTime()) ? date : started;
 };
+
+const getInitialTicketSeconds = (editingWorklog?: JiraWorklog, prefill?: AddTimePrefill) =>
+  editingWorklog?.timeSpentSeconds ??
+  (prefill?.timeSpentSeconds && prefill.timeSpentSeconds > 0 ? Math.round(prefill.timeSpentSeconds) : undefined) ??
+  2 * 60 * 60;
 
 const dayLabel = (date: Date) =>
   `${new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date).toUpperCase()} · ${date.getDate()} ${new Intl.DateTimeFormat(
@@ -159,6 +179,7 @@ export const AddTimeModal = ({
   isLogging,
   isDeleting = false,
   logError,
+  prefill,
   editingWorklog,
   editingPersonalNote,
   onClose,
@@ -173,8 +194,9 @@ export const AddTimeModal = ({
   const isEditingWorklog = Boolean(editingWorklog);
   const isEditingPersonalNote = Boolean(editingPersonalNote);
   const isEditing = isEditingWorklog || isEditingPersonalNote;
-  const initialStart = getInitialStart(date, editingWorklog, editingPersonalNote);
-  const initialSeconds = editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60;
+  const activePrefill = isEditing ? undefined : prefill;
+  const initialStart = getInitialStart(date, editingWorklog, editingPersonalNote, activePrefill);
+  const initialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
   const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
@@ -188,19 +210,22 @@ export const AddTimeModal = ({
     ? initialDateKey
     : chooseWorkingDateKey(initialDateKey, selectableDateOptions);
   const dateOptionsKey = selectableDateOptions.join("|");
+  const initialPrefillTicket = activePrefill?.ticket;
   const [mode, setMode] = useState<"ticket" | "note" | "recurring">(isEditingPersonalNote ? "note" : "ticket");
   const [recSelectedId, setRecSelectedId] = useState<string | undefined>();
   const [recMinutes, setRecMinutes] = useState(15);
   const [recNote, setRecNote] = useState("");
-  const [activeKey, setActiveKey] = useState<string | undefined>(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
-  const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>();
+  const [activeKey, setActiveKey] = useState<string | undefined>(
+    editingWorklog?.issueKey ?? initialPrefillTicket?.key ?? ticketOptions[0]?.key
+  );
+  const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>(initialPrefillTicket);
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
   const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
   const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
   const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
   const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
-  const [note, setNote] = useState(editingWorklog?.comment ?? "");
+  const [note, setNote] = useState(editingWorklog?.comment ?? activePrefill?.comment ?? "");
   const [personalNoteTitle, setPersonalNoteTitle] = useState(editingPersonalNote?.title ?? "");
   const [personalNote, setPersonalNote] = useState(editingPersonalNote?.text ?? "");
   const [personalNoteCategory, setPersonalNoteCategory] = useState<PersonalNoteCategory>(
@@ -339,15 +364,17 @@ export const AddTimeModal = ({
   };
 
   useEffect(() => {
-    const start = getInitialStart(date, editingWorklog, editingPersonalNote);
-    const seconds = editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60;
+    const nextPrefill = editingWorklog || editingPersonalNote ? undefined : prefill;
+    const start = getInitialStart(date, editingWorklog, editingPersonalNote, nextPrefill);
+    const seconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
     const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
     const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
+    const prefillTicket = nextPrefill?.ticket;
 
     setMode(editingPersonalNote ? "note" : "ticket");
-    setActiveKey(editingPersonalNote ? undefined : editingWorklog?.issueKey ?? ticketOptions[0]?.key);
-    setSelectedTicketOverride(undefined);
+    setActiveKey(editingPersonalNote ? undefined : editingWorklog?.issueKey ?? prefillTicket?.key ?? ticketOptions[0]?.key);
+    setSelectedTicketOverride(prefillTicket);
     setDurationSeconds(seconds);
     setTicketDurationMode(hasPreset ? "preset" : "custom");
     setTicketCustomAmount(customHoursAmount(seconds));
@@ -355,7 +382,7 @@ export const AddTimeModal = ({
     const startDateKey = toLocalDateKey(start);
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
-    setNote(editingWorklog?.comment ?? "");
+    setNote(editingWorklog?.comment ?? nextPrefill?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
     setPersonalNoteCategory(editingPersonalNote?.category ?? "firefighting");
@@ -368,7 +395,16 @@ export const AddTimeModal = ({
     // reference avoids clobbering an in-progress edit on every parent re-render. The
     // default ticket is set by the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toLocalDateKey(date), dateOptionsKey, editingPersonalNote?.id, editingWorklog?.id]);
+  }, [
+    toLocalDateKey(date),
+    dateOptionsKey,
+    editingPersonalNote?.id,
+    editingWorklog?.id,
+    prefill?.comment,
+    prefill?.startedISO,
+    prefill?.ticket?.key,
+    prefill?.timeSpentSeconds
+  ]);
 
   useEffect(() => {
     if (!isEditing && !activeKey && ticketOptions[0]) {
