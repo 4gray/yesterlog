@@ -27,4 +27,4 @@ Fix the Day Reconstruction flow so clicking `Log N entries in Jira` opens the ex
 
 ## Git Handoff
 
-- Pending: commit the fix, push the feature branch, merge into `main`, and push `main`.
+- Done: committed the fix, pushed `codex/reconstruct-log-duration-prefill`, fast-forwarded `main`, and pushed `main`.
