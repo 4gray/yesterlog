@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import type { WeekState } from "../../shared/types";
 import { LoadingView } from "../components/LoadingView";
-import type { AppView } from "../components/Sidebar";
+import type { AppView, ReportTab } from "../components/Sidebar";
 import { TicketDetailsProvider, type OpenTicketDetails } from "../components/TicketDetailsContext";
 import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReconRoute } from "./AppReconRoute";
@@ -22,6 +22,7 @@ type AppWeekRouteProps = ComponentProps<typeof AppWeekRoute>;
 
 export interface AppMainViewProps {
   view: AppView;
+  reportTab: ReportTab;
   isBooting: boolean;
   currentDate: AppTodayRouteProps["currentDate"];
   selectedTicket: AppTodayRouteProps["selectedTicket"];
@@ -114,6 +115,7 @@ export interface AppMainViewProps {
 
 export const AppMainView = ({
   view,
+  reportTab,
   isBooting,
   currentDate,
   selectedTicket,
@@ -328,6 +330,7 @@ export const AppMainView = ({
   } else if (view === "reports") {
     content = (
       <AppReportsRoute
+        reportTab={reportTab}
         weekState={weekState}
         weekStates={reportsWeekStates}
         goToPreviousWeek={goToPreviousWeek}

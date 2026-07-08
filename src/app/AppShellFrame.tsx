@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Sidebar, type AppView, type ThemeMode } from "../components/Sidebar";
+import { Sidebar, type AppView, type ReportTab, type ThemeMode } from "../components/Sidebar";
 import type { AppSyncState } from "./useSyncControls";
 
 export interface AppShellFrameProps {
@@ -9,8 +9,10 @@ export interface AppShellFrameProps {
   isBooting: boolean;
   theme: ThemeMode;
   view: AppView;
+  reportTab: ReportTab;
   sidebarCollapsed: boolean;
   onViewChange: (view: AppView) => void;
+  onReportTabChange: (tab: ReportTab) => void;
   onToggleSidebarCollapsed: () => void;
   syncLabel: string;
   syncState: AppSyncState;
@@ -25,8 +27,10 @@ export const AppShellFrame = ({
   isBooting,
   theme,
   view,
+  reportTab,
   sidebarCollapsed,
   onViewChange,
+  onReportTabChange,
   onToggleSidebarCollapsed,
   syncLabel,
   syncState,
@@ -43,8 +47,10 @@ export const AppShellFrame = ({
     <div className="shell-body">
       <Sidebar
         view={view}
+        reportTab={reportTab}
         collapsed={sidebarCollapsed}
         onViewChange={onViewChange}
+        onReportTabChange={onReportTabChange}
         onToggleCollapse={onToggleSidebarCollapsed}
         syncLabel={syncLabel}
         syncState={syncState}

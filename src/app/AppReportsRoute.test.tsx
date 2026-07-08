@@ -54,6 +54,7 @@ const weekState = {
 const noop = () => undefined;
 
 const baseProps = (): AppReportsRouteProps => ({
+  reportTab: "summary",
   weekState,
   goToPreviousWeek: noop,
   goToCurrentWeek: noop,

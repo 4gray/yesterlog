@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import {
   Calendar,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "settings";
+export type ReportTab = "summary" | "composition" | "focus" | "trends";
 export type ThemeMode = "light" | "dark";
 
 const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
@@ -23,10 +25,20 @@ const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof
   { id: "reports", label: "REPORTS", Icon: LineChart }
 ];
 
+/** Reports sub-pages, in sidebar order. Estimates is intentionally deferred. */
+export const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
+  { id: "summary", label: "Summary" },
+  { id: "composition", label: "Composition" },
+  { id: "focus", label: "Focus" },
+  { id: "trends", label: "Trends" }
+];
+
 interface SidebarProps {
   view: AppView;
+  reportTab: ReportTab;
   collapsed: boolean;
   onViewChange: (view: AppView) => void;
+  onReportTabChange: (tab: ReportTab) => void;
   onToggleCollapse: () => void;
   syncLabel: string;
   syncState: "synced" | "stale" | "syncing";
@@ -36,8 +48,10 @@ interface SidebarProps {
 
 export const Sidebar = ({
   view,
+  reportTab,
   collapsed,
   onViewChange,
+  onReportTabChange,
   onToggleCollapse,
   syncLabel,
   syncState,
@@ -45,22 +59,43 @@ export const Sidebar = ({
   settingsDirty
 }: SidebarProps) => {
   const visibleNav = NAV.filter((item) => item.id !== "review" || showReview);
+  // The sub-nav sits directly under the (last) REPORTS row while Reports is the
+  // active section and the sidebar is expanded — collapsed hides all labels.
+  const showReportSub = view === "reports" && !collapsed;
 
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
       <nav className="sb-nav">
         {visibleNav.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            className={`nav-item ${view === id ? "active" : ""}`}
-            aria-current={view === id ? "page" : undefined}
-            onClick={() => onViewChange(id)}
-            title={label}
-          >
-            <Icon size={18} />
-            <span className="nav-label">{label}</span>
-          </button>
+          <Fragment key={id}>
+            <button
+              type="button"
+              className={`nav-item ${view === id ? "active" : ""}`}
+              aria-current={view === id ? "page" : undefined}
+              onClick={() => onViewChange(id)}
+              title={label}
+            >
+              <Icon size={18} />
+              <span className="nav-label">{label}</span>
+            </button>
+            {id === "reports" && showReportSub ? (
+              <div className="report-subnav" role="tablist" aria-label="Reports pages">
+                {REPORT_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    className={`report-subnav-item ${reportTab === tab.id ? "active" : ""}`}
+                    aria-selected={reportTab === tab.id}
+                    onClick={() => onReportTabChange(tab.id)}
+                  >
+                    <span className="report-subnav-dot" />
+                    <span className="nav-label">{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </Fragment>
         ))}
       </nav>
 

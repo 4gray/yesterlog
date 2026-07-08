@@ -29,6 +29,7 @@ import { usePrevWorkingDay } from "./app/usePrevWorkingDay";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useReportsHistory } from "./app/useReportsHistory";
+import { useReportTabState } from "./app/useReportTabState";
 import { useSettingsActions } from "./app/useSettingsActions";
 import { useSidebarState } from "./app/useSidebarState";
 import { useSnackbars } from "./app/useSnackbars";
@@ -47,6 +48,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
   const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view, isDemo });
+  const { reportTab, setReportTab } = useReportTabState({ initialTab: demoConfig?.reportTab, persist: !isDemo });
   const { settings, setSettings, settingsDraft, setSettingsDraft } = useAppSettingsState({ demoScenario });
   const isSettingsDirty = useMemo(
     () => JSON.stringify(settings) !== JSON.stringify(settingsDraft),
@@ -474,8 +476,10 @@ export const App = () => {
       isBooting={isBooting}
       theme={effectiveTheme}
       view={view}
+      reportTab={reportTab}
       sidebarCollapsed={sidebarCollapsed}
       onViewChange={handleShellViewChange}
+      onReportTabChange={setReportTab}
       onToggleSidebarCollapsed={toggleSidebarCollapsed}
       syncLabel={syncLabel}
       syncState={syncState}
@@ -537,6 +541,7 @@ export const App = () => {
     >
       <AppMainView
         view={view}
+        reportTab={reportTab}
         isBooting={isBooting}
         currentDate={currentDate}
         selectedTicket={selectedTicket}

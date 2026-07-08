@@ -84,6 +84,7 @@ const noop = () => undefined;
 
 const baseProps = (): AppMainViewProps => ({
   view: "week",
+  reportTab: "summary",
   isBooting: false,
   currentDate: new Date(2026, 5, 17, 12),
   selectedTicket: undefined,

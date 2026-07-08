@@ -153,5 +153,10 @@ export const useReportsHistory = ({
     weeksBack
   ]);
 
-  return weekStates;
+  // Only expose the window once it actually contains the visible week. The load
+  // is async, so right after navigating weeks `weekStates` still holds the prior
+  // window (ending at the old week); handing that to the reports would compare
+  // against the wrong week until the rebuild lands. Gating on the key keeps the
+  // consumers on a consistent "building" state instead of a mismatched window.
+  return weekStates?.some((week) => week.weekKey === visibleWeekState.weekKey) ? weekStates : undefined;
 };

@@ -4,6 +4,7 @@ import { ReportsView } from "../components/ReportsView";
 type ReportsViewProps = ComponentProps<typeof ReportsView>;
 
 export interface AppReportsRouteProps {
+  reportTab: ReportsViewProps["reportTab"];
   weekState: ReportsViewProps["weekState"];
   weekStates?: ReportsViewProps["weekStates"];
   goToPreviousWeek: ReportsViewProps["onPreviousWeek"];
@@ -12,6 +13,7 @@ export interface AppReportsRouteProps {
 }
 
 export const AppReportsRoute = ({
+  reportTab,
   weekState,
   weekStates,
   goToPreviousWeek,
@@ -19,6 +21,7 @@ export const AppReportsRoute = ({
   goToNextWeek
 }: AppReportsRouteProps) => (
   <ReportsView
+    reportTab={reportTab}
     weekState={weekState}
     weekStates={weekStates}
     onPreviousWeek={goToPreviousWeek}
