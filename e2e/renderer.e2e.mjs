@@ -225,7 +225,7 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
     assert.ok(await page.getByText(/WEEK \d+/).first().isVisible());
 
     await clickNav(page, "TODAY", "today");
-    await page.getByRole("button", { name: "Jira worklog" }).waitFor();
+    await page.locator(".cal-track").waitFor();
 
     await clickNav(page, "WEEK", "week");
     await page.getByRole("button", { name: /Log time for Wednesday/i }).waitFor();
@@ -287,21 +287,21 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
   });
 });
 
-test("today composer saves a local note without Jira access", { timeout: 60_000 }, async () => {
+test("today calendar creates a local note via the Add Time modal", { timeout: 60_000 }, async () => {
   await withDemoPage({ view: "today" }, async (page) => {
-    await page.getByRole("button", { name: "Personal note", exact: true }).click();
-    await page.getByLabel("Duration").fill("45m");
-    await page.getByLabel("Personal note title").fill("Today E2E note");
-    await page.locator(".composer textarea.note-textarea").fill("Local composer entry for refactor coverage.");
-    await page.getByRole("button", { name: /Save .* local note/ }).click();
+    // Click an empty early-morning slot on the day grid to open the prefilled popup.
+    await page.locator(".cal-track").waitFor();
+    await page.locator(".cal-track").click({ position: { x: 180, y: 24 } });
+    await page.getByRole("dialog", { name: "Log time" }).waitFor();
 
+    await page.getByRole("button", { name: "Personal note", exact: true }).click();
+    await page.getByLabel("Personal note title").fill("Today E2E note");
+    await page.locator(".personal-note-form textarea.note-textarea").fill("Local entry created from the calendar.");
+    await page.getByRole("button", { name: "Save note" }).click();
+    await page.getByRole("dialog", { name: /Personal note|Log time/ }).waitFor({ state: "detached" });
+
+    // The saved note renders as a block on the day grid.
     await page.getByText("Today E2E note").waitFor();
-    assert.ok(await page.getByText("Local composer entry for refactor coverage.").isVisible());
-    const todayNoteRow = page.locator(".entry-local", { hasText: "Today E2E note" });
-    await todayNoteRow.hover();
-    await todayNoteRow.getByRole("button", { name: "Edit personal note" }).click();
-    await page.getByRole("dialog", { name: "Edit personal note" }).waitFor();
-    await page.getByRole("button", { name: "CANCEL" }).click();
   });
 });
 
