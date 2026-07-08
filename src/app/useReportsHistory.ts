@@ -153,10 +153,15 @@ export const useReportsHistory = ({
     weeksBack
   ]);
 
-  // Only expose the window once it actually contains the visible week. The load
-  // is async, so right after navigating weeks `weekStates` still holds the prior
-  // window (ending at the old week); handing that to the reports would compare
-  // against the wrong week until the rebuild lands. Gating on the key keeps the
-  // consumers on a consistent "building" state instead of a mismatched window.
-  return weekStates?.some((week) => week.weekKey === visibleWeekState.weekKey) ? weekStates : undefined;
+  // Only expose the window once it has been rebuilt to END at the visible week.
+  // The load is async, so right after navigating weeks `weekStates` still holds
+  // the prior window. Testing mere membership isn't enough: stepping to an
+  // earlier week leaves the old window still *containing* the new selection (it
+  // is within the trailing range) while ending at the old week, which would let
+  // consumers read baselines from weeks after the selection. `load()` always
+  // builds the window ending at the visible week, so requiring the last entry to
+  // match keeps consumers on a consistent "building" state until it lands.
+  return weekStates && weekStates[weekStates.length - 1]?.weekKey === visibleWeekState.weekKey
+    ? weekStates
+    : undefined;
 };
