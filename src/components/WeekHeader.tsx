@@ -1,12 +1,15 @@
 import { Loader2, Plus, RotateCw } from "lucide-react";
 import { formatHours, formatWeekRangeCompact, getIsoWeekNumber } from "../utils/date";
 import { ProgressRing } from "./ProgressRing";
+import { TimeSplit } from "./TimeSplit";
 import { WeekNavigator } from "./WeekNavigator";
 
 export interface WeekHeaderProps {
   weekStart: Date;
   remainingWeekHours: number;
   trackedWeekHours: number;
+  /** Jira-synced (billable) hours this week; the rest of `trackedWeekHours` is local. */
+  billableWeekHours: number;
   weeklyTargetHours: number;
   isSyncing: boolean;
   isConfigured: boolean;
@@ -21,6 +24,7 @@ export const WeekHeader = ({
   weekStart,
   remainingWeekHours,
   trackedWeekHours,
+  billableWeekHours,
   weeklyTargetHours,
   isSyncing,
   isConfigured,
@@ -50,6 +54,14 @@ export const WeekHeader = ({
               · {formatHours(trackedWeekHours)} / {formatHours(weeklyTargetHours)}
             </span>
           </div>
+          {trackedWeekHours > 0.01 && (
+            <TimeSplit
+              billableHours={billableWeekHours}
+              localHours={Math.max(trackedWeekHours - billableWeekHours, 0)}
+              size="lg"
+              className="week-split"
+            />
+          )}
         </div>
       </div>
 

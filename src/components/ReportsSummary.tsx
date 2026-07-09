@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { DayTrackingSummary, JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
-import { activitySegments, dayActivitySeconds, sumActivitySeconds } from "../domain/activity";
+import { activitySegments, dayActivitySeconds, sumActivitySeconds, weekBillableSplit } from "../domain/activity";
 import { buildReportsHistory, type KpiDelta } from "../domain/reportsTrend";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { DayRing } from "./DayRing";
@@ -230,7 +230,7 @@ export const ReportsSummary = ({
   const total = weekState.trackedWeekHours;
   const remaining = weekState.weeklyTargetHours - total;
   const billablePct = total > 0 ? Math.round((weekState.jiraTrackedWeekHours / total) * 100) : 0;
-  const localWeekHours = Math.max(total - weekState.jiraTrackedWeekHours, 0);
+  const localWeekHours = weekBillableSplit(weekState).localHours;
   const targetPct =
     weekState.weeklyTargetHours > 0 ? Math.min((total / weekState.weeklyTargetHours) * 100, 100) : 0;
 

@@ -621,6 +621,7 @@ export const WeekView = ({
         weekStart={weekStart}
         remainingWeekHours={weekState.remainingWeekHours}
         trackedWeekHours={weekState.trackedWeekHours}
+        billableWeekHours={weekState.jiraTrackedWeekHours}
         weeklyTargetHours={weekState.weeklyTargetHours}
         isSyncing={isSyncing}
         isConfigured={isConfigured}

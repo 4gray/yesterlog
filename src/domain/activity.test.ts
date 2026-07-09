@@ -7,7 +7,8 @@ import {
   dayActivitySeconds,
   dayBillableSplit,
   ringSegmentFractions,
-  sumActivitySeconds
+  sumActivitySeconds,
+  weekBillableSplit
 } from "./activity";
 
 const issue = (loggedSeconds: number): JiraIssueSummary => ({
@@ -100,6 +101,19 @@ describe("billable split", () => {
     const split = dayBillableSplit(day({ personalNotes: [note(3600)] }));
     expect(split.billableHours).toBe(0);
     expect(split.localHours).toBe(1);
+  });
+
+  it("derives the week split from the precomputed WeekState totals", () => {
+    const split = weekBillableSplit({ jiraTrackedWeekHours: 30, trackedWeekHours: 42 });
+    expect(split.billableHours).toBe(30);
+    expect(split.localHours).toBe(12); // notes + recurring remainder
+    expect(split.totalHours).toBe(42);
+  });
+
+  it("never reports negative local hours when tracked trails billable", () => {
+    // Defensive: rounding could momentarily make jira exceed the tracked total.
+    const split = weekBillableSplit({ jiraTrackedWeekHours: 8.01, trackedWeekHours: 8 });
+    expect(split.localHours).toBe(0);
   });
 });
 

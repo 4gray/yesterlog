@@ -58,6 +58,11 @@
   color: var(--dim-2);
 }
 
+/* Billable vs "to log" split under the week figure, mirroring the Today hero. */
+.week-split {
+  margin-top: 14px;
+}
+
 .week-figure-sub {
   font-family: var(--font-mono);
   font-size: 13px;

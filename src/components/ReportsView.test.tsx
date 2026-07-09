@@ -96,6 +96,24 @@ describe("ReportsView", () => {
     expect(markup).toContain("Next week");
   });
 
+  it("renders the billable / to-log split in an insight sub-page header", () => {
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="composition"
+        weekState={weekState}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    // Same billable-vs-"to log" readout as Today/Summary, driven off week totals
+    // (5h Jira billable, 5.5 tracked − 5 = 0.5h local still to log).
+    expect(markup).toContain("reports-split");
+    expect(markup).toContain("5h billable");
+    expect(markup).toContain("0h 30m to log");
+  });
+
   it("uses the configured day count in the days-on-target KPI", () => {
     const threeDayState: WeekState = {
       ...weekState,

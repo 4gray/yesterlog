@@ -223,9 +223,14 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
   await withDemoPage({ view: "week" }, async (page) => {
     await page.locator(".week-header").waitFor();
     assert.ok(await page.getByText(/WEEK \d+/).first().isVisible());
+    // The week header carries the same billable / "to log" split as the Today hero.
+    assert.ok(await page.locator(".week-header .week-split .ts-billable").isVisible());
 
     await clickNav(page, "TODAY", "today");
     await page.locator(".cal-track").waitFor();
+    // The demo seeds a confirmed "Daily Standup" recurring ritual on the current day; it
+    // must render as a committed block on the day grid, not just count toward the header.
+    await page.locator(".cal-block--recurring", { hasText: "Daily Standup" }).first().waitFor();
 
     await clickNav(page, "WEEK", "week");
     await page.getByRole("button", { name: /Log time for Wednesday/i }).waitFor();
@@ -302,6 +307,23 @@ test("today calendar creates a local note via the Add Time modal", { timeout: 60
 
     // The saved note renders as a block on the day grid.
     await page.getByText("Today E2E note").waitFor();
+  });
+});
+
+test("today calendar confirms a pending recurring ritual into a committed block", { timeout: 60_000 }, async () => {
+  // Thursday seeds a confirmed daily standup plus an unconfirmed "Weekly Team Sync".
+  await withDemoPage({ view: "today", today: "2026-06-18" }, async (page) => {
+    await page.locator(".cal-track").waitFor();
+
+    // The pending ritual shows as a dashed suggestion block; the confirmed one is committed.
+    const pending = page.locator(".cal-block--recurring-pending", { hasText: "Weekly Team Sync" });
+    await pending.waitFor();
+    await page.locator(".cal-block--recurring", { hasText: "Daily Standup" }).first().waitFor();
+
+    // Confirming it turns the suggestion into a committed recurring block at the same time.
+    await pending.click();
+    await page.locator(".cal-block--recurring-pending", { hasText: "Weekly Team Sync" }).waitFor({ state: "detached" });
+    await page.locator(".cal-block--recurring", { hasText: "Weekly Team Sync" }).waitFor();
   });
 });
 

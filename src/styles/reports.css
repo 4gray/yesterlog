@@ -692,6 +692,13 @@
   align-items: flex-end;
 }
 
+/* With the billable/to-log split under the figure the lead column grows taller, so
+   centre the navigator/toggle against it — matching the Summary header — instead of
+   bottom-aligning to the split baseline. */
+.report-page-header.has-split {
+  align-items: center;
+}
+
 .report-head-lead {
   min-width: 0;
 }

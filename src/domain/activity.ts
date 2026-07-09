@@ -1,4 +1,4 @@
-import type { DayTrackingSummary } from "../../shared/types";
+import type { DayTrackingSummary, WeekState } from "../../shared/types";
 
 export type ActivityKey = "ticket" | "meeting" | "fire";
 
@@ -70,6 +70,20 @@ export const billableSplitFromSeconds = (seconds: ActivitySeconds): BillableSpli
 /** Billable (Jira) vs local (not-yet-tracked) split for a single resolved day. */
 export const dayBillableSplit = (day: DayTrackingSummary): BillableSplit =>
   billableSplitFromSeconds(dayActivitySeconds(day));
+
+/**
+ * Billable (Jira) vs local split for a whole week, read from the precomputed
+ * {@link WeekState} totals. `jiraTrackedWeekHours` is the synced/billable axis;
+ * everything else tracked (notes + recurring) is the local remainder. The single
+ * source of truth for the week-scope split shown in the Week and Reports headers.
+ */
+export const weekBillableSplit = (
+  week: Pick<WeekState, "jiraTrackedWeekHours" | "trackedWeekHours">
+): BillableSplit => {
+  const billableHours = week.jiraTrackedWeekHours;
+  const localHours = Math.max(week.trackedWeekHours - billableHours, 0);
+  return { billableHours, localHours, totalHours: billableHours + localHours };
+};
 
 /** Fold per-category seconds across many days (week / month aggregate). */
 export const sumActivitySeconds = (parts: ActivitySeconds[]): ActivitySeconds =>

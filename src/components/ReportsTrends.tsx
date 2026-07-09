@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { WeekState } from "../../shared/types";
+import { weekBillableSplit } from "../domain/activity";
 import { buildReportsHistory, MIN_TREND_WEEKS, type TrendPoint } from "../domain/reportsTrend";
 import { buildTrends, type TrendKpi, type TrendsComparison } from "../domain/reportsInsights";
 import { formatDuration, formatHours } from "../utils/date";
@@ -171,12 +172,15 @@ export const ReportsTrends = ({
     : report.headlinePct === 0
       ? "0"
       : `${report.totalLogged.deltaUp ? "+" : "−"}${report.headlinePct}`;
+  const split = weekBillableSplit(weekState);
   const header = (
     <ReportPageHeader
       eyebrow="REPORTS — TRENDS"
       figure={headlineFigure}
       unit={report?.hasComparison ? (comparison === "4week" ? "% vs avg" : "% vs last") : undefined}
       caption={report?.comparisonLabel ?? "building baseline"}
+      billableHours={split.billableHours}
+      localHours={split.localHours}
       controls={
         <>
           {toggle}
