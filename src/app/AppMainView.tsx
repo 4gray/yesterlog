@@ -29,6 +29,8 @@ export interface AppMainViewProps {
   todayWorklogs: AppTodayRouteProps["todayWorklogs"];
   todaySignals: AppTodayRouteProps["todaySignals"];
   todayPersonalNotes: AppTodayRouteProps["todayPersonalNotes"];
+  todayRecurringEntries: AppTodayRouteProps["todayRecurringEntries"];
+  todayPendingRecurring: AppTodayRouteProps["todayPendingRecurring"];
   issueUrlsByKey: AppReviewRouteProps["issueUrlsByKey"];
   issueTypesByKey: AppReviewRouteProps["issueTypesByKey"];
   todayTrackedHours: AppTodayRouteProps["todayTrackedHours"];
@@ -101,8 +103,10 @@ export interface AppMainViewProps {
   openEditWorklog: AppTodayRouteProps["openEditWorklog"] & AppWeekRouteProps["openEditWorklog"];
   openEditPersonalNote: AppTodayRouteProps["openEditPersonalNote"] & AppWeekRouteProps["openEditPersonalNote"];
   handleToggleSkipped: AppWeekRouteProps["handleToggleSkipped"];
-  handleConfirmRecurring: AppWeekRouteProps["handleConfirmRecurring"];
-  handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
+  // Sourced from the Today route (non-optional): the app always supplies these handlers,
+  // and both the Today and Week routes accept this stricter signature.
+  handleConfirmRecurring: AppTodayRouteProps["handleConfirmRecurring"];
+  handleSkipRecurring: AppTodayRouteProps["handleSkipRecurring"];
   handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
   openSettings: () => void;
   openTicketDetails: OpenTicketDetails;
@@ -120,6 +124,8 @@ export const AppMainView = ({
   todayWorklogs,
   todaySignals,
   todayPersonalNotes,
+  todayRecurringEntries,
+  todayPendingRecurring,
   issueUrlsByKey,
   issueTypesByKey,
   todayTrackedHours,
@@ -213,6 +219,8 @@ export const AppMainView = ({
         todayWorklogs={todayWorklogs}
         todaySignals={todaySignals}
         todayPersonalNotes={todayPersonalNotes}
+        todayRecurringEntries={todayRecurringEntries}
+        todayPendingRecurring={todayPendingRecurring}
         todayTrackedHours={todayTrackedHours}
         dailyTargetHours={todayDailyTargetHours}
         touchedNotLogged={touchedNotLogged}
@@ -221,6 +229,8 @@ export const AppMainView = ({
         reminderTime={settings.reminderTime}
         remindersEnabled={settings.remindersEnabled}
         handleMoveWorklog={handleMoveWorklog}
+        handleConfirmRecurring={handleConfirmRecurring}
+        handleSkipRecurring={handleSkipRecurring}
         openAddTime={openAddTime}
         openEditWorklog={openEditWorklog}
         openEditPersonalNote={openEditPersonalNote}

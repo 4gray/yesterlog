@@ -1,4 +1,4 @@
-import type { JiraWorklog, PersonalNote } from "../../shared/types";
+import type { JiraWorklog, PendingRecurringOccurrence, PersonalNote, RecurringEntry } from "../../shared/types";
 import type { ReconstructSignal } from "./reconstruct";
 
 /**
@@ -16,7 +16,7 @@ import type { ReconstructSignal } from "./reconstruct";
 
 export const MINUTES_PER_DAY = 24 * 60;
 
-export type CalendarItemKind = "worklog" | "note" | "recurring" | "ghost" | "draft";
+export type CalendarItemKind = "worklog" | "note" | "recurring" | "recurring-pending" | "ghost" | "draft";
 export type CalendarColorRole = "accent" | "meeting" | "fire" | "muted";
 export type CalendarLayer = "committed" | "ghost";
 
@@ -32,6 +32,8 @@ export interface CalendarItem {
   layer: CalendarLayer;
   worklog?: JiraWorklog;
   note?: PersonalNote;
+  recurring?: RecurringEntry;
+  pending?: PendingRecurringOccurrence;
   signal?: ReconstructSignal;
 }
 
@@ -332,9 +334,63 @@ export const noteToItem = (note: PersonalNote): CalendarItem => {
   };
 };
 
-/** Worklogs + notes as one sorted committed lane. */
-export const buildCommittedItems = (worklogs: JiraWorklog[], notes: PersonalNote[]): CalendarItem[] =>
-  [...worklogs.map(worklogToItem), ...notes.map(noteToItem)].sort((a, b) => a.startMin - b.startMin);
+/** Local minutes from midnight for a recurring event's "HH:MM" wall-clock time. */
+const minutesFromLocalTime = (localTime: string): number => {
+  const [hours, minutes] = localTime.split(":");
+  return clampMinute((Number(hours) || 0) * 60 + (Number(minutes) || 0));
+};
+
+/**
+ * A confirmed recurring ritual (standup, planning…) as a committed block. Its wall-clock
+ * `localTime` maps straight to minutes-from-midnight — the same local frame worklogs use —
+ * so it slots into the committed lane alongside them. Colored as a meeting (matching the
+ * day ring, which folds recurring time into the Meetings segment).
+ */
+export const recurringToItem = (entry: RecurringEntry): CalendarItem => {
+  const startMin = minutesFromLocalTime(entry.localTime);
+  return {
+    id: `rec:${entry.eventId}`,
+    kind: "recurring",
+    startMin,
+    endMin: startMin + entry.timeSpentSeconds / 60,
+    colorRole: "meeting",
+    layer: "committed",
+    recurring: entry
+  };
+};
+
+/** Worklogs + notes + confirmed recurring rituals as one sorted committed lane. */
+export const buildCommittedItems = (
+  worklogs: JiraWorklog[],
+  notes: PersonalNote[],
+  recurring: RecurringEntry[] = []
+): CalendarItem[] =>
+  [...worklogs.map(worklogToItem), ...notes.map(noteToItem), ...recurring.map(recurringToItem)].sort(
+    (a, b) => a.startMin - b.startMin
+  );
+
+/**
+ * A recurring ritual scheduled today but not yet confirmed — a suggestion, not committed
+ * time. Placed at its scheduled `localTime` for its default duration, on the non-committed
+ * ghost layer so it never blocks logging or column-packs as real time. Click confirms it
+ * (it becomes a {@link recurringToItem} block); the corner action skips it for the day.
+ */
+export const pendingRecurringToItem = (pending: PendingRecurringOccurrence): CalendarItem => {
+  const startMin = minutesFromLocalTime(pending.localTime);
+  return {
+    id: `pending:${pending.eventId}`,
+    kind: "recurring-pending",
+    startMin,
+    endMin: startMin + pending.defaultDurationMinutes,
+    colorRole: "meeting",
+    layer: "ghost",
+    pending
+  };
+};
+
+/** Today's unconfirmed recurring rituals as a sorted suggestion lane. */
+export const buildPendingRecurringItems = (pending: PendingRecurringOccurrence[]): CalendarItem[] =>
+  pending.map(pendingRecurringToItem).sort((a, b) => a.startMin - b.startMin);
 
 /**
  * Detected-but-unlogged activity as a faint background "ghost" layer. Keeps only

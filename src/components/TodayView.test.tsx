@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { AppSettings, JiraTicket, JiraWorklog } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog, PendingRecurringOccurrence, RecurringEntry } from "../../shared/types";
 import type { ReconstructSignal } from "../domain/reconstruct";
 import { TodayView } from "./TodayView";
 
@@ -67,7 +67,29 @@ const personalNote = {
   updatedAt: "2026-06-18T12:00:00.000Z"
 };
 
-const renderToday = (detectedSignals: ReconstructSignal[] = []) =>
+const recurringEntry: RecurringEntry = {
+  eventId: "rec-daily",
+  dateKey: "2026-06-18",
+  title: "Daily Standup",
+  localTime: "09:15",
+  timeSpentSeconds: 15 * 60,
+  note: "Blockers & plan for the day"
+};
+
+const pendingRecurring: PendingRecurringOccurrence = {
+  eventId: "rec-sync",
+  dateKey: "2026-06-18",
+  title: "Weekly Team Sync",
+  localTime: "15:00",
+  defaultDurationMinutes: 30,
+  defaultNote: "Team weekly — demos & announcements"
+};
+
+const renderToday = (
+  detectedSignals: ReconstructSignal[] = [],
+  recurringEntries: RecurringEntry[] = [],
+  pending: PendingRecurringOccurrence[] = []
+) =>
   renderToStaticMarkup(
     <TodayView
       date={new Date("2026-06-18T10:00:00.000Z")}
@@ -75,6 +97,8 @@ const renderToday = (detectedSignals: ReconstructSignal[] = []) =>
       todayWorklogs={[worklog]}
       detectedSignals={detectedSignals}
       personalNotes={[personalNote]}
+      recurringEntries={recurringEntries}
+      pendingRecurring={pending}
       todayTrackedHours={1}
       dailyTargetHours={8}
       touchedNotLogged={[touchedTicket]}
@@ -83,6 +107,8 @@ const renderToday = (detectedSignals: ReconstructSignal[] = []) =>
       remindersEnabled={true}
       onCreateAt={() => undefined}
       onMoveWorklog={async () => true}
+      onConfirmRecurring={async () => true}
+      onSkipRecurring={async () => true}
       onEditWorklog={() => undefined}
       onEditPersonalNote={() => undefined}
     />
@@ -130,6 +156,28 @@ describe("TodayView calendar", () => {
     const loggedSignal: ReconstructSignal = { ...ghostSignal, id: "sig-2", key: "FTDM-397" };
     const markup = renderToday([loggedSignal]);
 
+    expect(markup).not.toContain("cal-block--ghost");
+  });
+
+  it("renders a confirmed recurring ritual as a committed meeting block", () => {
+    const markup = renderToday([], [recurringEntry]);
+
+    // The standup shows on the grid as a recurring, meeting-colored committed block.
+    expect(markup).toContain("cal-block--recurring");
+    expect(markup).toContain("cal-block--meeting");
+    expect(markup).toContain("Daily Standup");
+    // It is not part of the ghost layer.
+    expect(markup).not.toContain("cal-block--ghost");
+  });
+
+  it("renders a pending recurring ritual as a confirm/skip suggestion block", () => {
+    const markup = renderToday([], [], [pendingRecurring]);
+
+    // The unconfirmed weekly sync shows as a dashed suggestion with a skip affordance.
+    expect(markup).toContain("cal-block--recurring-pending");
+    expect(markup).toContain("Weekly Team Sync");
+    expect(markup).toContain("cal-pending-skip");
+    // A suggestion is not part of the ghost layer.
     expect(markup).not.toContain("cal-block--ghost");
   });
 });

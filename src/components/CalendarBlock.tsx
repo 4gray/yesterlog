@@ -27,6 +27,9 @@ const titleFor = (item: CalendarItem) => {
   if (item.note) {
     return item.note.title?.trim() || item.note.text || "Local note";
   }
+  if (item.recurring) {
+    return item.recurring.title;
+  }
   if (item.signal) {
     return item.signal.key || "Detected";
   }
@@ -39,6 +42,9 @@ const detailFor = (item: CalendarItem) => {
   }
   if (item.note) {
     return item.note.title?.trim() ? item.note.text : undefined;
+  }
+  if (item.recurring) {
+    return item.recurring.note;
   }
   if (item.signal) {
     return item.signal.title;

@@ -5,7 +5,9 @@ import type {
   JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
+  PendingRecurringOccurrence,
   PersonalNote,
+  RecurringEntry,
   SyncDayBucket,
   SyncResult,
   TicketsResult,
@@ -15,6 +17,8 @@ import { toLocalDateKey } from "../utils/date";
 
 const EMPTY_WORKLOGS: JiraWorklog[] = [];
 const EMPTY_PERSONAL_NOTES: PersonalNote[] = [];
+const EMPTY_RECURRING_ENTRIES: RecurringEntry[] = [];
+const EMPTY_PENDING_RECURRING: PendingRecurringOccurrence[] = [];
 const EMPTY_TICKETS: JiraTicket[] = [];
 
 export interface IssueMetadataOptions {
@@ -41,6 +45,10 @@ export interface IssueMetadata {
   todayBucket?: SyncDayBucket;
   todayWorklogs: JiraWorklog[];
   todayPersonalNotes: PersonalNote[];
+  /** Today's confirmed recurring rituals, for the Today calendar's committed lane. */
+  todayRecurringEntries: RecurringEntry[];
+  /** Today's scheduled-but-unconfirmed rituals, for the Today calendar's suggestion lane. */
+  todayPendingRecurring: PendingRecurringOccurrence[];
   todayTrackedHours: number;
   touchedNotLogged: JiraTicket[];
 }
@@ -112,6 +120,8 @@ export const buildIssueMetadata = ({
   const todayWorklogs = todayBucket?.worklogs ?? EMPTY_WORKLOGS;
   const todayPersonalNotes =
     todaySummary?.personalNotes ?? personalNotes.filter((note) => note.dateKey === todayKey);
+  const todayRecurringEntries = todaySummary?.recurringEntries ?? EMPTY_RECURRING_ENTRIES;
+  const todayPendingRecurring = todaySummary?.pendingRecurring ?? EMPTY_PENDING_RECURRING;
   const todayNoteSeconds = todayPersonalNotes.reduce((sum, note) => sum + note.timeSpentSeconds, 0);
   const todayTrackedHours = todaySummary?.trackedHours ?? ((todayBucket?.trackedSeconds ?? 0) + todayNoteSeconds) / 3600;
   const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
@@ -129,6 +139,8 @@ export const buildIssueMetadata = ({
     todayBucket,
     todayWorklogs,
     todayPersonalNotes,
+    todayRecurringEntries,
+    todayPendingRecurring,
     todayTrackedHours,
     touchedNotLogged
   };

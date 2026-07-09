@@ -1,5 +1,14 @@
 import { useMemo } from "react";
-import type { AppSettings, DayTrackingSummary, JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import type {
+  AppSettings,
+  DayTrackingSummary,
+  JiraTicket,
+  JiraWorklog,
+  PendingRecurringOccurrence,
+  PersonalNote,
+  RecurringEntry
+} from "../../shared/types";
+import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import { formatClock, formatDuration, formatHours } from "../utils/date";
 import { activitySegments } from "../domain/activity";
 import { buildGhostItems } from "../domain/dayCalendar";
@@ -19,6 +28,10 @@ interface TodayViewProps {
   /** Detected-but-unlogged activity for the calendar ghost layer. */
   detectedSignals: ReconstructSignal[];
   personalNotes: PersonalNote[];
+  /** Today's confirmed recurring rituals — rendered as committed calendar blocks. */
+  recurringEntries: RecurringEntry[];
+  /** Today's scheduled-but-unconfirmed rituals — rendered as confirm/skip suggestion blocks. */
+  pendingRecurring: PendingRecurringOccurrence[];
   todayTrackedHours: number;
   dailyTargetHours: number;
   touchedNotLogged: JiraTicket[];
@@ -32,6 +45,10 @@ interface TodayViewProps {
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a calendar drag move/resize to an existing worklog (optimistic). */
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Confirm a pending recurring ritual from the calendar (defaults, like the Week card). */
+  onConfirmRecurring: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  /** Skip a pending recurring ritual for the day. */
+  onSkipRecurring: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
 }
@@ -44,6 +61,8 @@ export const TodayView = ({
   todayWorklogs,
   detectedSignals,
   personalNotes,
+  recurringEntries,
+  pendingRecurring,
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
@@ -53,6 +72,8 @@ export const TodayView = ({
   remindersEnabled,
   onCreateAt,
   onMoveWorklog,
+  onConfirmRecurring,
+  onSkipRecurring,
   onEditWorklog,
   onEditPersonalNote
 }: TodayViewProps) => {
@@ -174,10 +195,14 @@ export const TodayView = ({
           date={todayDate}
           worklogs={todayWorklogs}
           notes={personalNotes}
+          recurring={recurringEntries}
+          pending={pendingRecurring}
           ghosts={ghosts}
           onCreateAt={onCreateAt}
           onMoveWorklog={onMoveWorklog}
           onPromoteGhost={promoteGhost}
+          onConfirmRecurring={onConfirmRecurring}
+          onSkipRecurring={onSkipRecurring}
           onEditWorklog={onEditWorklog}
           onEditPersonalNote={onEditPersonalNote}
         />

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { JiraWorklog, PersonalNote } from "../../shared/types";
-import { toLocalDateKey } from "../utils/date";
+import type { JiraWorklog, PendingRecurringOccurrence, PersonalNote, RecurringEntry } from "../../shared/types";
+import { formatClock, toLocalDateKey } from "../utils/date";
 import {
   buildCommittedItems,
+  buildPendingRecurringItems,
   computeDayWindow,
   findGaps,
   hourMarks,
@@ -17,6 +18,7 @@ import {
   type Range
 } from "../domain/dayCalendar";
 import type { ReconstructSignal } from "../domain/reconstruct";
+import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { CalendarBlock } from "./CalendarBlock";
 import { useDayCalendarInteraction } from "./useDayCalendarInteraction";
@@ -25,6 +27,10 @@ interface DayCalendarProps {
   date: Date;
   worklogs: JiraWorklog[];
   notes: PersonalNote[];
+  /** Confirmed recurring rituals (standups, planning…) for the day, as committed blocks. */
+  recurring: RecurringEntry[];
+  /** Scheduled-but-unconfirmed recurring rituals for the day, as suggestion blocks. */
+  pending: PendingRecurringOccurrence[];
   /** Detected-but-unlogged activity (ghost layer). */
   ghosts: CalendarItem[];
   pxPerHour?: number;
@@ -34,6 +40,10 @@ interface DayCalendarProps {
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
   /** Promote a ghost to a real worklog (opens the prefilled popup). */
   onPromoteGhost: (signal: ReconstructSignal, startedISO: string) => void;
+  /** Confirm a pending recurring ritual with its defaults (mirrors the Week card's ✓). */
+  onConfirmRecurring: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  /** Skip a pending recurring ritual for the day (mirrors the Week card's ✗). */
+  onSkipRecurring: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
 }
@@ -58,20 +68,28 @@ export const DayCalendar = ({
   date,
   worklogs,
   notes,
+  recurring,
+  pending,
   ghosts,
   pxPerHour,
   onCreateAt,
   onMoveWorklog,
   onPromoteGhost,
+  onConfirmRecurring,
+  onSkipRecurring,
   onEditWorklog,
   onEditPersonalNote
 }: DayCalendarProps) => {
-  const items = useMemo(() => buildCommittedItems(worklogs, notes), [worklogs, notes]);
+  const items = useMemo(() => buildCommittedItems(worklogs, notes, recurring), [worklogs, notes, recurring]);
+  const pendingItems = useMemo(() => buildPendingRecurringItems(pending), [pending]);
   const positioned = useMemo(() => layoutColumns(items), [items]);
   const positionedGhosts = useMemo(() => layoutColumns(ghosts), [ghosts]);
-  // Window must account for ghosts too, or detected activity outside the logged span
-  // clamps to the grid edge and renders at the wrong time.
-  const layout = useMemo(() => computeDayWindow([...items, ...ghosts], { pxPerHour }), [items, ghosts, pxPerHour]);
+  // Window must account for ghosts and pending suggestions too, or activity outside the
+  // logged span clamps to the grid edge and renders at the wrong time.
+  const layout = useMemo(
+    () => computeDayWindow([...items, ...ghosts, ...pendingItems], { pxPerHour }),
+    [items, ghosts, pendingItems, pxPerHour]
+  );
   const marks = useMemo(() => hourMarks(layout), [layout]);
   const height = layoutHeight(layout);
 
@@ -145,6 +163,18 @@ export const DayCalendar = ({
       }
     },
     [date, onPromoteGhost]
+  );
+
+  const confirmPending = useCallback(
+    (pendingOccurrence: PendingRecurringOccurrence) => {
+      void onConfirmRecurring({
+        eventId: pendingOccurrence.eventId,
+        dateKey: pendingOccurrence.dateKey,
+        timeSpentSeconds: pendingOccurrence.defaultDurationMinutes * 60,
+        note: pendingOccurrence.defaultNote?.trim() || undefined
+      });
+    },
+    [onConfirmRecurring]
   );
 
   const { draft, startCreate, startBlockDrag } = useDayCalendarInteraction({
@@ -243,6 +273,53 @@ export const DayCalendar = ({
                   onSelect={selectItem}
                   onBlockDrag={item.kind === "worklog" ? startBlockDrag : undefined}
                 />
+              );
+            })}
+            {/* Pending rituals overlay the committed lane (translucent + dashed) so a
+                scheduled-but-unconfirmed standup stays visible even when a worklog overlaps
+                its slot — matching how the Week view always lists it. Click confirms with
+                defaults; the corner ✗ skips it for the day. */}
+            {pendingItems.map((item) => {
+              const occurrence = item.pending!;
+              const rect = rectForRange(item.startMin, item.endMin, layout);
+              const durationLabel = formatClock(Math.round((item.endMin - item.startMin) * 60));
+              return (
+                <div
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  className="cal-block cal-block--meeting cal-block--recurring-pending"
+                  style={{ top: `${rect.top}px`, height: `${Math.max(rect.height, MIN_BLOCK_PX)}px`, left: "4px", width: "calc(100% - 14px)" }}
+                  title={`Confirm ${occurrence.title} · ${durationLabel}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={() => confirmPending(occurrence)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      confirmPending(occurrence);
+                    }
+                  }}
+                >
+                  <span className="cal-block-head">
+                    <span className="cal-block-title">{occurrence.title}</span>
+                  </span>
+                  <span className="cal-block-meta">
+                    {minuteToLabel(item.startMin)}–{minuteToLabel(item.endMin)} · {durationLabel}
+                  </span>
+                  <button
+                    type="button"
+                    className="cal-pending-skip"
+                    aria-label={`Skip ${occurrence.title} today`}
+                    title="Skip today"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void onSkipRecurring(occurrence.eventId, occurrence.dateKey);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               );
             })}
             {positionedGhosts.map(({ item, column, columns }) => {

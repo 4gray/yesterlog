@@ -91,6 +91,8 @@ const baseProps = (): AppMainViewProps => ({
   todayWorklogs: [],
   todaySignals: [],
   todayPersonalNotes: [],
+  todayRecurringEntries: [],
+  todayPendingRecurring: [],
   issueUrlsByKey: {},
   issueTypesByKey: {},
   todayTrackedHours: 0,

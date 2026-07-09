@@ -10,6 +10,8 @@ export interface AppTodayRouteProps {
   todayWorklogs: TodayViewProps["todayWorklogs"];
   todaySignals: TodayViewProps["detectedSignals"];
   todayPersonalNotes: TodayViewProps["personalNotes"];
+  todayRecurringEntries: TodayViewProps["recurringEntries"];
+  todayPendingRecurring: TodayViewProps["pendingRecurring"];
   todayTrackedHours: TodayViewProps["todayTrackedHours"];
   dailyTargetHours: TodayViewProps["dailyTargetHours"];
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
@@ -18,6 +20,8 @@ export interface AppTodayRouteProps {
   reminderTime: TodayViewProps["reminderTime"];
   remindersEnabled: TodayViewProps["remindersEnabled"];
   handleMoveWorklog: TodayViewProps["onMoveWorklog"];
+  handleConfirmRecurring: TodayViewProps["onConfirmRecurring"];
+  handleSkipRecurring: TodayViewProps["onSkipRecurring"];
   openAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   openEditWorklog: TodayViewProps["onEditWorklog"];
   openEditPersonalNote: TodayViewProps["onEditPersonalNote"];
@@ -29,6 +33,8 @@ export const AppTodayRoute = ({
   todayWorklogs,
   todaySignals,
   todayPersonalNotes,
+  todayRecurringEntries,
+  todayPendingRecurring,
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
@@ -37,6 +43,8 @@ export const AppTodayRoute = ({
   reminderTime,
   remindersEnabled,
   handleMoveWorklog,
+  handleConfirmRecurring,
+  handleSkipRecurring,
   openAddTime,
   openEditWorklog,
   openEditPersonalNote
@@ -47,6 +55,8 @@ export const AppTodayRoute = ({
     todayWorklogs={todayWorklogs}
     detectedSignals={todaySignals}
     personalNotes={todayPersonalNotes}
+    recurringEntries={todayRecurringEntries}
+    pendingRecurring={todayPendingRecurring}
     todayTrackedHours={todayTrackedHours}
     dailyTargetHours={dailyTargetHours}
     touchedNotLogged={touchedNotLogged}
@@ -56,6 +66,8 @@ export const AppTodayRoute = ({
     remindersEnabled={remindersEnabled}
     onCreateAt={(prefill) => openAddTime(currentDate, prefill)}
     onMoveWorklog={handleMoveWorklog}
+    onConfirmRecurring={handleConfirmRecurring}
+    onSkipRecurring={handleSkipRecurring}
     onEditWorklog={openEditWorklog}
     onEditPersonalNote={openEditPersonalNote}
   />

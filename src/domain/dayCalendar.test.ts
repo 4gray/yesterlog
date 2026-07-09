@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { JiraWorklog, PersonalNote } from "../../shared/types";
+import type { JiraWorklog, PendingRecurringOccurrence, PersonalNote, RecurringEntry } from "../../shared/types";
 import type { ReconstructSignal } from "./reconstruct";
 import {
   buildCommittedItems,
   buildGhostItems,
+  buildPendingRecurringItems,
   ceilingForStart,
   clampMinute,
   computeDayWindow,
@@ -24,7 +25,9 @@ import {
   minutesFromMidnight,
   noteToItem,
   overlapsCommitted,
+  pendingRecurringToItem,
   rangesOverlap,
+  recurringToItem,
   rectForRange,
   snapMinute,
   startedISOForMinute,
@@ -193,11 +196,58 @@ describe("mappers", () => {
     expect(noteToItem({ ...base }).colorRole).toBe("fire");
   });
 
-  it("merges worklogs and notes into one start-sorted lane", () => {
+  it("maps a confirmed recurring ritual to a committed meeting item at its wall-clock time", () => {
+    const entry = { eventId: "rec-daily", localTime: "09:15", timeSpentSeconds: 900, title: "Daily Standup" } as RecurringEntry;
+    const item = recurringToItem(entry);
+    expect(item).toMatchObject({
+      id: "rec:rec-daily",
+      kind: "recurring",
+      startMin: 555, // 09:15
+      endMin: 570, // + 15 min
+      colorRole: "meeting",
+      layer: "committed"
+    });
+    expect(item.recurring).toBe(entry);
+  });
+
+  it("maps a pending recurring ritual to a non-committed suggestion item at its scheduled time", () => {
+    const pending = {
+      eventId: "rec-sync",
+      dateKey: "2026-06-18",
+      localTime: "15:00",
+      defaultDurationMinutes: 30,
+      title: "Weekly Team Sync"
+    } as PendingRecurringOccurrence;
+    const item = pendingRecurringToItem(pending);
+    expect(item).toMatchObject({
+      id: "pending:rec-sync",
+      kind: "recurring-pending",
+      startMin: 900, // 15:00
+      endMin: 930, // + 30 min
+      colorRole: "meeting",
+      layer: "ghost" // never the committed lane — it's a suggestion, not logged time
+    });
+    expect(item.pending).toBe(pending);
+  });
+
+  it("sorts pending recurring suggestions by start time", () => {
+    const late = { eventId: "b", localTime: "15:00", defaultDurationMinutes: 30 } as PendingRecurringOccurrence;
+    const early = { eventId: "a", localTime: "09:15", defaultDurationMinutes: 15 } as PendingRecurringOccurrence;
+    expect(buildPendingRecurringItems([late, early]).map((item) => item.id)).toEqual(["pending:a", "pending:b"]);
+  });
+
+  it("merges worklogs, notes and recurring into one start-sorted lane", () => {
     const worklog = { id: "w1", timeSpentSeconds: 3600, started: new Date(2026, 6, 8, 11, 0).toISOString() } as JiraWorklog;
     const note = { id: "n1", timeSpentSeconds: 1800, startedISO: new Date(2026, 6, 8, 9, 0).toISOString() } as PersonalNote;
-    const items = buildCommittedItems([worklog], [note]);
-    expect(items.map((item) => item.id)).toEqual(["note:n1", "wl:w1"]);
+    const recurring = { eventId: "rec-daily", localTime: "09:15", timeSpentSeconds: 900, title: "Daily" } as RecurringEntry;
+    const items = buildCommittedItems([worklog], [note], [recurring]);
+    expect(items.map((item) => item.id)).toEqual(["note:n1", "rec:rec-daily", "wl:w1"]);
+    expect(items.every((item) => item.layer === "committed")).toBe(true);
+  });
+
+  it("defaults recurring to an empty lane so existing callers are unaffected", () => {
+    const note = { id: "n1", timeSpentSeconds: 1800, startedISO: new Date(2026, 6, 8, 9, 0).toISOString() } as PersonalNote;
+    expect(buildCommittedItems([], [note]).map((item) => item.id)).toEqual(["note:n1"]);
   });
 });
 

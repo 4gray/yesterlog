@@ -2,7 +2,14 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import type {
+  AppSettings,
+  JiraTicket,
+  JiraWorklog,
+  PendingRecurringOccurrence,
+  PersonalNote,
+  RecurringEntry
+} from "../../shared/types";
 import { AppTodayRoute, type AppTodayRouteProps } from "./AppTodayRoute";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -18,6 +25,8 @@ vi.mock("../components/TodayView", () => ({
     const worklogs = props.todayWorklogs as JiraWorklog[];
     const notes = props.personalNotes as PersonalNote[];
     const signals = props.detectedSignals as unknown[];
+    const recurring = props.recurringEntries as RecurringEntry[];
+    const pending = props.pendingRecurring as PendingRecurringOccurrence[];
     return (
       <section
         data-testid="today-view"
@@ -26,6 +35,8 @@ vi.mock("../components/TodayView", () => ({
         data-worklogs={String(worklogs.length)}
         data-signals={String(signals.length)}
         data-notes={String(notes.length)}
+        data-recurring={String(recurring.length)}
+        data-pending={String(pending.length)}
         data-tracked={String(props.todayTrackedHours)}
         data-target={String(props.dailyTargetHours)}
         data-reminder={String(props.reminderTime)}
@@ -50,6 +61,29 @@ vi.mock("../components/TodayView", () => ({
         </button>
         <button type="button" onClick={() => (props.onEditWorklog as (worklog: JiraWorklog) => void)(worklogs[0])}>
           edit
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            (props.onConfirmRecurring as (payload: Record<string, unknown>) => void)({
+              eventId: pending[0].eventId,
+              dateKey: pending[0].dateKey,
+              timeSpentSeconds: pending[0].defaultDurationMinutes * 60
+            })
+          }
+        >
+          confirm-recurring
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            (props.onSkipRecurring as (eventId: string, dateKey: string) => void)(
+              pending[0].eventId,
+              pending[0].dateKey
+            )
+          }
+        >
+          skip-recurring
         </button>
       </section>
     );
@@ -80,6 +114,23 @@ const note = {
   text: "Local work"
 } as PersonalNote;
 
+const recurringEntry = {
+  eventId: "rec-daily",
+  dateKey: "2026-06-17",
+  title: "Daily Standup",
+  localTime: "09:15",
+  timeSpentSeconds: 900
+} as RecurringEntry;
+
+const pendingRecurring = {
+  eventId: "rec-sync",
+  dateKey: "2026-06-17",
+  title: "Weekly Team Sync",
+  localTime: "15:00",
+  defaultDurationMinutes: 30,
+  defaultNote: "Team weekly"
+} as PendingRecurringOccurrence;
+
 const noop = () => undefined;
 const asyncTrue = async () => true;
 
@@ -91,6 +142,8 @@ const baseProps = (): AppTodayRouteProps => ({
   todayWorklogs: [worklog],
   todaySignals: [],
   todayPersonalNotes: [note],
+  todayRecurringEntries: [recurringEntry],
+  todayPendingRecurring: [pendingRecurring],
   todayTrackedHours: 5,
   dailyTargetHours: 8,
   touchedNotLogged: [ticket],
@@ -99,6 +152,8 @@ const baseProps = (): AppTodayRouteProps => ({
   reminderTime: "17:30",
   remindersEnabled: true,
   handleMoveWorklog: asyncTrue,
+  handleConfirmRecurring: asyncTrue,
+  handleSkipRecurring: asyncTrue,
   openAddTime: noop,
   openEditWorklog: noop,
   openEditPersonalNote: noop
@@ -135,6 +190,8 @@ describe("AppTodayRoute", () => {
     expect(rendered?.getAttribute("data-worklogs")).toBe("1");
     expect(rendered?.getAttribute("data-signals")).toBe("0");
     expect(rendered?.getAttribute("data-notes")).toBe("1");
+    expect(rendered?.getAttribute("data-recurring")).toBe("1");
+    expect(rendered?.getAttribute("data-pending")).toBe("1");
     expect(rendered?.getAttribute("data-tracked")).toBe("5");
     expect(rendered?.getAttribute("data-target")).toBe("8");
     expect(rendered?.getAttribute("data-reminder")).toBe("17:30");
@@ -170,5 +227,23 @@ describe("AppTodayRoute", () => {
     expect(openAddTime).toHaveBeenCalledWith(currentDate, { startedISO: "iso" });
     expect(handleMoveWorklog).toHaveBeenCalledWith(worklog, { startedISO: "iso2", timeSpentSeconds: 60 });
     expect(openEditWorklog).toHaveBeenCalledWith(worklog);
+  });
+
+  it("wires pending recurring confirm/skip through to the app handlers", () => {
+    const handleConfirmRecurring = vi.fn();
+    const handleSkipRecurring = vi.fn();
+    renderRoute({ handleConfirmRecurring, handleSkipRecurring });
+
+    act(() => {
+      container.querySelectorAll("button")[3]?.click(); // confirm-recurring
+      container.querySelectorAll("button")[4]?.click(); // skip-recurring
+    });
+
+    expect(handleConfirmRecurring).toHaveBeenCalledWith({
+      eventId: "rec-sync",
+      dateKey: "2026-06-17",
+      timeSpentSeconds: 1800
+    });
+    expect(handleSkipRecurring).toHaveBeenCalledWith("rec-sync", "2026-06-17");
   });
 });

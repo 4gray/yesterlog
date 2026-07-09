@@ -284,6 +284,21 @@ describe("issue metadata", () => {
 
   it("derives today values and filters in-progress tickets already logged today", () => {
     const todayNote = buildNote("today-note");
+    const todayRecurring = {
+      eventId: "rec-daily",
+      dateKey: "2026-06-17",
+      title: "Daily Standup",
+      localTime: "09:15",
+      timeSpentSeconds: 900
+    };
+    const todayPending = {
+      eventId: "rec-sync",
+      dateKey: "2026-06-17",
+      title: "Weekly Team Sync",
+      localTime: "15:00",
+      defaultDurationMinutes: 30,
+      defaultNote: "Team weekly"
+    };
     const todayBucket = buildBucket({
       trackedSeconds: 7200,
       worklogs: [buildWorklog("TB-1")]
@@ -294,7 +309,14 @@ describe("issue metadata", () => {
       }
     });
     const weekState = buildWeekState({
-      days: [buildDay({ personalNotes: [todayNote], trackedHours: 4 })]
+      days: [
+        buildDay({
+          personalNotes: [todayNote],
+          recurringEntries: [todayRecurring],
+          pendingRecurring: [todayPending],
+          trackedHours: 4
+        })
+      ]
     });
     const tickets = buildTicketsResult({
       inProgress: [buildTicket("TB-1"), buildTicket("TB-2")],
@@ -312,6 +334,8 @@ describe("issue metadata", () => {
     expect(metadata.todayBucket).toBe(todayBucket);
     expect(metadata.todayWorklogs).toEqual([todayBucket.worklogs[0]]);
     expect(metadata.todayPersonalNotes).toEqual([todayNote]);
+    expect(metadata.todayRecurringEntries).toEqual([todayRecurring]);
+    expect(metadata.todayPendingRecurring).toEqual([todayPending]);
     expect(metadata.todayTrackedHours).toBe(4);
     expect(metadata.touchedNotLogged.map((ticket) => ticket.key)).toEqual(["TB-2"]);
   });

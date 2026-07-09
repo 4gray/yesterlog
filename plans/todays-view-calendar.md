@@ -182,9 +182,20 @@ demo preview.
 
 ## Open questions
 
-- **Notes in the strict lane?** Proposed: worklogs + notes share one non-overlapping
-  committed lane (a meeting IS your time). Recurring occurrences render as ghosts
-  until confirmed. Confirm.
+- **Notes in the strict lane?** Resolved: worklogs + notes + **confirmed recurring
+  rituals** share one committed lane (column-packed on overlap). A confirmed recurring
+  occurrence maps via `recurringToItem` (`kind: "recurring"`, meeting color, `↻` glyph)
+  and is threaded App → `useIssueMetadata.todayRecurringEntries` → TodayView →
+  DayCalendar. (Earlier proposal to render *confirmed* recurring as ghosts was dropped:
+  a confirmed ritual IS committed time.)
+- **Pending recurring on Today?** Resolved (for Week parity): scheduled-but-unconfirmed
+  rituals render as `recurring-pending` suggestion cards via `pendingRecurringToItem`
+  (`layer: "ghost"`, not a committed obstacle), threaded through
+  `useIssueMetadata.todayPendingRecurring`. They overlay the committed lane (opaque
+  tinted card, dashed border) so they stay visible even when a worklog shares the slot.
+  Click confirms with defaults (→ `handleConfirmRecurring`), corner ✗ skips
+  (→ `handleSkipRecurring`) — mirroring the Week `PendingRecurringCard`. Duration/note
+  editing stays in Week.
 - **Ghost time precision** — reconstruct signals are `startHour` only; do we place
   them on the hour, or infer minutes later? (Phase 3.)
 - **Off-hours** — collapse 0–7 / 20–24 or just scroll? Proposed: scroll, auto-fit to

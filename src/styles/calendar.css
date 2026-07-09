@@ -164,6 +164,72 @@
   background: transparent;
 }
 
+/* Confirmed recurring rituals — meeting-colored (they join the Meetings ring), tagged
+   with a repeat glyph so they read as scheduled time rather than an ad-hoc note, and
+   not draggable (managed from Week / Settings). */
+.cal-block--recurring {
+  cursor: default;
+}
+.cal-block--recurring .cal-block-title::after {
+  content: " ↻";
+  color: var(--purple);
+  font-weight: 600;
+}
+
+/* Pending recurring — a scheduled ritual you haven't confirmed yet. Dashed + translucent
+   so it reads as a suggestion, sits behind committed blocks (earlier in the DOM), and
+   click-to-confirms. The ↻ marks it as recurring; a corner ✗ skips it for the day. */
+.cal-block--recurring-pending {
+  border: 1px dashed var(--purple);
+  border-left-width: 3px;
+  /* Opaque tinted card: overlays the committed lane so it stays visible even when a
+     worklog shares its slot, and reads as its own suggestion rather than jumbling with
+     the block underneath. */
+  background: color-mix(in srgb, var(--purple) 16%, var(--bg));
+  color: var(--dim);
+  cursor: pointer;
+}
+.cal-block--recurring-pending .cal-block-title {
+  color: var(--muted);
+  font-weight: 500;
+}
+.cal-block--recurring-pending .cal-block-title::after {
+  content: " ↻";
+  color: var(--purple);
+  font-weight: 600;
+}
+.cal-block--recurring-pending:hover {
+  background: color-mix(in srgb, var(--purple) 16%, transparent);
+  border-style: solid;
+}
+.cal-pending-skip {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+.cal-block--recurring-pending:hover .cal-pending-skip {
+  opacity: 1;
+}
+.cal-pending-skip:hover {
+  color: var(--text);
+  background: var(--bg-active);
+}
+
 /* Ghost layer — detected-but-unlogged activity, click to promote to a worklog. */
 .cal-block--ghost {
   border: 1px dashed var(--border-strong);

@@ -267,6 +267,8 @@ export const App = () => {
     prevDaySummary,
     todayWorklogs,
     todayPersonalNotes,
+    todayRecurringEntries,
+    todayPendingRecurring,
     todayTrackedHours,
     touchedNotLogged
   } = useIssueMetadata({
@@ -557,6 +559,8 @@ export const App = () => {
         todayWorklogs={todayWorklogs}
         todaySignals={todaySignals}
         todayPersonalNotes={todayPersonalNotes}
+        todayRecurringEntries={todayRecurringEntries}
+        todayPendingRecurring={todayPendingRecurring}
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
         todayTrackedHours={todayTrackedHours}
