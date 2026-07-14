@@ -149,7 +149,7 @@ export const ActiveWorkDock = ({
     };
     rail.addEventListener("wheel", onWheel, { passive: false });
     return () => rail.removeEventListener("wheel", onWheel);
-  }, [open]);
+  }, [open, tickets.length]);
 
   if (tickets.length === 0) {
     return null;

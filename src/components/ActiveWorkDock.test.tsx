@@ -60,4 +60,35 @@ describe("ActiveWorkDock", () => {
     expect(onActivateCard).toHaveBeenCalledTimes(2);
     expect(onActivateCard).toHaveBeenLastCalledWith(ticket);
   });
+
+  it("attaches wheel scrolling when tickets load after mount", () => {
+    const renderDock = (tickets: JiraTicket[]) => (
+      <ActiveWorkDock
+        tickets={tickets}
+        activeCount={tickets.length}
+        open={true}
+        shownCount={6}
+        draggingKey={null}
+        now={new Date("2026-06-18T12:00:00.000Z")}
+        onToggleOpen={() => undefined}
+        onLoadMore={() => undefined}
+      />
+    );
+
+    act(() => root.render(renderDock([])));
+    act(() => root.render(renderDock([ticket])));
+
+    const rail = container.querySelector<HTMLElement>(".dock-rail");
+    expect(rail).not.toBeNull();
+    Object.defineProperties(rail, {
+      scrollWidth: { configurable: true, value: 1000 },
+      clientWidth: { configurable: true, value: 500 }
+    });
+    const wheel = new WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: 80 });
+
+    act(() => rail?.dispatchEvent(wheel));
+
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(rail?.scrollLeft).toBe(80);
+  });
 });
