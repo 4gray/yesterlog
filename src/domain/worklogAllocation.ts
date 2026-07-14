@@ -22,7 +22,13 @@ export interface ProjectWorklogsOptions {
 
 interface PendingAllocation {
   dateKey: string;
+  started: string;
   timeSpentSeconds: number;
+}
+
+interface TimeRange {
+  startSeconds: number;
+  endSeconds: number;
 }
 
 const rawWorklog = (worklog: JiraWorklog): JiraWorklog => {
@@ -41,10 +47,57 @@ const sourceWorklogs = (syncResult: SyncResult): JiraWorklog[] => {
   return [...byId.values()];
 };
 
-const allocationStartedISO = (dateKey: string) => {
+const allocationStartedISO = (dateKey: string, secondsFromMidnight = DEFAULT_ALLOCATION_START_HOUR * 3600) => {
   const started = fromLocalDateKey(dateKey);
-  started.setHours(DEFAULT_ALLOCATION_START_HOUR, 0, 0, 0);
+  started.setHours(0, 0, 0, 0);
+  started.setSeconds(secondsFromMidnight);
   return started.toISOString();
+};
+
+const secondsFromMidnight = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+};
+
+const addBlockedRange = (rangesByDate: Map<string, TimeRange[]>, dateKey: string, range: TimeRange) => {
+  const ranges = rangesByDate.get(dateKey) ?? [];
+  ranges.push(range);
+  rangesByDate.set(dateKey, ranges);
+};
+
+const freeRangesForDate = (
+  rangesByDate: Map<string, TimeRange[]>,
+  dateKey: string,
+  workdayStartSeconds: number,
+  workdayEndSeconds: number
+) => {
+  const blocked = (rangesByDate.get(dateKey) ?? [])
+    .map((range) => ({
+      startSeconds: Math.max(range.startSeconds, workdayStartSeconds),
+      endSeconds: Math.min(range.endSeconds, workdayEndSeconds)
+    }))
+    .filter((range) => range.endSeconds > range.startSeconds)
+    .sort((left, right) => left.startSeconds - right.startSeconds);
+  const free: TimeRange[] = [];
+  let cursor = workdayStartSeconds;
+
+  for (const range of blocked) {
+    if (range.startSeconds > cursor) {
+      free.push({ startSeconds: cursor, endSeconds: range.startSeconds });
+    }
+    cursor = Math.max(cursor, range.endSeconds);
+    if (cursor >= workdayEndSeconds) {
+      return free;
+    }
+  }
+
+  if (cursor < workdayEndSeconds) {
+    free.push({ startSeconds: cursor, endSeconds: workdayEndSeconds });
+  }
+  return free;
 };
 
 const dateKeyFor = (value?: string) => {
@@ -95,16 +148,29 @@ const inferDirection = (
   };
 };
 
-const mergeResidual = (allocations: PendingAllocation[], fallbackDateKey: string, seconds: number) => {
+const appendResidual = (
+  allocations: PendingAllocation[],
+  fallbackDateKey: string,
+  seconds: number,
+  blockedRanges: Map<string, TimeRange[]>
+) => {
   if (seconds <= 0) {
     return;
   }
-  const last = allocations[allocations.length - 1];
-  if (last) {
-    last.timeSpentSeconds += seconds;
-    return;
-  }
-  allocations.push({ dateKey: fallbackDateKey, timeSpentSeconds: seconds });
+  const dateKey = allocations[allocations.length - 1]?.dateKey ?? fallbackDateKey;
+  const startSeconds = (blockedRanges.get(dateKey) ?? []).reduce(
+    (latest, range) => Math.max(latest, range.endSeconds),
+    DEFAULT_ALLOCATION_START_HOUR * 3600
+  );
+  allocations.push({
+    dateKey,
+    started: allocationStartedISO(dateKey, startSeconds),
+    timeSpentSeconds: seconds
+  });
+  addBlockedRange(blockedRanges, dateKey, {
+    startSeconds,
+    endSeconds: startSeconds + seconds
+  });
 };
 
 /**
@@ -142,6 +208,9 @@ export const projectWorklogsForWeek = (
     return syncResult;
   }
   const occupiedSeconds = new Map<string, number>();
+  const blockedRanges = new Map<string, TimeRange[]>();
+  const workdayStartSeconds = DEFAULT_ALLOCATION_START_HOUR * 3600;
+  const workdayEndSeconds = workdayStartSeconds + dailyCapacitySeconds;
 
   const isEligibleDate = (date: Date) => {
     const dateKey = toLocalDateKey(date);
@@ -155,6 +224,13 @@ export const projectWorklogsForWeek = (
     const dateKey = dateKeyFor(worklog.started);
     if (dateKey) {
       occupiedSeconds.set(dateKey, (occupiedSeconds.get(dateKey) ?? 0) + worklog.timeSpentSeconds);
+      const startSeconds = secondsFromMidnight(worklog.started);
+      if (startSeconds !== undefined) {
+        addBlockedRange(blockedRanges, dateKey, {
+          startSeconds,
+          endSeconds: startSeconds + worklog.timeSpentSeconds
+        });
+      }
     }
   }
 
@@ -192,11 +268,31 @@ export const projectWorklogsForWeek = (
 
       if (isEligibleDate(cursor)) {
         const available = Math.max(dailyCapacitySeconds - (occupiedSeconds.get(dateKey) ?? 0), 0);
-        const allocated = Math.min(remaining, available);
-        if (allocated > 0) {
-          allocations.push({ dateKey, timeSpentSeconds: allocated });
-          occupiedSeconds.set(dateKey, (occupiedSeconds.get(dateKey) ?? 0) + allocated);
+        let allocatable = Math.min(remaining, available);
+        let allocatedForDay = 0;
+        for (const range of freeRangesForDate(blockedRanges, dateKey, workdayStartSeconds, workdayEndSeconds)) {
+          if (allocatable <= 0) {
+            break;
+          }
+          const allocated = Math.min(allocatable, range.endSeconds - range.startSeconds);
+          if (allocated <= 0) {
+            continue;
+          }
+          allocations.push({
+            dateKey,
+            started: allocationStartedISO(dateKey, range.startSeconds),
+            timeSpentSeconds: allocated
+          });
+          addBlockedRange(blockedRanges, dateKey, {
+            startSeconds: range.startSeconds,
+            endSeconds: range.startSeconds + allocated
+          });
+          allocatable -= allocated;
+          allocatedForDay += allocated;
           remaining -= allocated;
+        }
+        if (allocatedForDay > 0) {
+          occupiedSeconds.set(dateKey, (occupiedSeconds.get(dateKey) ?? 0) + allocatedForDay);
         }
       }
       cursor = addDays(cursor, direction === "forward" ? 1 : -1);
@@ -205,7 +301,7 @@ export const projectWorklogsForWeek = (
     // A forward range can run out at creation/today when normal worklogs already
     // consume its capacity. Keep the Jira total exact and expose the overload on
     // the last eligible day instead of silently dropping or moving pre-start time.
-    mergeResidual(allocations, anchorKey, remaining);
+    appendResidual(allocations, anchorKey, remaining, blockedRanges);
 
     const partCount = allocations.length;
     allocations.forEach((allocation, index) => {
@@ -213,7 +309,7 @@ export const projectWorklogsForWeek = (
         ...worklog,
         allocation: {
           dateKey: allocation.dateKey,
-          started: allocationStartedISO(allocation.dateKey),
+          started: allocation.started,
           timeSpentSeconds: allocation.timeSpentSeconds,
           direction,
           partIndex: index + 1,

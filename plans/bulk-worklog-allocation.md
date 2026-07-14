@@ -12,6 +12,7 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Imported bulk worklogs use `started` and `created` to choose a direction: explicitly backdated records allocate forward from `started` up to creation; same-day records allocate retrospectively backward.
 - Never allocate into future dates, skipped dates, or non-working days. Preserve any residual duration exactly in the final allocation.
 - Derived allocations are visibly marked as estimates and are not independently draggable/editable. Editing always targets the original Jira worklog.
+- Place derived calendar slices in actual free ranges inside the working-day window, splitting a day's projection around ordinary Jira worklogs when needed.
 - TimeBro continues to create one Jira worklog. Durations longer than a day are allowed and receive an exact deterministic local projection; creating multiple Jira worklogs remains out of scope until explicitly approved.
 - Keep synchronization read-only. Expand the existing author/date search around the selected week, reconcile the returned IDs into a global local worklog ledger, and build other weeks from that ledger. Jira's updated/deleted feeds remain a future optimization if the bounded scan becomes too expensive in production.
 
@@ -27,7 +28,7 @@ Make Jira worklogs longer than a configured working day visible across the days 
 
 ## Verification
 
-- `npm run test`: 101 files, 636 tests passed on the clean `origin/main` branch.
+- `npm run test`: 101 files, 637 tests passed on the clean `origin/main` branch after review fixes.
 - `npm run e2e:renderer`: 6 renderer scenarios passed, including the mobile overflow check.
 - `npm run build`: passed (TypeScript, Vite renderer, Electron TypeScript).
 - Playwright visual check: 2-week custom duration at 560px width, no console errors or inaccessible modal controls. The original shared checkout was also checked at 1200px and 760px before the clean port.
@@ -37,4 +38,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: clean branch verified, committed, and pushed; PR publication, CI, review, and merge are in progress.
+- Status: PR #17 is ready for review; initial CI passed, all four automated review threads were addressed and locally verified, and follow-up CI/re-review plus merge remain.

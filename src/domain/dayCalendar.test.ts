@@ -189,6 +189,29 @@ describe("mappers", () => {
     expect(item).toMatchObject({ id: "wl:w1", startMin: 570, endMin: 630, colorRole: "accent", layer: "committed" });
   });
 
+  it("gives split allocation slices unique calendar item ids", () => {
+    const allocated = (partIndex: number) =>
+      ({
+        id: "bulk-1",
+        timeSpentSeconds: 80 * 3600,
+        started: startISO,
+        allocation: {
+          dateKey: "2026-07-08",
+          started: startISO,
+          timeSpentSeconds: 3600,
+          direction: "backward",
+          partIndex,
+          partCount: 2,
+          isApproximate: true
+        }
+      }) as JiraWorklog;
+
+    expect(buildCommittedItems([allocated(1), allocated(2)], []).map((item) => item.id)).toEqual([
+      "wl:bulk-1:2026-07-08:1",
+      "wl:bulk-1:2026-07-08:2"
+    ]);
+  });
+
   it("colors notes by category", () => {
     const base = { id: "n1", timeSpentSeconds: 1800, startedISO: startISO } as PersonalNote;
     expect(noteToItem({ ...base, category: "meeting" }).colorRole).toBe("meeting");

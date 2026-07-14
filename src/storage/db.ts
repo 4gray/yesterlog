@@ -217,16 +217,40 @@ const reconcileJiraWorklogCache = async (result: SyncResult) => {
 };
 
 export const getSyncResult = async (weekKey: string) => {
-  const [stored, cachedWorklogs] = await Promise.all([
-    readStore<SyncResult>("syncResults", weekKey),
-    readAllStore<JiraWorklog>("jiraWorklogs")
-  ]);
+  const stored = await readStore<SyncResult>("syncResults", weekKey);
+
+  // Results written by the current schema already carry the full bounded source
+  // set needed for projection. Avoid re-reading the global ledger for every week
+  // loaded by month, report, and reconstruction views.
+  if (stored?.sourceWorklogs !== undefined) {
+    return stored;
+  }
+
+  let accountId = stored?.accountId;
+  if (!accountId) {
+    const syncResults = await readAllStore<SyncResult>("syncResults");
+    const latest = syncResults
+      .filter((result) => Boolean(result.accountId))
+      .sort(
+        (left, right) =>
+          new Date(right.syncedAt).getTime() - new Date(left.syncedAt).getTime() ||
+          right.weekKey.localeCompare(left.weekKey)
+      )[0];
+    accountId = latest?.accountId;
+  }
+
+  // A ledger can outlive a Jira reconfiguration. Without a stored account
+  // context, never guess from IndexedDB's unspecified getAll() ordering.
+  if (!accountId) {
+    return stored;
+  }
+
+  const cachedWorklogs = await readAllStore<JiraWorklog>("jiraWorklogs");
 
   if (cachedWorklogs.length === 0) {
     return stored;
   }
 
-  const accountId = stored?.accountId ?? cachedWorklogs[0].authorAccountId;
   const sourceWorklogs = cachedWorklogs.filter((worklog) => worklog.authorAccountId === accountId);
   if (stored) {
     return { ...stored, sourceWorklogs };

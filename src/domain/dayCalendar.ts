@@ -311,8 +311,11 @@ export const hourMarks = (layout: DayLayout): HourMark[] => {
 
 export const worklogToItem = (worklog: JiraWorklog): CalendarItem => {
   const startMin = minutesFromMidnight(new Date(getWorklogDisplayStarted(worklog)));
+  const allocationSuffix = worklog.allocation
+    ? `:${worklog.allocation.dateKey}:${worklog.allocation.partIndex}`
+    : "";
   return {
-    id: `wl:${worklog.id}`,
+    id: `wl:${worklog.id}${allocationSuffix}`,
     kind: "worklog",
     startMin,
     endMin: startMin + getWorklogDisplaySeconds(worklog) / 60,

@@ -625,24 +625,30 @@ export const AddTimeModal = ({
                     </small>
                   </div>
                   <div className="bulk-direction-toggle" role="radiogroup" aria-label="Bulk worklog distribution">
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={allocationDirection === "backward"}
+                    <label
                       className={allocationDirection === "backward" ? "active" : ""}
-                      onClick={() => setAllocationDirection("backward")}
                     >
-                      End on date
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={allocationDirection === "forward"}
+                      <input
+                        type="radio"
+                        name="bulk-worklog-distribution"
+                        value="backward"
+                        checked={allocationDirection === "backward"}
+                        onChange={() => setAllocationDirection("backward")}
+                      />
+                      <span>End on date</span>
+                    </label>
+                    <label
                       className={allocationDirection === "forward" ? "active" : ""}
-                      onClick={() => setAllocationDirection("forward")}
                     >
-                      Start on date
-                    </button>
+                      <input
+                        type="radio"
+                        name="bulk-worklog-distribution"
+                        value="forward"
+                        checked={allocationDirection === "forward"}
+                        onChange={() => setAllocationDirection("forward")}
+                      />
+                      <span>Start on date</span>
+                    </label>
                   </div>
                 </div>
               )}

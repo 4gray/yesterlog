@@ -213,7 +213,7 @@
 }
 
 .bulk-allocation-copy span,
-.bulk-direction-toggle button {
+.bulk-direction-toggle label {
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 700;
@@ -242,16 +242,30 @@
   background: var(--bg);
 }
 
-.bulk-direction-toggle button {
+.bulk-direction-toggle label {
+  position: relative;
   padding: 7px 9px;
   border: 0;
   border-radius: 5px;
   background: transparent;
   color: var(--dim);
   letter-spacing: 0.03em;
+  cursor: pointer;
 }
 
-.bulk-direction-toggle button.active {
+.bulk-direction-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.bulk-direction-toggle label:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.bulk-direction-toggle label.active {
   background: color-mix(in srgb, var(--amber) 16%, var(--bg-raised));
   color: var(--amber-soft);
 }
@@ -261,8 +275,9 @@
     grid-template-columns: 1fr;
   }
 
-  .bulk-direction-toggle button {
+  .bulk-direction-toggle label {
     flex: 1;
+    text-align: center;
   }
 }
 

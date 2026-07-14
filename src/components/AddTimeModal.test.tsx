@@ -289,6 +289,7 @@ describe("AddTimeModal", () => {
 
     expect(markup).toContain("BULK WORKLOG");
     expect(markup).toContain("One Jira entry, distributed locally");
-    expect(markup).toContain('aria-checked="true" class="active">Start on date');
+    expect(markup).toContain('<label class="active"><input type="radio" name="bulk-worklog-distribution" checked="" value="forward"/>');
+    expect(markup).toContain("<span>Start on date</span>");
   });
 });

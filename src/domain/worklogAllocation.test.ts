@@ -97,19 +97,30 @@ describe("projectWorklogsForWeek", () => {
   });
 
   it("fills around ordinary worklogs before exposing unavoidable overflow", () => {
+    const ordinaryStart = new Date(2026, 6, 13, 10, 0, 0, 0);
     const ordinary = worklog({
       id: "normal-1",
-      started: "2026-07-13T10:00:00.000Z",
-      created: "2026-07-13T10:00:00.000Z",
+      started: ordinaryStart.toISOString(),
+      created: ordinaryStart.toISOString(),
       timeSpentSeconds: 2 * 3600
     });
     const result = projectWorklogsForWeek(sync("2026-07-13", [ordinary, worklog()]), {
       settings: DEFAULT_SETTINGS,
-      now: new Date("2026-07-14T18:00:00.000Z")
+      now: new Date(2026, 6, 14, 18, 0, 0, 0)
     })!;
 
     expect(projectedHours(result)).toEqual({ "2026-07-13": 8, "2026-07-14": 8 });
-    expect(result.daySummaries["2026-07-13"].worklogs).toHaveLength(2);
+    const allocated = result.daySummaries["2026-07-13"].worklogs.filter((entry) => entry.allocation);
+    expect(allocated).toHaveLength(2);
+    expect(allocated.map((entry) => new Date(entry.allocation!.started).getHours())).toEqual([9, 12]);
+    expect(allocated.map((entry) => entry.allocation!.timeSpentSeconds / 3600)).toEqual([1, 5]);
+
+    const ordinaryEnd = ordinaryStart.getTime() + ordinary.timeSpentSeconds * 1000;
+    for (const entry of allocated) {
+      const allocatedStart = new Date(entry.allocation!.started).getTime();
+      const allocatedEnd = allocatedStart + entry.allocation!.timeSpentSeconds * 1000;
+      expect(allocatedStart < ordinaryEnd && ordinaryStart.getTime() < allocatedEnd).toBe(false);
+    }
   });
 
   it("keeps normal one-day worklogs unchanged", () => {
