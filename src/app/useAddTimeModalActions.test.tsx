@@ -2,7 +2,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { AppSettings, JiraWorklog, PersonalNote, WeekState } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog, PersonalNote, WeekState } from "../../shared/types";
 import type { AddTimePrefill } from "../components/AddTimeModal";
 import { buildWeekState, DEFAULT_SETTINGS } from "../domain/week";
 import { toLocalDateKey } from "../utils/date";
@@ -39,6 +39,18 @@ const worklog: JiraWorklog = {
   started: "2026-06-17T10:00:00.000Z",
   timeSpentSeconds: 3600,
   comment: "Existing worklog"
+};
+
+const ticket: JiraTicket = {
+  id: "20001",
+  key: "TB-42",
+  summary: "Refactor modal actions",
+  projectKey: "TB",
+  projectName: "TimeBro",
+  statusName: "In Progress",
+  statusCategory: "indeterminate",
+  loggedSecondsTotal: 0,
+  url: "https://example.atlassian.net/browse/TB-42"
 };
 
 const personalNote: PersonalNote = {
@@ -192,6 +204,14 @@ describe("useAddTimeModalActions", () => {
 
     expect(addModalDate).toBeUndefined();
     expect(addTimePrefill).toBeUndefined();
+  });
+
+  it("defaults a ticket-only prefill to retrospective without changing exact-time prefills", () => {
+    renderHarness();
+
+    act(() => getApi().openAddTime(new Date(2026, 5, 17, 9, 0), { ticket }));
+
+    expect(addTimePrefill).toEqual({ ticket, retrospective: true });
   });
 
   it("opens the tracking shortcut on the current week and rounds to the minute", () => {
