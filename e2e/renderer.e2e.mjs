@@ -243,7 +243,7 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
     assert.ok(await page.getByText("REVIEW TIME", { exact: true }).isVisible());
 
     await clickNav(page, "TICKETS", "tickets");
-    assert.ok(await page.getByText("IN PROGRESS · ASSIGNED TO ME").isVisible());
+    assert.ok(await page.getByText("IN PROGRESS · 2").isVisible());
 
     await clickNav(page, "REPORTS", "reports");
     assert.ok(await page.getByText("BY TICKET").isVisible());
