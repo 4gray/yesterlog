@@ -170,6 +170,7 @@ describe("useAddTimeModalActions", () => {
     expect(toLocalDateKey(addModalDate ?? new Date(0))).toBe("2026-06-16");
     expect(addModalDate?.getHours()).toBe(14);
     expect(addModalDate?.getMinutes()).toBe(37);
+    expect(addTimePrefill).toEqual({ retrospective: true });
     expect(editingWorklog).toBeUndefined();
     expect(editingPersonalNote).toBeUndefined();
     expect(logError).toBeUndefined();
@@ -205,7 +206,7 @@ describe("useAddTimeModalActions", () => {
 
     expect(toLocalDateKey(weekStartState)).toBe("2026-07-06");
     expect(addModalDate?.getTime()).toBe(new Date(2026, 6, 8, 16, 12, 0, 0).getTime());
-    expect(addTimePrefill).toBeUndefined();
+    expect(addTimePrefill).toEqual({ retrospective: true });
     expect(editingWorklog).toBeUndefined();
     expect(editingPersonalNote).toBeUndefined();
     expect(logError).toBeUndefined();

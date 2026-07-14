@@ -68,6 +68,31 @@ interface WeekViewProps {
   onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
 }
 
+interface QuickLogStartOptions {
+  dateKey: string;
+  currentDate: Date;
+  timeSpentSeconds: number;
+  startedMinutes?: number;
+}
+
+export const quickLogStartedAt = ({
+  dateKey,
+  currentDate,
+  timeSpentSeconds,
+  startedMinutes
+}: QuickLogStartOptions) => {
+  const started = fromLocalDateKey(dateKey);
+
+  if (startedMinutes != null) {
+    started.setHours(Math.floor(startedMinutes / 60), startedMinutes % 60, 0, 0);
+    return started;
+  }
+
+  started.setHours(currentDate.getHours(), currentDate.getMinutes(), 0, 0);
+  started.setTime(started.getTime() - timeSpentSeconds * 1000);
+  return started;
+};
+
 const PALETTE = [
   { seg: "#5b8cff", text: "#8fb0ff" },
   { seg: "#3bb7a8", text: "#6bd0c2" },
@@ -622,16 +647,17 @@ export const WeekView = ({
     if (!quickLog || !quickLogTicket || !onDockLog || quickLogValidationMessage) {
       return;
     }
-    const started = fromLocalDateKey(quickLog.dateKey);
-    if (quickLog.startedMinutes == null) {
-      started.setHours(now.getHours(), now.getMinutes(), 0, 0);
-    } else {
-      started.setHours(Math.floor(quickLog.startedMinutes / 60), quickLog.startedMinutes % 60, 0, 0);
-    }
+    const timeSpentSeconds = Math.round(quickLog.hours * 3600);
+    const started = quickLogStartedAt({
+      dateKey: quickLog.dateKey,
+      currentDate: now,
+      timeSpentSeconds,
+      startedMinutes: quickLog.startedMinutes
+    });
     const success = await onDockLog({
       issueKey: quickLogTicket.key,
       ticket: quickLogTicket,
-      timeSpentSeconds: Math.round(quickLog.hours * 3600),
+      timeSpentSeconds,
       startedISO: started.toISOString(),
       comment: quickLog.comment.trim() || undefined
     });

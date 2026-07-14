@@ -31,6 +31,8 @@ export interface AddTimePrefill {
   timeSpentSeconds?: number;
   startedISO?: string;
   comment?: string;
+  /** Treat the modal date as the end of a just-finished entry until its start is edited manually. */
+  retrospective?: boolean;
 }
 
 export interface AddTimeModalProps {
@@ -83,8 +85,14 @@ const PERSONAL_NOTE_PRESETS: DurationPreset[] = [
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
+const getInitialTicketSeconds = (editingWorklog?: JiraWorklog, prefill?: AddTimePrefill) =>
+  editingWorklog?.timeSpentSeconds ??
+  (prefill?.timeSpentSeconds && prefill.timeSpentSeconds > 0 ? Math.round(prefill.timeSpentSeconds) : undefined) ??
+  2 * 60 * 60;
+
 const getInitialStart = (
   date: Date,
+  ticketSeconds: number,
   editingWorklog?: JiraWorklog,
   editingPersonalNote?: PersonalNote,
   prefill?: AddTimePrefill
@@ -95,14 +103,11 @@ const getInitialStart = (
       ? new Date(editingPersonalNote.startedISO)
       : prefill?.startedISO
         ? new Date(prefill.startedISO)
-        : date;
+        : prefill?.retrospective
+          ? new Date(date.getTime() - ticketSeconds * 1000)
+          : date;
   return Number.isNaN(started.getTime()) ? date : started;
 };
-
-const getInitialTicketSeconds = (editingWorklog?: JiraWorklog, prefill?: AddTimePrefill) =>
-  editingWorklog?.timeSpentSeconds ??
-  (prefill?.timeSpentSeconds && prefill.timeSpentSeconds > 0 ? Math.round(prefill.timeSpentSeconds) : undefined) ??
-  2 * 60 * 60;
 
 const dayLabel = (date: Date) =>
   `${new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date).toUpperCase()} · ${date.getDate()} ${new Intl.DateTimeFormat(
@@ -195,8 +200,9 @@ export const AddTimeModal = ({
   const isEditingPersonalNote = Boolean(editingPersonalNote);
   const isEditing = isEditingWorklog || isEditingPersonalNote;
   const activePrefill = isEditing ? undefined : prefill;
-  const initialStart = getInitialStart(date, editingWorklog, editingPersonalNote, activePrefill);
   const initialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
+  const initialStart = getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill);
+  const isRetrospectiveEntry = Boolean(activePrefill?.retrospective && !activePrefill.startedISO);
   const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
@@ -225,6 +231,7 @@ export const AddTimeModal = ({
   const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
   const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
+  const [isStartEdited, setIsStartEdited] = useState(false);
   const [note, setNote] = useState(editingWorklog?.comment ?? activePrefill?.comment ?? "");
   const [personalNoteTitle, setPersonalNoteTitle] = useState(editingPersonalNote?.title ?? "");
   const [personalNote, setPersonalNote] = useState(editingPersonalNote?.text ?? "");
@@ -365,8 +372,8 @@ export const AddTimeModal = ({
 
   useEffect(() => {
     const nextPrefill = editingWorklog || editingPersonalNote ? undefined : prefill;
-    const start = getInitialStart(date, editingWorklog, editingPersonalNote, nextPrefill);
     const seconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
+    const start = getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill);
     const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
     const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
@@ -382,6 +389,7 @@ export const AddTimeModal = ({
     const startDateKey = toLocalDateKey(start);
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
+    setIsStartEdited(false);
     setNote(editingWorklog?.comment ?? nextPrefill?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
@@ -401,6 +409,7 @@ export const AddTimeModal = ({
     editingPersonalNote?.id,
     editingWorklog?.id,
     prefill?.comment,
+    prefill?.retrospective,
     prefill?.startedISO,
     prefill?.ticket?.key,
     prefill?.timeSpentSeconds
@@ -447,21 +456,42 @@ export const AddTimeModal = ({
     return () => document.removeEventListener("keydown", onKey);
   });
 
+  const updateRetrospectiveStart = (seconds: number) => {
+    if (!isRetrospectiveEntry || isStartEdited || seconds <= 0) {
+      return;
+    }
+
+    const ended = fromLocalDateKey(dateStr);
+    ended.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    const started = new Date(ended.getTime() - seconds * 1000);
+    setTimeStr(`${pad(started.getHours())}:${pad(started.getMinutes())}`);
+  };
+
+  const updateTicketDuration = (seconds: number) => {
+    setDurationSeconds(seconds);
+    updateRetrospectiveStart(seconds);
+  };
+
+  const updatePersonalDuration = (seconds: number) => {
+    setPersonalNoteSeconds(seconds);
+    updateRetrospectiveStart(seconds);
+  };
+
   const applyTicketPreset = (seconds: number) => {
     setTicketDurationMode("preset");
-    setDurationSeconds(seconds);
+    updateTicketDuration(seconds);
   };
 
   const applyTicketCustom = (amount: string, unit = ticketCustomUnit) => {
     setTicketDurationMode("custom");
     setTicketCustomAmount(amount);
-    setDurationSeconds(customDurationToSeconds(amount, unit));
+    updateTicketDuration(customDurationToSeconds(amount, unit));
   };
 
   const setTicketCustomUnitAndDuration = (unit: DurationUnit) => {
     setTicketDurationMode("custom");
     setTicketCustomUnit(unit);
-    setDurationSeconds(customDurationToSeconds(ticketCustomAmount, unit));
+    updateTicketDuration(customDurationToSeconds(ticketCustomAmount, unit));
   };
 
   const normalizeTicketCustomAmount = () => {
@@ -469,24 +499,24 @@ export const AddTimeModal = ({
       return;
     }
     setTicketCustomAmount("1");
-    setDurationSeconds(customDurationToSeconds("1", ticketCustomUnit));
+    updateTicketDuration(customDurationToSeconds("1", ticketCustomUnit));
   };
 
   const applyPersonalPreset = (seconds: number) => {
     setPersonalDurationMode("preset");
-    setPersonalNoteSeconds(seconds);
+    updatePersonalDuration(seconds);
   };
 
   const applyPersonalCustom = (amount: string, unit = personalCustomUnit) => {
     setPersonalDurationMode("custom");
     setPersonalCustomAmount(amount);
-    setPersonalNoteSeconds(customDurationToSeconds(amount, unit));
+    updatePersonalDuration(customDurationToSeconds(amount, unit));
   };
 
   const setPersonalCustomUnitAndDuration = (unit: DurationUnit) => {
     setPersonalDurationMode("custom");
     setPersonalCustomUnit(unit);
-    setPersonalNoteSeconds(customDurationToSeconds(personalCustomAmount, unit));
+    updatePersonalDuration(customDurationToSeconds(personalCustomAmount, unit));
   };
 
   const normalizePersonalCustomAmount = () => {
@@ -494,7 +524,7 @@ export const AddTimeModal = ({
       return;
     }
     setPersonalCustomAmount("1");
-    setPersonalNoteSeconds(customDurationToSeconds("1", personalCustomUnit));
+    updatePersonalDuration(customDurationToSeconds("1", personalCustomUnit));
   };
 
   return (
@@ -520,10 +550,24 @@ export const AddTimeModal = ({
 
         {!isEditing && (
           <div className="modal-mode-tabs">
-            <button type="button" className={mode === "ticket" ? "active" : ""} onClick={() => setMode("ticket")}>
+            <button
+              type="button"
+              className={mode === "ticket" ? "active" : ""}
+              onClick={() => {
+                setMode("ticket");
+                updateRetrospectiveStart(durationSeconds);
+              }}
+            >
               Log to ticket
             </button>
-            <button type="button" className={mode === "note" ? "active" : ""} onClick={() => setMode("note")}>
+            <button
+              type="button"
+              className={mode === "note" ? "active" : ""}
+              onClick={() => {
+                setMode("note");
+                updateRetrospectiveStart(personalNoteSeconds);
+              }}
+            >
               Personal note
             </button>
             {recurringTabEnabled && (
@@ -591,7 +635,14 @@ export const AddTimeModal = ({
                     <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
                     <label className="input-chip">
                       <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
-                      <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />
+                      <input
+                        type="time"
+                        value={timeStr}
+                        onChange={(event) => {
+                          setIsStartEdited(true);
+                          setTimeStr(event.target.value);
+                        }}
+                      />
                     </label>
                   </div>
                 </div>
@@ -666,7 +717,14 @@ export const AddTimeModal = ({
                 <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
                 <label className="input-chip personal-time-chip">
                   <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
-                  <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />
+                  <input
+                    type="time"
+                    value={timeStr}
+                    onChange={(event) => {
+                      setIsStartEdited(true);
+                      setTimeStr(event.target.value);
+                    }}
+                  />
                 </label>
               </div>
               <div className="personal-note-duration">
