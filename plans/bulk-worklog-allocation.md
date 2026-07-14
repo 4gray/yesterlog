@@ -37,4 +37,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: clean branch verified; awaiting commit, PR, CI, review, and merge.
+- Status: clean branch verified, committed, and pushed; PR publication, CI, review, and merge are in progress.
