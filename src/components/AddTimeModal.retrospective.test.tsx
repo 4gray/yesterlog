@@ -143,4 +143,31 @@ describe("AddTimeModal retrospective start", () => {
     expect(readTime()).toBe("00:30");
     expect(selectedDate()).toContain("14 JUL");
   });
+
+  it("clamps the default duration when its retrospective start is not selectable", () => {
+    act(() => {
+      root.render(
+        <AddTimeModal
+          date={new Date(2026, 6, 13, 0, 30)}
+          dateOptions={["2026-07-13", "2026-07-14", "2026-07-15", "2026-07-16", "2026-07-17"]}
+          ticketOptions={[ticket]}
+          isConfigured={true}
+          isLogging={false}
+          prefill={{ retrospective: true }}
+          onClose={() => undefined}
+          onLog={async () => true}
+        />
+      );
+    });
+
+    const timeInput = container.querySelector<HTMLInputElement>('input[type="time"]');
+    const selectedDate = container.querySelector<HTMLButtonElement>('.modal-day-option[aria-checked="true"]');
+    const submitButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) =>
+      button.textContent?.includes("Log 30m to TB-42")
+    );
+
+    expect(timeInput?.value).toBe("00:00");
+    expect(selectedDate?.textContent).toContain("13 JUL");
+    expect(submitButton).toBeDefined();
+  });
 });

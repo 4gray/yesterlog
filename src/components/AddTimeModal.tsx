@@ -90,6 +90,37 @@ const getInitialTicketSeconds = (editingWorklog?: JiraWorklog, prefill?: AddTime
   (prefill?.timeSpentSeconds && prefill.timeSpentSeconds > 0 ? Math.round(prefill.timeSpentSeconds) : undefined) ??
   2 * 60 * 60;
 
+interface RetrospectiveStart {
+  started: Date;
+  timeSpentSeconds: number;
+}
+
+const getSelectableRetrospectiveStart = (
+  date: Date,
+  requestedSeconds: number,
+  dateOptions: string[]
+): RetrospectiveStart => {
+  const ended = new Date(date);
+  ended.setSeconds(0, 0);
+  const requestedStart = new Date(ended.getTime() - requestedSeconds * 1000);
+
+  if (dateOptions.includes(toLocalDateKey(requestedStart))) {
+    return { started: requestedStart, timeSpentSeconds: requestedSeconds };
+  }
+
+  const endDateKey = toLocalDateKey(ended);
+  if (!dateOptions.includes(endDateKey)) {
+    return { started: requestedStart, timeSpentSeconds: requestedSeconds };
+  }
+
+  const dayStart = fromLocalDateKey(endDateKey);
+  const availableSeconds = Math.max(0, Math.floor((ended.getTime() - dayStart.getTime()) / 1000));
+  return {
+    started: dayStart,
+    timeSpentSeconds: Math.min(requestedSeconds, availableSeconds)
+  };
+};
+
 const getInitialStart = (
   date: Date,
   ticketSeconds: number,
@@ -200,9 +231,15 @@ export const AddTimeModal = ({
   const isEditingPersonalNote = Boolean(editingPersonalNote);
   const isEditing = isEditingWorklog || isEditingPersonalNote;
   const activePrefill = isEditing ? undefined : prefill;
-  const initialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
-  const initialStart = getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill);
   const isRetrospectiveEntry = Boolean(activePrefill?.retrospective && !activePrefill.startedISO);
+  const requestedInitialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
+  const retrospectiveInitial = isRetrospectiveEntry
+    ? getSelectableRetrospectiveStart(date, requestedInitialSeconds, dateOptions)
+    : undefined;
+  const initialSeconds = retrospectiveInitial?.timeSpentSeconds ?? requestedInitialSeconds;
+  const initialStart =
+    retrospectiveInitial?.started ??
+    getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill);
   const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
@@ -372,8 +409,14 @@ export const AddTimeModal = ({
 
   useEffect(() => {
     const nextPrefill = editingWorklog || editingPersonalNote ? undefined : prefill;
-    const seconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
-    const start = getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill);
+    const requestedSeconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
+    const retrospectiveStart = nextPrefill?.retrospective && !nextPrefill.startedISO
+      ? getSelectableRetrospectiveStart(date, requestedSeconds, dateOptions)
+      : undefined;
+    const seconds = retrospectiveStart?.timeSpentSeconds ?? requestedSeconds;
+    const start =
+      retrospectiveStart?.started ??
+      getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill);
     const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
     const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
@@ -458,14 +501,13 @@ export const AddTimeModal = ({
 
   const updateRetrospectiveStart = (seconds: number) => {
     if (!isRetrospectiveEntry || isStartEdited || seconds <= 0) {
-      return;
+      return seconds;
     }
 
-    const ended = new Date(date);
-    ended.setSeconds(0, 0);
-    const started = new Date(ended.getTime() - seconds * 1000);
-    setDateStr(toLocalDateKey(started));
-    setTimeStr(`${pad(started.getHours())}:${pad(started.getMinutes())}`);
+    const retrospectiveStart = getSelectableRetrospectiveStart(date, seconds, selectableDateOptions);
+    setDateStr(toLocalDateKey(retrospectiveStart.started));
+    setTimeStr(`${pad(retrospectiveStart.started.getHours())}:${pad(retrospectiveStart.started.getMinutes())}`);
+    return retrospectiveStart.timeSpentSeconds;
   };
 
   const selectStartedDate = (nextDateKey: string) => {
@@ -474,13 +516,15 @@ export const AddTimeModal = ({
   };
 
   const updateTicketDuration = (seconds: number) => {
-    setDurationSeconds(seconds);
-    updateRetrospectiveStart(seconds);
+    const nextSeconds = updateRetrospectiveStart(seconds);
+    setDurationSeconds(nextSeconds);
+    return nextSeconds;
   };
 
   const updatePersonalDuration = (seconds: number) => {
-    setPersonalNoteSeconds(seconds);
-    updateRetrospectiveStart(seconds);
+    const nextSeconds = updateRetrospectiveStart(seconds);
+    setPersonalNoteSeconds(nextSeconds);
+    return nextSeconds;
   };
 
   const applyTicketPreset = (seconds: number) => {
@@ -491,13 +535,23 @@ export const AddTimeModal = ({
   const applyTicketCustom = (amount: string, unit = ticketCustomUnit) => {
     setTicketDurationMode("custom");
     setTicketCustomAmount(amount);
-    updateTicketDuration(customDurationToSeconds(amount, unit));
+    const requestedSeconds = customDurationToSeconds(amount, unit);
+    const nextSeconds = updateTicketDuration(requestedSeconds);
+    if (nextSeconds !== requestedSeconds) {
+      setTicketCustomAmount(customHoursAmount(nextSeconds));
+      setTicketCustomUnit("h");
+    }
   };
 
   const setTicketCustomUnitAndDuration = (unit: DurationUnit) => {
     setTicketDurationMode("custom");
     setTicketCustomUnit(unit);
-    updateTicketDuration(customDurationToSeconds(ticketCustomAmount, unit));
+    const requestedSeconds = customDurationToSeconds(ticketCustomAmount, unit);
+    const nextSeconds = updateTicketDuration(requestedSeconds);
+    if (nextSeconds !== requestedSeconds) {
+      setTicketCustomAmount(customHoursAmount(nextSeconds));
+      setTicketCustomUnit("h");
+    }
   };
 
   const normalizeTicketCustomAmount = () => {
@@ -516,13 +570,23 @@ export const AddTimeModal = ({
   const applyPersonalCustom = (amount: string, unit = personalCustomUnit) => {
     setPersonalDurationMode("custom");
     setPersonalCustomAmount(amount);
-    updatePersonalDuration(customDurationToSeconds(amount, unit));
+    const requestedSeconds = customDurationToSeconds(amount, unit);
+    const nextSeconds = updatePersonalDuration(requestedSeconds);
+    if (nextSeconds !== requestedSeconds) {
+      setPersonalCustomAmount(customHoursAmount(nextSeconds));
+      setPersonalCustomUnit("h");
+    }
   };
 
   const setPersonalCustomUnitAndDuration = (unit: DurationUnit) => {
     setPersonalDurationMode("custom");
     setPersonalCustomUnit(unit);
-    updatePersonalDuration(customDurationToSeconds(personalCustomAmount, unit));
+    const requestedSeconds = customDurationToSeconds(personalCustomAmount, unit);
+    const nextSeconds = updatePersonalDuration(requestedSeconds);
+    if (nextSeconds !== requestedSeconds) {
+      setPersonalCustomAmount(customHoursAmount(nextSeconds));
+      setPersonalCustomUnit("h");
+    }
   };
 
   const normalizePersonalCustomAmount = () => {
@@ -561,7 +625,7 @@ export const AddTimeModal = ({
               className={mode === "ticket" ? "active" : ""}
               onClick={() => {
                 setMode("ticket");
-                updateRetrospectiveStart(durationSeconds);
+                updateTicketDuration(durationSeconds);
               }}
             >
               Log to ticket
@@ -571,7 +635,7 @@ export const AddTimeModal = ({
               className={mode === "note" ? "active" : ""}
               onClick={() => {
                 setMode("note");
-                updateRetrospectiveStart(personalNoteSeconds);
+                updatePersonalDuration(personalNoteSeconds);
               }}
             >
               Personal note

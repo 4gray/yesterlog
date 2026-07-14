@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { SyncResult, WeekState } from "../../shared/types";
-import { quickLogStartedAt, WeekView } from "./WeekView";
+import { isQuickLogIntervalAvailable, quickLogStartedAt, WeekView } from "./WeekView";
 
 const weekState: WeekState = {
   weekKey: "2026-06-15",
@@ -115,6 +115,46 @@ describe("WeekView", () => {
 
     expect(started.getHours()).toBe(9);
     expect(started.getMinutes()).toBe(15);
+  });
+
+  it("blocks a retrospective summary quick log that overlaps committed work", () => {
+    const available = isQuickLogIntervalAvailable({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 14, 0),
+      timeSpentSeconds: 60 * 60,
+      committedItems: [
+        {
+          id: "wl:existing",
+          kind: "worklog",
+          startMin: 13 * 60,
+          endMin: 14 * 60,
+          colorRole: "accent",
+          layer: "committed"
+        }
+      ]
+    });
+
+    expect(available).toBe(false);
+  });
+
+  it("allows a retrospective summary quick log in an empty interval", () => {
+    const available = isQuickLogIntervalAvailable({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 15, 0),
+      timeSpentSeconds: 60 * 60,
+      committedItems: [
+        {
+          id: "wl:existing",
+          kind: "worklog",
+          startMin: 13 * 60,
+          endMin: 14 * 60,
+          colorRole: "accent",
+          layer: "committed"
+        }
+      ]
+    });
+
+    expect(available).toBe(true);
   });
 
   it("shows Jira link icons next to week ticket keys", () => {

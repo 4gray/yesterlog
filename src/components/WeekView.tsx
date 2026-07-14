@@ -16,7 +16,12 @@ import {
   toLocalDateKey
 } from "../utils/date";
 import { dayActivitySeconds } from "../domain/activity";
-import { buildCommittedItems, minuteToLabel, overlapsCommitted } from "../domain/dayCalendar";
+import {
+  buildCommittedItems,
+  minuteToLabel,
+  overlapsCommitted,
+  type CalendarItem
+} from "../domain/dayCalendar";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
@@ -91,6 +96,33 @@ export const quickLogStartedAt = ({
   started.setHours(currentDate.getHours(), currentDate.getMinutes(), 0, 0);
   started.setTime(started.getTime() - timeSpentSeconds * 1000);
   return started;
+};
+
+interface QuickLogAvailabilityOptions extends QuickLogStartOptions {
+  committedItems: CalendarItem[];
+  timelineEndMinutes?: number;
+}
+
+export const isQuickLogIntervalAvailable = ({
+  dateKey,
+  currentDate,
+  timeSpentSeconds,
+  startedMinutes,
+  committedItems,
+  timelineEndMinutes
+}: QuickLogAvailabilityOptions) => {
+  const started = quickLogStartedAt({ dateKey, currentDate, timeSpentSeconds, startedMinutes });
+  if (toLocalDateKey(started) !== dateKey) {
+    return false;
+  }
+
+  const startMinutes = started.getHours() * 60 + started.getMinutes();
+  const durationMinutes = Math.max(15, Math.round(timeSpentSeconds / 60));
+  if (timelineEndMinutes != null && startMinutes + durationMinutes > timelineEndMinutes) {
+    return false;
+  }
+
+  return !overlapsCommitted(startMinutes, startMinutes + durationMinutes, committedItems);
 };
 
 const PALETTE = [
@@ -637,9 +669,19 @@ export const WeekView = ({
   const quickLogColor = quickLog
     ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
     : DOCK_PALETTE[0];
+  const quickLogIntervalAvailable = quickLog
+    ? Boolean(dropDayMeta.get(quickLog.dateKey)?.droppable) &&
+      isQuickLogIntervalAvailable({
+        dateKey: quickLog.dateKey,
+        currentDate: now,
+        timeSpentSeconds: Math.round(quickLog.hours * 3600),
+        startedMinutes: quickLog.startedMinutes,
+        committedItems: committedByDay.get(quickLog.dateKey) ?? [],
+        timelineEndMinutes: quickLog.timelineEndMinutes
+      })
+    : true;
   const quickLogValidationMessage =
-    quickLog?.startedMinutes != null &&
-    !isDroppable(quickLog.dateKey, quickLog.startedMinutes, quickLog.hours, quickLog.timelineEndMinutes)
+    quickLog && !quickLogIntervalAvailable
       ? "Choose a shorter duration or another time — this interval is unavailable."
       : undefined;
 
