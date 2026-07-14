@@ -760,6 +760,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
     weekEndExclusiveISO,
     syncedAt: new Date().toISOString(),
     accountId: currentUser.accountId,
+    jiraSite: normalizeBaseUrl(settings.jiraBaseUrl),
     displayName: currentUser.displayName,
     trackedSeconds,
     issueCount: visibleIssueKeys.size,

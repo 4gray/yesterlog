@@ -15,7 +15,7 @@ import { DEFAULT_SETTINGS } from "../domain/week";
 import { addDays, fromLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 10;
+const DB_VERSION = 11;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -37,6 +37,15 @@ type StoreName =
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
+interface CachedJiraWorklog {
+  cacheKey: string;
+  jiraSite: string;
+  authorAccountId: string;
+  worklog: JiraWorklog;
+}
+
+let jiraWorklogCachePromise: Promise<CachedJiraWorklog[]> | undefined;
+
 const openDatabase = () => {
   if (dbPromise) {
     return dbPromise;
@@ -45,7 +54,7 @@ const openDatabase = () => {
   dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
 
       if (!db.objectStoreNames.contains("settings")) {
@@ -96,8 +105,14 @@ const openDatabase = () => {
         db.createObjectStore("worklogAllocationPreferences", { keyPath: "worklogId" });
       }
 
+      // Version 10 briefly stored raw worklogs by Jira ID alone. Recreate this
+      // derived cache so equal IDs from different Jira sites cannot collide.
+      if (event.oldVersion === 10 && db.objectStoreNames.contains("jiraWorklogs")) {
+        db.deleteObjectStore("jiraWorklogs");
+      }
+
       if (!db.objectStoreNames.contains("jiraWorklogs")) {
-        db.createObjectStore("jiraWorklogs", { keyPath: "id" });
+        db.createObjectStore("jiraWorklogs", { keyPath: "cacheKey" });
       }
     };
 
@@ -144,6 +159,15 @@ const readAllStore = async <T>(storeName: StoreName) => {
   });
 };
 
+const readJiraWorklogCache = () => {
+  jiraWorklogCachePromise ??= readAllStore<CachedJiraWorklog>("jiraWorklogs");
+  return jiraWorklogCachePromise;
+};
+
+const invalidateJiraWorklogCache = () => {
+  jiraWorklogCachePromise = undefined;
+};
+
 export const getSettings = async (): Promise<AppSettings> => {
   const stored = await readStore<AppSettings & { id: string }>("settings", SETTINGS_KEY);
   const { id: _id, ...settings } = stored ?? { id: SETTINGS_KEY, ...DEFAULT_SETTINGS };
@@ -177,15 +201,39 @@ const rawCachedWorklog = (worklog: JiraWorklog): JiraWorklog => {
   return raw;
 };
 
+const jiraSiteFromWorklog = (worklog?: JiraWorklog) => {
+  if (!worklog?.issueUrl) {
+    return undefined;
+  }
+  try {
+    return new URL(worklog.issueUrl).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const jiraSiteForResult = (result?: SyncResult) =>
+  result?.jiraSite ?? result?.sourceWorklogs?.map(jiraSiteFromWorklog).find((site): site is string => Boolean(site));
+
+const jiraWorklogCacheKey = (jiraSite: string, worklogId: string) => JSON.stringify([jiraSite, worklogId]);
+
 const reconcileJiraWorklogCache = async (result: SyncResult) => {
-  if (!result.sourceWorklogs) {
+  const jiraSite = jiraSiteForResult(result);
+  if (!result.sourceWorklogs || !jiraSite) {
     return;
   }
 
   const db = await openDatabase();
-  const existing = await readAllStore<JiraWorklog>("jiraWorklogs");
-  const incoming = result.sourceWorklogs.map(rawCachedWorklog);
-  const incomingIds = new Set(incoming.map((worklog) => worklog.id));
+  const existing = await readJiraWorklogCache();
+  const incoming = result.sourceWorklogs.map(rawCachedWorklog).map(
+    (worklog): CachedJiraWorklog => ({
+      cacheKey: jiraWorklogCacheKey(jiraSite, worklog.id),
+      jiraSite,
+      authorAccountId: worklog.authorAccountId,
+      worklog
+    })
+  );
+  const incomingKeys = new Set(incoming.map((entry) => entry.cacheKey));
   const scanStart = result.scanStartISO ? new Date(result.scanStartISO) : undefined;
   const scanEnd = result.scanEndExclusiveISO ? new Date(result.scanEndExclusiveISO) : undefined;
 
@@ -194,66 +242,75 @@ const reconcileJiraWorklogCache = async (result: SyncResult) => {
     const store = transaction.objectStore("jiraWorklogs");
 
     if (scanStart && scanEnd && !Number.isNaN(scanStart.getTime()) && !Number.isNaN(scanEnd.getTime())) {
-      for (const worklog of existing) {
-        const started = new Date(worklog.started);
+      for (const entry of existing) {
+        const started = new Date(entry.worklog.started);
         if (
-          worklog.authorAccountId === result.accountId &&
+          entry.jiraSite === jiraSite &&
+          entry.authorAccountId === result.accountId &&
           started >= scanStart &&
           started < scanEnd &&
-          !incomingIds.has(worklog.id)
+          !incomingKeys.has(entry.cacheKey)
         ) {
-          store.delete(worklog.id);
+          store.delete(entry.cacheKey);
         }
       }
     }
 
-    for (const worklog of incoming) {
-      store.put(worklog);
+    for (const entry of incoming) {
+      store.put(entry);
     }
 
-    transaction.onerror = () => reject(transaction.error);
-    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => {
+      invalidateJiraWorklogCache();
+      reject(transaction.error);
+    };
+    transaction.oncomplete = () => {
+      invalidateJiraWorklogCache();
+      resolve();
+    };
   });
 };
 
 export const getSyncResult = async (weekKey: string) => {
   const stored = await readStore<SyncResult>("syncResults", weekKey);
+  let accountId = stored?.accountId;
+  let jiraSite = jiraSiteForResult(stored);
 
-  // Results written by the current schema already carry the full bounded source
-  // set needed for projection. Avoid re-reading the global ledger for every week
-  // loaded by month, report, and reconstruction views.
-  if (stored?.sourceWorklogs !== undefined) {
+  if (stored && (!accountId || !jiraSite)) {
+    // A legacy stored week without site context remains usable as-is, but must
+    // never be combined with a site-scoped global ledger.
     return stored;
   }
 
-  let accountId = stored?.accountId;
-  if (!accountId) {
+  if (!stored) {
     const syncResults = await readAllStore<SyncResult>("syncResults");
     const latest = syncResults
-      .filter((result) => Boolean(result.accountId))
+      .filter((result) => Boolean(result.accountId && jiraSiteForResult(result)))
       .sort(
         (left, right) =>
           new Date(right.syncedAt).getTime() - new Date(left.syncedAt).getTime() ||
           right.weekKey.localeCompare(left.weekKey)
       )[0];
     accountId = latest?.accountId;
+    jiraSite = jiraSiteForResult(latest);
   }
 
-  // A ledger can outlive a Jira reconfiguration. Without a stored account
-  // context, never guess from IndexedDB's unspecified getAll() ordering.
-  if (!accountId) {
+  if (!accountId || !jiraSite) {
     return stored;
   }
 
-  const cachedWorklogs = await readAllStore<JiraWorklog>("jiraWorklogs");
-
-  if (cachedWorklogs.length === 0) {
+  // All week loaders share one in-memory IndexedDB read. Reconciliation
+  // invalidates it, so already-cached weeks still see newly synced bulk logs.
+  const cachedEntries = await readJiraWorklogCache();
+  const sourceWorklogs = cachedEntries
+    .filter((entry) => entry.jiraSite === jiraSite && entry.authorAccountId === accountId)
+    .map((entry) => entry.worklog);
+  if (sourceWorklogs.length === 0) {
     return stored;
   }
 
-  const sourceWorklogs = cachedWorklogs.filter((worklog) => worklog.authorAccountId === accountId);
   if (stored) {
-    return { ...stored, sourceWorklogs };
+    return { ...stored, jiraSite, sourceWorklogs };
   }
 
   const weekStart = fromLocalDateKey(weekKey);
@@ -269,6 +326,7 @@ export const getSyncResult = async (weekKey: string) => {
     weekEndExclusiveISO: weekEndExclusive.toISOString(),
     syncedAt,
     accountId,
+    jiraSite,
     trackedSeconds: 0,
     issueCount: 0,
     worklogCount: 0,

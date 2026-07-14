@@ -107,6 +107,7 @@ describe("syncJiraWorklogs", () => {
 
     expect(searchRequest?.searchParams.get("jql")).toContain('worklogDate >= "2026-04-14"');
     expect(Number(worklogRequest?.searchParams.get("startedAfter"))).toBeLessThan(new Date("2026-07-01").getTime());
+    expect(result.jiraSite).toBe("https://example.atlassian.net");
     expect(result.sourceWorklogs?.map((worklog) => worklog.id)).toEqual(["bulk", "visible"]);
     expect(result.sourceWorklogs?.[0]).toMatchObject({
       created: "2026-07-14T17:00:00.000+0000",

@@ -110,6 +110,8 @@ export interface SyncResult {
   weekEndExclusiveISO: string;
   syncedAt: string;
   accountId: string;
+  /** Normalized Jira origin used to keep local caches isolated across sites. */
+  jiraSite?: string;
   displayName?: string;
   trackedSeconds: number;
   issueCount: number;

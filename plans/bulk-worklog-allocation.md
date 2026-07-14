@@ -15,6 +15,7 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Place derived calendar slices in actual free ranges inside the working-day window, splitting a day's projection around ordinary Jira worklogs when needed.
 - TimeBro continues to create one Jira worklog. Durations longer than a day are allowed and receive an exact deterministic local projection; creating multiple Jira worklogs remains out of scope until explicitly approved.
 - Keep synchronization read-only. Expand the existing author/date search around the selected week, reconcile the returned IDs into a global local worklog ledger, and build other weeks from that ledger. Jira's updated/deleted feeds remain a future optimization if the bounded scan becomes too expensive in production.
+- Scope ledger records by normalized Jira site plus account, and share one in-memory IndexedDB read across week loaders. Any reconciliation invalidates that read so already-cached weeks see newly synced worklogs without mixing Jira instances.
 
 ## Completed work
 
@@ -28,9 +29,10 @@ Make Jira worklogs longer than a configured working day visible across the days 
 
 ## Verification
 
-- `npm run test`: 105 files, 656 tests passed after integrating the Week Timeline changes from current `origin/main`.
+- `npm run test`: 106 files, 657 tests passed after integrating the Week Timeline changes from current `origin/main`.
 - `npm run e2e:renderer`: 7 renderer scenarios passed, including Timeline persistence and the mobile overflow check.
 - `npm run build`: passed (TypeScript, Vite renderer, Electron TypeScript).
+- `npm audit`: 0 vulnerabilities after adding the IndexedDB test runtime.
 - Playwright visual check: 2-week custom duration at 560px width, no console errors or inaccessible modal controls. The original shared checkout was also checked at 1200px and 760px before the clean port.
 
 ## Pull request
@@ -38,4 +40,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: PR #17 is ready for review; six automated review threads are addressed, current `origin/main` is integrated, and final CI/re-review plus merge remain.
+- Status: PR #17 is ready for review; eight automated review threads are addressed locally, current `origin/main` is integrated, and final commit, CI/re-review, plus merge remain.
