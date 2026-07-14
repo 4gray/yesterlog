@@ -209,6 +209,41 @@ describe("projectWorklogsForWeek", () => {
     expect(result.daySummaries["2026-07-14"].worklogs[0]).not.toHaveProperty("allocation");
   });
 
+  it("keeps an imported overtime worklog below two daily targets on its Jira day", () => {
+    const overtime = worklog({ id: "overtime", timeSpentSeconds: 9 * 3600 });
+    const result = projectWorklogsForWeek(sync("2026-07-13", [overtime]), {
+      settings: DEFAULT_SETTINGS,
+      now: new Date("2026-07-14T18:00:00.000Z")
+    })!;
+
+    expect(projectedHours(result)).toEqual({ "2026-07-14": 9 });
+    expect(result.daySummaries["2026-07-14"].worklogs[0]).not.toHaveProperty("allocation");
+  });
+
+  it("honors an explicit TimeBro distribution choice below the imported bulk threshold", () => {
+    const preference: WorklogAllocationPreference = {
+      preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", "explicit-overtime"]),
+      jiraSite: "https://alpha.atlassian.net",
+      authorAccountId: "me",
+      worklogId: "explicit-overtime",
+      direction: "backward",
+      createdAt: "2026-07-14T18:00:00.000Z",
+      updatedAt: "2026-07-14T18:00:00.000Z"
+    };
+    const overtime = worklog({ id: "explicit-overtime", timeSpentSeconds: 9 * 3600 });
+    const result = projectWorklogsForWeek(sync("2026-07-13", [overtime]), {
+      settings: DEFAULT_SETTINGS,
+      preferences: [preference],
+      now: new Date("2026-07-14T18:00:00.000Z")
+    })!;
+
+    expect(projectedHours(result)).toEqual({ "2026-07-13": 1, "2026-07-14": 8 });
+    expect(result.daySummaries["2026-07-14"].worklogs[0].allocation).toMatchObject({
+      direction: "backward",
+      isApproximate: false
+    });
+  });
+
   it("keeps an overloaded residual start on its allocation date", () => {
     const dateKey = "2026-07-14";
     const lateStart = new Date(2026, 6, 14, 23, 0, 0, 0);

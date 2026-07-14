@@ -17,6 +17,7 @@ import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 const DB_NAME = "jira-week-tracker";
 const DB_VERSION = 12;
 const SETTINGS_KEY = "default";
+const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
 
@@ -42,6 +43,14 @@ interface CachedJiraWorklog {
   jiraSite: string;
   authorAccountId: string;
   worklog: JiraWorklog;
+}
+
+interface ActiveJiraContext {
+  id: typeof JIRA_CONTEXT_KEY;
+  jiraSite: string;
+  authorAccountId: string;
+  jiraEmail: string;
+  syncedAt: string;
 }
 
 let jiraWorklogCachePromise: Promise<CachedJiraWorklog[]> | undefined;
@@ -225,6 +234,55 @@ const jiraSiteFromWorklog = (worklog?: JiraWorklog) => {
 const jiraSiteForResult = (result?: SyncResult) =>
   result?.jiraSite ?? result?.sourceWorklogs?.map(jiraSiteFromWorklog).find((site): site is string => Boolean(site));
 
+const jiraSiteFromSettings = (rawSite: string) => {
+  const trimmed = rawSite.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return undefined;
+  }
+  const candidate = trimmed.includes("://")
+    ? trimmed
+    : `https://${trimmed.includes(".") ? trimmed : `${trimmed}.atlassian.net`}`;
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const normalizedJiraEmail = (email: string) => email.trim().toLocaleLowerCase();
+
+const getConfiguredJiraContext = async () => {
+  const [settings, storedContext] = await Promise.all([
+    getSettings(),
+    readStore<ActiveJiraContext>("settings", JIRA_CONTEXT_KEY)
+  ]);
+  const jiraSite = jiraSiteFromSettings(settings.jiraBaseUrl);
+  const jiraEmail = normalizedJiraEmail(settings.jiraEmail);
+  const activeContext =
+    storedContext && storedContext.jiraSite === jiraSite && storedContext.jiraEmail === jiraEmail
+      ? storedContext
+      : undefined;
+  return { jiraSite, jiraEmail, activeContext, hasStoredContext: Boolean(storedContext) };
+};
+
+const saveActiveJiraContext = async (result: SyncResult) => {
+  const jiraSite = jiraSiteForResult(result);
+  if (!jiraSite || !result.accountId) {
+    return;
+  }
+  const settings = await getSettings();
+  if (jiraSiteFromSettings(settings.jiraBaseUrl) !== jiraSite) {
+    return;
+  }
+  await writeStore("settings", {
+    id: JIRA_CONTEXT_KEY,
+    jiraSite,
+    authorAccountId: result.accountId,
+    jiraEmail: normalizedJiraEmail(settings.jiraEmail),
+    syncedAt: result.syncedAt
+  } satisfies ActiveJiraContext);
+};
+
 const jiraWorklogCacheKey = (jiraSite: string, worklogId: string) => JSON.stringify([jiraSite, worklogId]);
 
 const summarizeWorklogsForWeek = (
@@ -343,27 +401,26 @@ const reconcileJiraWorklogCache = async (result: SyncResult) => {
 };
 
 export const getSyncResult = async (weekKey: string) => {
-  const stored = await readStore<SyncResult>("syncResults", weekKey);
-  let accountId = stored?.accountId;
-  let jiraSite = jiraSiteForResult(stored);
+  let stored = await readStore<SyncResult>("syncResults", weekKey);
+  const configuredContext = await getConfiguredJiraContext();
+  let accountId = configuredContext.activeContext?.authorAccountId;
+  let jiraSite = configuredContext.activeContext?.jiraSite;
 
-  if (stored && (!accountId || !jiraSite)) {
+  if (!configuredContext.activeContext) {
+    if (configuredContext.hasStoredContext) {
+      return undefined;
+    }
+    const storedSite = jiraSiteForResult(stored);
+    if (!stored || !configuredContext.jiraSite || storedSite !== configuredContext.jiraSite) {
+      return undefined;
+    }
     // A legacy stored week without site context remains usable as-is, but must
-    // never be combined with a site-scoped global ledger.
+    // never be combined with or used to synthesize from a global ledger.
     return stored;
   }
 
-  if (!stored) {
-    const syncResults = await readAllStore<SyncResult>("syncResults");
-    const latest = syncResults
-      .filter((result) => Boolean(result.accountId && jiraSiteForResult(result)))
-      .sort(
-        (left, right) =>
-          new Date(right.syncedAt).getTime() - new Date(left.syncedAt).getTime() ||
-          right.weekKey.localeCompare(left.weekKey)
-      )[0];
-    accountId = latest?.accountId;
-    jiraSite = jiraSiteForResult(latest);
+  if (stored && (stored.accountId !== accountId || jiraSiteForResult(stored) !== jiraSite)) {
+    stored = undefined;
   }
 
   if (!accountId || !jiraSite) {
@@ -423,7 +480,11 @@ export const getSyncResult = async (weekKey: string) => {
 };
 
 export const saveSyncResult = async (result: SyncResult) => {
-  await Promise.all([writeStore("syncResults", result), reconcileJiraWorklogCache(result)]);
+  await Promise.all([
+    writeStore("syncResults", result),
+    reconcileJiraWorklogCache(result),
+    saveActiveJiraContext(result)
+  ]);
 };
 
 export const getWorklogAllocationPreferences = () =>

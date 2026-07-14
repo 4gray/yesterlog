@@ -210,6 +210,8 @@ export const projectWorklogsForWeek = (
       )
       .map((preference) => [preference.worklogId, preference])
   );
+  const isBulkWorklog = (worklog: JiraWorklog) =>
+    preferenceMap.has(worklog.id) || worklog.timeSpentSeconds >= dailyCapacitySeconds * 2;
   const now = options.now ?? new Date();
   const todayKey = toLocalDateKey(now);
   const weekStart = fromLocalDateKey(syncResult.weekKey);
@@ -233,7 +235,7 @@ export const projectWorklogsForWeek = (
   };
 
   for (const worklog of rawSources) {
-    if (worklog.timeSpentSeconds > dailyCapacitySeconds) {
+    if (isBulkWorklog(worklog)) {
       continue;
     }
     const dateKey = dateKeyFor(worklog.started);
@@ -251,11 +253,11 @@ export const projectWorklogsForWeek = (
 
   const projected: JiraWorklog[] = [];
   const bulkWorklogs = rawSources
-    .filter((worklog) => worklog.timeSpentSeconds > dailyCapacitySeconds)
+    .filter(isBulkWorklog)
     .sort((left, right) => new Date(left.started).getTime() - new Date(right.started).getTime() || left.id.localeCompare(right.id));
 
   for (const worklog of rawSources) {
-    if (worklog.timeSpentSeconds <= dailyCapacitySeconds) {
+    if (!isBulkWorklog(worklog)) {
       projected.push(worklog);
     }
   }

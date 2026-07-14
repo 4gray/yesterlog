@@ -2,10 +2,12 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import type { JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import { DEFAULT_SETTINGS } from "../domain/week";
 import {
   getSyncResult,
   getWorklogAllocationPreferences,
   saveSyncResult,
+  saveSettings,
   saveWorklogAllocationPreference
 } from "./db";
 import { mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
@@ -45,13 +47,14 @@ const syncResult = (
 });
 
 describe("Jira worklog ledger", () => {
-  it("refreshes cached weeks while isolating equal account and worklog IDs by Jira site", async () => {
+  it("refreshes cached weeks while following the active Jira site context", async () => {
     const siteA = "https://alpha.atlassian.net";
     const siteB = "https://beta.atlassian.net";
     const a1 = source("bulk-1", siteA, "2026-07-14T09:00:00.000Z");
     const a2 = source("shared-id", siteA, "2026-07-21T09:00:00.000Z");
     const b2 = source("shared-id", siteB, "2026-07-28T09:00:00.000Z");
 
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: siteA, jiraEmail: "person@example.com" });
     await saveSyncResult(syncResult("2026-07-13", siteA, "2026-07-14T12:00:00.000Z", [a1]));
     expect((await getSyncResult("2026-07-13"))?.sourceWorklogs?.map((worklog) => worklog.id)).toEqual([
       "bulk-1"
@@ -62,13 +65,11 @@ describe("Jira worklog ledger", () => {
     expect(refreshedWeek?.sourceWorklogs?.map((worklog) => worklog.id).sort()).toEqual(["bulk-1", "shared-id"]);
     expect(refreshedWeek?.sourceWorklogs?.every((worklog) => worklog.issueUrl?.startsWith(siteA))).toBe(true);
 
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: siteB, jiraEmail: "person@example.com" });
     await saveSyncResult(syncResult("2026-07-27", siteB, "2026-07-28T12:00:00.000Z", [b2]));
-    const isolatedStoredWeek = await getSyncResult("2026-07-13");
-    expect(isolatedStoredWeek?.sourceWorklogs?.map((worklog) => worklog.id).sort()).toEqual([
-      "bulk-1",
-      "shared-id"
-    ]);
-    expect(isolatedStoredWeek?.sourceWorklogs?.every((worklog) => worklog.issueUrl?.startsWith(siteA))).toBe(true);
+    const activeSiteWeek = await getSyncResult("2026-07-13");
+    expect(activeSiteWeek?.sourceWorklogs?.map((worklog) => worklog.id)).toEqual(["shared-id"]);
+    expect(activeSiteWeek?.sourceWorklogs?.every((worklog) => worklog.issueUrl?.startsWith(siteB))).toBe(true);
 
     const synthesizedLatestWeek = await getSyncResult("2026-08-03");
     expect(synthesizedLatestWeek?.jiraSite).toBe(siteB);
@@ -82,6 +83,7 @@ describe("Jira worklog ledger", () => {
     const later = source("z-later", site, "2026-08-04T09:00:00.000Z");
     later.updated = "2026-08-04T01:00:00.000Z";
 
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: site, jiraEmail: "person@example.com" });
     await saveSyncResult(syncResult("2026-08-03", site, "2026-08-05T12:00:00.000Z", [earlier, later]));
     const synthesized = await getSyncResult("2026-08-10");
 
@@ -115,6 +117,7 @@ describe("Jira worklog ledger", () => {
     const ordinary = source("ledger-normal", site, "2026-08-18T09:00:00.000Z");
     ordinary.timeSpentSeconds = 2 * 3600;
 
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: site, jiraEmail: "person@example.com" });
     await saveSyncResult(
       syncResult("2026-08-10", site, "2026-08-20T12:00:00.000Z", [ordinary])
     );
@@ -141,5 +144,24 @@ describe("Jira worklog ledger", () => {
       started: "2026-08-18T10:00:00.000Z",
       timeSpentSeconds: 3 * 3600
     });
+  });
+
+  it("does not synthesize history after Jira site or account settings change before sync", async () => {
+    const site = "https://previous.atlassian.net";
+    const ordinary = source("previous-site", site, "2026-08-25T09:00:00.000Z");
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: site, jiraEmail: "old@example.com" });
+    await saveSyncResult(
+      syncResult("2026-08-17", site, "2026-08-25T12:00:00.000Z", [ordinary])
+    );
+
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: site, jiraEmail: "new@example.com" });
+    expect(await getSyncResult("2026-08-24")).toBeUndefined();
+
+    await saveSettings({
+      ...DEFAULT_SETTINGS,
+      jiraBaseUrl: "https://new.atlassian.net",
+      jiraEmail: "old@example.com"
+    });
+    expect(await getSyncResult("2026-08-24")).toBeUndefined();
   });
 });
