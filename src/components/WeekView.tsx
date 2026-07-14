@@ -22,6 +22,7 @@ import { TimeSplit } from "./TimeSplit";
 import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
+import { useActiveWorkDock } from "./useActiveWorkDock";
 import { WeekHeader } from "./WeekHeader";
 import {
   PendingRecurringCard,
@@ -29,9 +30,6 @@ import {
   type RecurringConfirmPayload
 } from "./WeekRecurringRows";
 
-const DOCK_OPEN_STORAGE_KEY = "timebro-active-dock";
-const DOCK_INITIAL_SHOWN = 6;
-const DOCK_PAGE_SIZE = 4;
 const LANE_HOURS = [0.5, 1, 2, 4] as const;
 
 export interface DockLogPayload {
@@ -64,15 +62,6 @@ interface WeekViewProps {
   onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
 }
-
-const readDockOpen = () => {
-  try {
-    const stored = localStorage.getItem(DOCK_OPEN_STORAGE_KEY);
-    return stored == null ? true : stored === "1";
-  } catch {
-    return true;
-  }
-};
 
 const PALETTE = [
   { seg: "#5b8cff", text: "#8fb0ff" },
@@ -528,8 +517,9 @@ export const WeekView = ({
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
 
-  const [dockOpen, setDockOpen] = useState(readDockOpen);
-  const [dockShown, setDockShown] = useState(DOCK_INITIAL_SHOWN);
+  const { open: dockOpen, shownCount: dockShown, toggleOpen: toggleDock, loadMore: loadMoreDock } = useActiveWorkDock(
+    dockTickets.length
+  );
   const [quickLog, setQuickLog] = useState<QuickLogContext | null>(null);
 
   const dockColorMap = useMemo(() => buildDockColorMap(dockTickets), [dockTickets]);
@@ -569,23 +559,6 @@ export const WeekView = ({
     isDroppable,
     onDrop: handleDrop
   });
-
-  const toggleDock = useCallback(() => {
-    setDockOpen((current) => {
-      const next = !current;
-      try {
-        localStorage.setItem(DOCK_OPEN_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-
-  const loadMoreDock = useCallback(
-    () => setDockShown((current) => Math.min(dockTickets.length, current + DOCK_PAGE_SIZE)),
-    [dockTickets.length]
-  );
 
   const quickLogTicket = quickLog ? dockTickets.find((ticket) => ticket.key === quickLog.ticketKey) : undefined;
   const quickLogColor = quickLog

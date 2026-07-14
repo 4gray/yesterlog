@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ChevronDown, ChevronUp, Hand, LayoutGrid, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Hand, LayoutGrid, MousePointerClick, Plus } from "lucide-react";
 import type { JiraTicket } from "../../shared/types";
 import { formatHours } from "../utils/date";
 import { buildDockColorMap, formatRelativeTime, getDockStatus } from "./activeWork";
@@ -17,7 +17,11 @@ interface ActiveWorkDockProps {
   now: Date;
   onToggleOpen: () => void;
   onLoadMore: () => void;
-  onGrabCard: (ticket: JiraTicket, event: React.MouseEvent) => void;
+  /** Enables Week's drag gesture. */
+  onGrabCard?: (ticket: JiraTicket, event: React.MouseEvent) => void;
+  /** Enables view-specific click/keyboard activation, such as logging on Today. */
+  onActivateCard?: (ticket: JiraTicket) => void;
+  interaction?: "drag" | "select";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -32,27 +36,45 @@ const DockCard = ({
   color,
   isDragging,
   now,
-  onGrabCard
+  onGrabCard,
+  onActivateCard,
+  interaction
 }: {
   ticket: JiraTicket;
   color: { seg: string; text: string };
   isDragging: boolean;
   now: Date;
-  onGrabCard: (ticket: JiraTicket, event: React.MouseEvent) => void;
+  onGrabCard?: (ticket: JiraTicket, event: React.MouseEvent) => void;
+  onActivateCard?: (ticket: JiraTicket) => void;
+  interaction: "drag" | "select";
 }) => {
   const status = getDockStatus(ticket);
   const badge = getIssueTypeBadgeLabel(ticket.issueType);
   const isDone = status.tone === "done";
   const createdRelative = formatRelativeTime(ticket.createdAt, now);
   const loggedHours = ticket.loggedSecondsTotal / 3600;
+  const isInteractive = Boolean(onGrabCard || onActivateCard);
+  const actionLabel =
+    interaction === "select" ? `Log time for ${ticket.key} today` : `Drag ${ticket.key} onto a day to log time`;
 
   return (
     <div
-      className={`dock-card ${isDragging ? "is-dragging" : ""} ${isDone ? "is-done" : ""}`}
-      onMouseDown={(event) => onGrabCard(ticket, event)}
-      role="button"
-      tabIndex={0}
-      aria-label={`Drag ${ticket.key} onto a day to log time`}
+      className={`dock-card ${onActivateCard ? "is-activatable" : ""} ${isDragging ? "is-dragging" : ""} ${isDone ? "is-done" : ""}`}
+      onMouseDown={onGrabCard ? (event) => onGrabCard(ticket, event) : undefined}
+      onClick={onActivateCard ? () => onActivateCard(ticket) : undefined}
+      onKeyDown={
+        onActivateCard
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onActivateCard(ticket);
+              }
+            }
+          : undefined
+      }
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-label={isInteractive ? actionLabel : undefined}
       title={`${ticket.key} — ${ticket.summary}`}
     >
       <div className="dock-card-top">
@@ -95,12 +117,10 @@ export const ActiveWorkDock = ({
   now,
   onToggleOpen,
   onLoadMore,
-  onGrabCard
+  onGrabCard,
+  onActivateCard,
+  interaction = "drag"
 }: ActiveWorkDockProps) => {
-  if (tickets.length === 0) {
-    return null;
-  }
-
   const railRef = useRef<HTMLDivElement | null>(null);
 
   // Translate vertical wheel scrolling into horizontal movement of the rail.
@@ -131,10 +151,17 @@ export const ActiveWorkDock = ({
     return () => rail.removeEventListener("wheel", onWheel);
   }, [open]);
 
+  if (tickets.length === 0) {
+    return null;
+  }
+
   const colorMap = buildDockColorMap(tickets);
   const shown = Math.min(shownCount, tickets.length);
   const visible = tickets.slice(0, shown);
   const remaining = tickets.length - shown;
+  const interactionHint =
+    interaction === "select" ? "select a card to log time today" : "drag a ticket onto a day to log time";
+  const InteractionIcon = interaction === "select" ? MousePointerClick : Hand;
 
   if (!open) {
     return (
@@ -142,7 +169,7 @@ export const ActiveWorkDock = ({
         <LayoutGrid size={15} strokeWidth={1.8} className="dock-collapsed-icon" />
         <span className="dock-collapsed-title">MY ACTIVE WORK</span>
         <span className="dock-count">{activeCount}</span>
-        <span className="dock-collapsed-hint">— drag a ticket onto a day to log time</span>
+        <span className="dock-collapsed-hint">— {interactionHint}</span>
         <span className="dock-card-spacer" />
         <ChevronUp size={15} strokeWidth={2} className="dock-collapsed-icon" />
       </button>
@@ -155,8 +182,8 @@ export const ActiveWorkDock = ({
         <span className="dock-head-title">MY ACTIVE WORK</span>
         <span className="dock-count">{activeCount}</span>
         <span className="dock-head-hint">
-          <Hand size={12} strokeWidth={1.8} />
-          drag a card onto a day to log
+          <InteractionIcon size={12} strokeWidth={1.8} />
+          {interactionHint}
         </span>
         <span className="dock-card-spacer" />
         <button type="button" className="dock-hide" onClick={onToggleOpen} title="Hide panel" aria-label="Hide active work panel">
@@ -173,6 +200,8 @@ export const ActiveWorkDock = ({
             isDragging={draggingKey === ticket.key}
             now={now}
             onGrabCard={onGrabCard}
+            onActivateCard={onActivateCard}
+            interaction={interaction}
           />
         ))}
         {remaining > 0 && (

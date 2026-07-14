@@ -114,6 +114,11 @@
   cursor: grabbing;
 }
 
+.dock-card.is-activatable,
+.dock-card.is-activatable:active {
+  cursor: pointer;
+}
+
 .dock-card.is-dragging {
   opacity: 0.35;
 }
@@ -470,4 +475,3 @@
 /* ============================================================
    QUICK-LOG CONFIRM SHEET
    ============================================================ */
-

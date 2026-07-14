@@ -88,7 +88,8 @@ const pendingRecurring: PendingRecurringOccurrence = {
 const renderToday = (
   detectedSignals: ReconstructSignal[] = [],
   recurringEntries: RecurringEntry[] = [],
-  pending: PendingRecurringOccurrence[] = []
+  pending: PendingRecurringOccurrence[] = [],
+  dockTickets: JiraTicket[] = []
 ) =>
   renderToStaticMarkup(
     <TodayView
@@ -102,6 +103,8 @@ const renderToday = (
       todayTrackedHours={1}
       dailyTargetHours={8}
       touchedNotLogged={[touchedTicket]}
+      dockTickets={dockTickets}
+      activeTicketCount={dockTickets.length}
       settings={settings}
       reminderTime="17:00"
       remindersEnabled={true}
@@ -141,6 +144,14 @@ describe("TodayView calendar", () => {
     const markup = renderToday();
 
     expect(markup).toContain("LOGGED OF 8h");
+  });
+
+  it("renders the active-work dock with Today-specific logging guidance", () => {
+    const markup = renderToday([], [], [], [touchedTicket]);
+
+    expect(markup).toContain("MY ACTIVE WORK");
+    expect(markup).toContain("select a card to log time today");
+    expect(markup).toContain("Log time for FTDM-401 today");
   });
 
   it("renders detected-but-unlogged activity as a ghost block", () => {

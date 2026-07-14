@@ -383,15 +383,17 @@ body.cal-dragging .cal-track {
   cursor: grabbing;
 }
 
-/* Below the two-column breakpoint the body stacks; give the calendar a bounded
-   height so it keeps its own scroll and the rail flows beneath a scrolling page. */
+/* Below the two-column breakpoint the body stacks. Keep that middle region as
+   the scroll surface so the Today header and active-work dock remain available. */
 @media (max-width: 1100px) {
   .today-view {
-    overflow-y: auto;
+    overflow-y: hidden;
   }
 
   .today-view .today-body {
-    flex: none;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .cal {

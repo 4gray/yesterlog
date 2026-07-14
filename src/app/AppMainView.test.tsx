@@ -11,7 +11,23 @@ vi.mock("../components/LoadingView", () => ({
 }));
 
 vi.mock("../components/TodayView", () => ({
-  TodayView: ({ reminderTime }: { reminderTime: string }) => <section data-testid="today-view">{reminderTime}</section>
+  TodayView: ({
+    reminderTime,
+    dockTickets,
+    activeTicketCount
+  }: {
+    reminderTime: string;
+    dockTickets: unknown[];
+    activeTicketCount: number;
+  }) => (
+    <section
+      data-testid="today-view"
+      data-dock={String(dockTickets.length)}
+      data-active-count={String(activeTicketCount)}
+    >
+      {reminderTime}
+    </section>
+  )
 }));
 
 vi.mock("../components/WeekView", () => ({
@@ -230,6 +246,13 @@ describe("AppMainView", () => {
     renderView({ view: "week", isSyncing: false, isSyncingReviews: true });
 
     expect(rendered("week-view")?.dataset.syncing).toBe("true");
+  });
+
+  it("passes active-work dock data to the today view", () => {
+    renderView({ view: "today", dockTickets: [{}, {}] as AppMainViewProps["dockTickets"], activeTicketCount: 1 });
+
+    expect(rendered("today-view")?.dataset.dock).toBe("2");
+    expect(rendered("today-view")?.dataset.activeCount).toBe("1");
   });
 
   it("passes empty ticket buckets when ticket data has not loaded", () => {

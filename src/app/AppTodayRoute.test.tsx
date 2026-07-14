@@ -39,6 +39,8 @@ vi.mock("../components/TodayView", () => ({
         data-pending={String(pending.length)}
         data-tracked={String(props.todayTrackedHours)}
         data-target={String(props.dailyTargetHours)}
+        data-dock={String((props.dockTickets as JiraTicket[]).length)}
+        data-active-count={String(props.activeTicketCount)}
         data-reminder={String(props.reminderTime)}
         data-reminders-enabled={String(props.remindersEnabled)}
       >
@@ -147,6 +149,8 @@ const baseProps = (): AppTodayRouteProps => ({
   todayTrackedHours: 5,
   dailyTargetHours: 8,
   touchedNotLogged: [ticket],
+  dockTickets: [ticket],
+  activeTicketCount: 1,
   recapDaySummary: undefined,
   settings,
   reminderTime: "17:30",
@@ -194,6 +198,8 @@ describe("AppTodayRoute", () => {
     expect(rendered?.getAttribute("data-pending")).toBe("1");
     expect(rendered?.getAttribute("data-tracked")).toBe("5");
     expect(rendered?.getAttribute("data-target")).toBe("8");
+    expect(rendered?.getAttribute("data-dock")).toBe("1");
+    expect(rendered?.getAttribute("data-active-count")).toBe("1");
     expect(rendered?.getAttribute("data-reminder")).toBe("17:30");
     expect(rendered?.getAttribute("data-reminders-enabled")).toBe("true");
     expect(todayViewProps[0]?.touchedNotLogged).toEqual([ticket]);

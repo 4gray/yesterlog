@@ -19,6 +19,8 @@ import { TimeSplit } from "./TimeSplit";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { DayCalendar } from "./DayCalendar";
 import type { AddTimePrefill } from "./AddTimeModal";
+import { ActiveWorkDock } from "./ActiveWorkDock";
+import { useActiveWorkDock } from "./useActiveWorkDock";
 
 interface TodayViewProps {
   date: Date;
@@ -35,6 +37,8 @@ interface TodayViewProps {
   todayTrackedHours: number;
   dailyTargetHours: number;
   touchedNotLogged: JiraTicket[];
+  dockTickets?: JiraTicket[];
+  activeTicketCount?: number;
   /** Previous working day's summary, for the rail recap card. */
   recapDaySummary?: DayTrackingSummary;
   /** App settings — the recap card reads the optional AI-polish config. */
@@ -66,6 +70,8 @@ export const TodayView = ({
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
+  dockTickets = [],
+  activeTicketCount,
   recapDaySummary,
   settings,
   reminderTime,
@@ -115,6 +121,9 @@ export const TodayView = ({
   const meterPct = dailyTargetHours > 0 ? Math.min((todayTrackedHours / dailyTargetHours) * 100, 100) : 0;
   const trackedH = Math.floor(todayTrackedHours);
   const trackedM = Math.round((todayTrackedHours - trackedH) * 60);
+  const { open: dockOpen, shownCount: dockShown, toggleOpen: toggleDock, loadMore: loadMoreDock } = useActiveWorkDock(
+    dockTickets.length
+  );
 
   // The day's three rings. Tickets come from worklogs; notes split by category
   // (meeting-tagged ones join the recurring rituals in Meetings, the rest are
@@ -251,6 +260,19 @@ export const TodayView = ({
           </div>
         </aside>
       </div>
+
+      <ActiveWorkDock
+        tickets={dockTickets}
+        activeCount={activeTicketCount ?? dockTickets.length}
+        open={dockOpen}
+        shownCount={dockShown}
+        draggingKey={null}
+        now={todayDate}
+        interaction="select"
+        onToggleOpen={toggleDock}
+        onLoadMore={loadMoreDock}
+        onActivateCard={(ticket) => onCreateAt({ ticket })}
+      />
     </div>
   );
 };

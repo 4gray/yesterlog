@@ -1,10 +1,9 @@
 # Active Work Dock (My Active Work panel)
 
 ## Goal
-Implement the "MY ACTIVE WORK" dock from the Claude Design handoff
-(`Stint - Editorial.dc.html`) as a real feature in the React/TS app. It is a
-collapsible panel at the bottom of the Week view showing a horizontal row of
-"active work" ticket cards that the user can **drag onto a day to log time**.
+Keep the "MY ACTIVE WORK" dock available in both Week and Today. Week supports
+drag-to-log onto a day; Today reuses the same collapsible dock and opens the
+existing Add Time flow for the selected active ticket on the current day.
 
 ## Source design
 - File: handoff `project/Stint - Editorial.dc.html`, lines ~227-331 (dock,
@@ -32,6 +31,9 @@ collapsible panel at the bottom of the Week view showing a horizontal row of
 - Droppable days = configured working, non-skipped, not in the future.
 - `started` for a dropped log = day at the current time-of-day.
 - Dock open/closed persisted in localStorage `timebro-active-dock`.
+- Week and Today share that saved open/closed preference and dock paging logic.
+- Today uses a view-specific hint and card activation copy so the reused dock
+  remains accurate outside the Week drag surface.
 
 ## Files
 - `src/components/ActiveWorkDock.tsx` — presentational dock (collapsed bar +
@@ -42,6 +44,11 @@ collapsible panel at the bottom of the Week view showing a horizontal row of
   ghost move, day/lane hit-testing, drop → confirm).
 - `src/components/WeekView.tsx` — render dock + overlays, `data-drop-day` on
   columns, new props.
+- `src/components/TodayView.tsx` — render the dock below the Today body and
+  hand ticket activation to the existing `onCreateAt` Add Time prefill.
+- `src/components/useActiveWorkDock.ts` — shared saved open state and paging.
+- `src/app/AppTodayRoute.tsx` / `src/app/AppMainView.tsx` — pass dock tickets and
+  the active count into Today.
 - `src/App.tsx` — pass dock tickets + onLog into WeekView.
 - `src/styles.css` — dock / card / lane / ghost / sheet styles via tokens.
 
@@ -51,10 +58,11 @@ collapsible panel at the bottom of the Week view showing a horizontal row of
 - `npm run test`, `npm run build`.
 
 ## Status
-- Done. Shipped `ActiveWorkDock`, `QuickLogSheet`, `useActiveWorkDrag`,
-  `activeWork` helpers (+ unit tests), wired into `WeekView`/`App`, styled in
-  `styles.css`.
-- Verified in browser (demo, dark + light): dock renders with real ticket data,
-  collapse persists, load-more pages, full drag → lanes → confirm sheet →
-  `handleAddWorklog` logs (snackbar), future/skipped days are blocked.
-- `npm run test` (76 passed) and `npm run build` green; no console errors.
+- Complete. Today now receives the active ticket list, renders the shared dock,
+  and opens Add Time with the selected ticket and current day prefilled.
+- The collapse preference is shared across Today and Week; the responsive Today
+  layout keeps the dock visible while its calendar/rail region scrolls.
+- Verified in the demo renderer at 1440×1000 and 1024×768 (expanded, collapsed,
+  Add Time handoff, cross-view persistence, no console errors).
+- `npm run test` (618 passed), `npm run e2e:renderer` (6 passed), and
+  `npm run build` are green.
