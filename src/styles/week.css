@@ -759,6 +759,19 @@
   flex: 1;
 }
 
+.day-log-bulk {
+  flex: none;
+  padding: 2px 4px;
+  border: 1px dashed color-mix(in srgb, var(--amber) 48%, transparent);
+  border-radius: 4px;
+  color: var(--amber-soft);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
 .week-grid.is-compact .day-log-spacer {
   display: none;
 }

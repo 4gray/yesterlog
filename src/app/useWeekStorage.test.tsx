@@ -10,7 +10,8 @@ import type {
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
-  WeekOverride
+  WeekOverride,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { buildDefaultRecurringEvents } from "../domain/recurring";
 import { toLocalDateKey } from "../utils/date";
@@ -100,7 +101,9 @@ let root: Root;
 let storage: WeekStorageClient;
 let getSettings: ReturnType<typeof vi.fn<WeekStorageClient["getSettings"]>>;
 let getWeekOverride: ReturnType<typeof vi.fn<WeekStorageClient["getWeekOverride"]>>;
+let getWeekOverrides: ReturnType<typeof vi.fn<WeekStorageClient["getWeekOverrides"]>>;
 let getSyncResult: ReturnType<typeof vi.fn<WeekStorageClient["getSyncResult"]>>;
+let getWorklogAllocationPreferences: ReturnType<typeof vi.fn<WeekStorageClient["getWorklogAllocationPreferences"]>>;
 let getJiraActivityResult: ReturnType<typeof vi.fn<WeekStorageClient["getJiraActivityResult"]>>;
 let getFavoriteKeys: ReturnType<typeof vi.fn<WeekStorageClient["getFavoriteKeys"]>>;
 let getPersonalNotes: ReturnType<typeof vi.fn<WeekStorageClient["getPersonalNotes"]>>;
@@ -111,7 +114,9 @@ let saveRecurringEvents: ReturnType<typeof vi.fn<WeekStorageClient["saveRecurrin
 let setSettings: ReturnType<typeof vi.fn<(value: AppSettings) => void>>;
 let setSettingsDraft: ReturnType<typeof vi.fn<(value: AppSettings) => void>>;
 let setWeekOverride: ReturnType<typeof vi.fn<(value: WeekOverride) => void>>;
+let setWeekOverrides: ReturnType<typeof vi.fn<(value: WeekOverride[]) => void>>;
 let setSyncResult: ReturnType<typeof vi.fn<(value: SyncResult | undefined) => void>>;
+let setWorklogAllocationPreferences: ReturnType<typeof vi.fn<(value: WorklogAllocationPreference[]) => void>>;
 let setJiraActivityResult: ReturnType<typeof vi.fn<(value: JiraActivitySyncResult | undefined) => void>>;
 let setFavoriteKeys: ReturnType<typeof vi.fn<(value: string[]) => void>>;
 let setPersonalNotes: ReturnType<typeof vi.fn<(value: PersonalNote[]) => void>>;
@@ -138,7 +143,9 @@ function Harness({
     setSettings,
     setSettingsDraft,
     setWeekOverride,
+    setWeekOverrides,
     setSyncResult,
+    setWorklogAllocationPreferences,
     setJiraActivityResult,
     setFavoriteKeys,
     setPersonalNotes,
@@ -180,7 +187,9 @@ const waitFor = async (assertion: () => void) => {
 beforeEach(() => {
   getSettings = vi.fn(async () => settings);
   getWeekOverride = vi.fn(async (weekKey) => buildOverride(weekKey, weekKey === "2026-06-22" ? ["2026-06-23"] : []));
+  getWeekOverrides = vi.fn(async () => [buildOverride("2026-06-08", ["2026-06-12"])]);
   getSyncResult = vi.fn(async (weekKey) => buildSyncResult(weekKey));
+  getWorklogAllocationPreferences = vi.fn(async () => []);
   getJiraActivityResult = vi.fn(async (weekKey) => buildJiraActivityResult(weekKey));
   getFavoriteKeys = vi.fn(async () => ["TB-1"]);
   getPersonalNotes = vi.fn(async (weekKey) => [buildNote(`note-${weekKey}`, weekKey)]);
@@ -191,7 +200,9 @@ beforeEach(() => {
   storage = {
     getSettings,
     getWeekOverride,
+    getWeekOverrides,
     getSyncResult,
+    getWorklogAllocationPreferences,
     getJiraActivityResult,
     getFavoriteKeys,
     getPersonalNotes,
@@ -203,7 +214,9 @@ beforeEach(() => {
   setSettings = vi.fn();
   setSettingsDraft = vi.fn();
   setWeekOverride = vi.fn();
+  setWeekOverrides = vi.fn();
   setSyncResult = vi.fn();
+  setWorklogAllocationPreferences = vi.fn();
   setJiraActivityResult = vi.fn();
   setFavoriteKeys = vi.fn();
   setPersonalNotes = vi.fn();
@@ -232,7 +245,9 @@ describe("useWeekStorage", () => {
     const weekKey = "2026-06-15";
     expect(getSettings).toHaveBeenCalledTimes(1);
     expect(getWeekOverride).toHaveBeenCalledWith(weekKey);
+    expect(getWeekOverrides).toHaveBeenCalledTimes(1);
     expect(getSyncResult).toHaveBeenCalledWith(weekKey);
+    expect(getWorklogAllocationPreferences).toHaveBeenCalledTimes(1);
     expect(getJiraActivityResult).toHaveBeenCalledWith(weekKey);
     expect(getFavoriteKeys).toHaveBeenCalledTimes(1);
     expect(getPersonalNotes).toHaveBeenCalledWith(weekKey);
@@ -245,7 +260,9 @@ describe("useWeekStorage", () => {
     expect(setSettings).toHaveBeenCalledWith(settings);
     expect(setSettingsDraft).toHaveBeenCalledWith(settings);
     expect(setWeekOverride).toHaveBeenCalledWith(buildOverride(weekKey));
+    expect(setWeekOverrides).toHaveBeenCalledWith([buildOverride("2026-06-08", ["2026-06-12"])]);
     expect(setSyncResult).toHaveBeenCalledWith(buildSyncResult(weekKey));
+    expect(setWorklogAllocationPreferences).toHaveBeenCalledWith([]);
     expect(setJiraActivityResult).toHaveBeenCalledWith(buildJiraActivityResult(weekKey));
     expect(setFavoriteKeys).toHaveBeenCalledWith(["TB-1"]);
     expect(setPersonalNotes).toHaveBeenCalledWith([buildNote(`note-${weekKey}`, weekKey)]);

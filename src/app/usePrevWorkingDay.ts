@@ -6,12 +6,17 @@ import type {
   RecurringOccurrence,
   SyncResult,
   WeekOverride,
-  WeekState
+  WeekState,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { buildWeekState } from "../domain/week";
+import { projectWorklogsForWeek } from "../domain/worklogAllocation";
 import { getPersonalNotes, getRecurringOccurrences, getSyncResult, getWeekOverride } from "../storage/db";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 import type { MonthStateStorageClient } from "./useMonthState";
+
+const EMPTY_ALLOCATION_PREFERENCES: WorklogAllocationPreference[] = [];
+const EMPTY_SKIPPED_DATES: string[] = [];
 
 const defaultStorage: MonthStateStorageClient = {
   getWeekOverride,
@@ -29,6 +34,8 @@ interface UsePrevWorkingDayOptions {
   visibleWeekState: WeekState;
   recurringEvents: RecurringEvent[];
   recurringOccurrences: RecurringOccurrence[];
+  allocationSkippedDates?: string[];
+  worklogAllocationPreferences?: WorklogAllocationPreference[];
   demoWeekStart?: Date;
   demoWeekOverride?: WeekOverride;
   demoSyncResult?: SyncResult;
@@ -59,6 +66,8 @@ export const usePrevWorkingDay = ({
   visibleWeekState,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates = EMPTY_SKIPPED_DATES,
+  worklogAllocationPreferences = EMPTY_ALLOCATION_PREFERENCES,
   demoWeekStart,
   demoWeekOverride,
   demoSyncResult,
@@ -96,7 +105,12 @@ export const usePrevWorkingDay = ({
           prevWeekStart,
           settings,
           isDemoWeek ? demoWeekOverride : { weekKey, skippedDates: [] },
-          isDemoWeek ? demoSyncResult : undefined,
+          projectWorklogsForWeek(isDemoWeek ? demoSyncResult : undefined, {
+            settings,
+            skippedDates: allocationSkippedDates,
+            preferences: worklogAllocationPreferences,
+            now: currentDate
+          }),
           [],
           currentDate,
           recurringEvents,
@@ -114,7 +128,12 @@ export const usePrevWorkingDay = ({
           prevWeekStart,
           settings,
           storedOverride,
-          storedSyncResult,
+          projectWorklogsForWeek(storedSyncResult, {
+            settings,
+            skippedDates: allocationSkippedDates,
+            preferences: worklogAllocationPreferences,
+            now: currentDate
+          }),
           storedPersonalNotes,
           currentDate,
           recurringEvents,
@@ -139,6 +158,7 @@ export const usePrevWorkingDay = ({
     };
   }, [
     currentDate,
+    allocationSkippedDates,
     demoSyncResult,
     demoWeekOverride,
     demoWeekStart,
@@ -150,7 +170,8 @@ export const usePrevWorkingDay = ({
     recurringOccurrences,
     settings,
     storage,
-    visibleWeekState
+    visibleWeekState,
+    worklogAllocationPreferences
   ]);
 
   return prevDay;

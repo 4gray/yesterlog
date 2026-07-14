@@ -11,6 +11,7 @@ interface TimeEntryModalLayerProps {
   isConfigured: boolean;
   isLogging: boolean;
   isDeletingWorklog: boolean;
+  dailyTargetHours?: AddTimeModalProps["dailyTargetHours"];
   logError?: string;
   onCloseAddTime: AddTimeModalProps["onClose"];
   onCloseEditingWorklog: AddTimeModalProps["onClose"];
@@ -36,6 +37,7 @@ export const TimeEntryModalLayer = ({
   isConfigured,
   isLogging,
   isDeletingWorklog,
+  dailyTargetHours,
   logError,
   onCloseAddTime,
   onCloseEditingWorklog,
@@ -58,6 +60,7 @@ export const TimeEntryModalLayer = ({
         ticketOptions={ticketOptions}
         isConfigured={isConfigured}
         isLogging={isLogging}
+        dailyTargetHours={dailyTargetHours}
         logError={logError}
         prefill={addTimePrefill}
         onClose={onCloseAddTime}
@@ -77,6 +80,7 @@ export const TimeEntryModalLayer = ({
         isConfigured={isConfigured}
         isLogging={isLogging}
         isDeleting={isDeletingWorklog}
+        dailyTargetHours={dailyTargetHours}
         logError={logError}
         editingWorklog={editingWorklog}
         onClose={onCloseEditingWorklog}
@@ -94,6 +98,7 @@ export const TimeEntryModalLayer = ({
         ticketOptions={ticketOptions}
         isConfigured={isConfigured}
         isLogging={isLogging}
+        dailyTargetHours={dailyTargetHours}
         logError={logError}
         editingPersonalNote={editingPersonalNote}
         onClose={onCloseEditingPersonalNote}

@@ -103,7 +103,9 @@ export const mergeCreatedWorklogIntoSyncResult = (
     authorAccountId: syncResult.accountId,
     started: payload.startedISO,
     timeSpentSeconds: payload.timeSpentSeconds,
-    comment: payload.comment
+    comment: payload.comment,
+    created: payload.syncedAtISO,
+    updated: payload.syncedAtISO
   };
 
   nextBucket.worklogs = [...nextBucket.worklogs, worklog].sort(
@@ -141,7 +143,10 @@ export const mergeCreatedWorklogIntoSyncResult = (
     daySummaries: {
       ...syncResult.daySummaries,
       [dateKey]: nextBucket
-    }
+    },
+    sourceWorklogs: syncResult.sourceWorklogs
+      ? [...syncResult.sourceWorklogs, worklog]
+      : undefined
   };
 };
 
@@ -249,6 +254,17 @@ export const mergeUpdatedWorklogIntoSyncResult = (
     ...syncResult,
     syncedAt: payload.syncedAtISO ?? syncResult.syncedAt,
     trackedSeconds: syncResult.trackedSeconds + (newSeconds - oldSeconds),
-    daySummaries
+    daySummaries,
+    sourceWorklogs: syncResult.sourceWorklogs?.map((worklog) =>
+      worklog.id === payload.worklogId
+        ? {
+            ...worklog,
+            started: payload.startedISO,
+            timeSpentSeconds: payload.timeSpentSeconds,
+            comment: payload.comment !== undefined ? payload.comment : worklog.comment,
+            updated: payload.syncedAtISO ?? worklog.updated
+          }
+        : worklog
+    )
   };
 };

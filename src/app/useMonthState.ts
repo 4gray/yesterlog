@@ -6,10 +6,12 @@ import type {
   RecurringOccurrence,
   SyncResult,
   WeekOverride,
-  WeekState
+  WeekState,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { buildMonthState, getMonthWeekStarts, type MonthState } from "../domain/month";
 import { buildWeekState } from "../domain/week";
+import { projectWorklogsForWeek } from "../domain/worklogAllocation";
 import {
   getPersonalNotes,
   getRecurringOccurrences,
@@ -17,6 +19,9 @@ import {
   getWeekOverride
 } from "../storage/db";
 import { toLocalDateKey } from "../utils/date";
+
+const EMPTY_ALLOCATION_PREFERENCES: WorklogAllocationPreference[] = [];
+const EMPTY_SKIPPED_DATES: string[] = [];
 
 export interface MonthStateStorageClient {
   getWeekOverride(weekKey: string): Promise<WeekOverride>;
@@ -34,6 +39,8 @@ interface UseMonthStateOptions {
   visibleWeekState: WeekState;
   recurringEvents: RecurringEvent[];
   recurringOccurrences: RecurringOccurrence[];
+  allocationSkippedDates?: string[];
+  worklogAllocationPreferences?: WorklogAllocationPreference[];
   demoWeekStart?: Date;
   demoWeekOverride?: WeekOverride;
   demoSyncResult?: SyncResult;
@@ -57,6 +64,8 @@ export const useMonthState = ({
   visibleWeekState,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates = EMPTY_SKIPPED_DATES,
+  worklogAllocationPreferences = EMPTY_ALLOCATION_PREFERENCES,
   demoWeekStart,
   demoWeekOverride,
   demoSyncResult,
@@ -88,7 +97,12 @@ export const useMonthState = ({
               start,
               settings,
               isDemoWeek ? demoWeekOverride : { weekKey, skippedDates: [] },
-              isDemoWeek ? demoSyncResult : undefined,
+              projectWorklogsForWeek(isDemoWeek ? demoSyncResult : undefined, {
+                settings,
+                skippedDates: allocationSkippedDates,
+                preferences: worklogAllocationPreferences,
+                now: currentDate
+              }),
               [],
               currentDate,
               recurringEvents,
@@ -107,7 +121,12 @@ export const useMonthState = ({
             start,
             settings,
             storedOverride,
-            storedSyncResult,
+            projectWorklogsForWeek(storedSyncResult, {
+              settings,
+              skippedDates: allocationSkippedDates,
+              preferences: worklogAllocationPreferences,
+              now: currentDate
+            }),
             storedPersonalNotes,
             currentDate,
             recurringEvents,
@@ -135,6 +154,7 @@ export const useMonthState = ({
     };
   }, [
     currentDate,
+    allocationSkippedDates,
     demoSyncResult,
     demoWeekOverride,
     demoWeekStart,
@@ -146,7 +166,8 @@ export const useMonthState = ({
     recurringOccurrences,
     settings,
     storage,
-    visibleWeekState
+    visibleWeekState,
+    worklogAllocationPreferences
   ]);
 
   return monthState;

@@ -7,12 +7,18 @@ import type {
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
+  WorklogAllocationPreference,
   WeekdayNumber
 } from "../../shared/types";
 import { computeAiDrafts, probeOllama } from "../api/ollama";
 import { applyAiDrafts, type AiDrafts } from "../domain/enhancePrompt";
 import type { PlacementMap, ReconstructDay, ReconstructLocalEntry, ReconstructWorklog } from "../domain/reconstruct";
 import { buildDayRecurring, indexOccurrences } from "../domain/recurring";
+import {
+  getWorklogDisplaySeconds,
+  getWorklogDisplayStarted,
+  projectWorklogsForWeek
+} from "../domain/worklogAllocation";
 import {
   autoDistribute,
   buildReconstructDay,
@@ -37,6 +43,8 @@ import { addDays, fromLocalDateKey, isoWeekday, startOfWeekMonday, toLocalDateKe
 
 /** Trailing days the stepper spans, ending today — the worklog sync/edit window. */
 const WINDOW_DAYS = 14;
+const EMPTY_ALLOCATION_PREFERENCES: WorklogAllocationPreference[] = [];
+const EMPTY_SKIPPED_DATES: string[] = [];
 
 interface UseReconstructOptions {
   currentDate: Date;
@@ -48,6 +56,8 @@ interface UseReconstructOptions {
   personalNotes: PersonalNote[];
   recurringEvents: RecurringEvent[];
   recurringOccurrences: RecurringOccurrence[];
+  allocationSkippedDates?: string[];
+  worklogAllocationPreferences?: WorklogAllocationPreference[];
   dailyTargetHours: number;
 }
 
@@ -96,6 +106,8 @@ export const useReconstruct = ({
   personalNotes,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates = EMPTY_SKIPPED_DATES,
+  worklogAllocationPreferences = EMPTY_ALLOCATION_PREFERENCES,
   dailyTargetHours
 }: UseReconstructOptions) => {
   const todayKey = toLocalDateKey(currentDate);
@@ -204,7 +216,15 @@ export const useReconstruct = ({
 
   const coreDay = useMemo<ReconstructDay>(() => {
     const weekKey = weekKeyOf(selDateKey);
-    const sync = syncResult?.weekKey === weekKey ? syncResult : loaded.sync[weekKey];
+    const sync =
+      syncResult?.weekKey === weekKey
+        ? syncResult
+        : projectWorklogsForWeek(loaded.sync[weekKey], {
+            settings,
+            skippedDates: allocationSkippedDates,
+            preferences: worklogAllocationPreferences,
+            now: currentDate
+          });
     const activity = jiraActivityResult?.weekKey === weekKey ? jiraActivityResult : loaded.jiraActivity[weekKey];
     const review = reviewResult?.weekKey === weekKey ? reviewResult : loaded.review[weekKey];
     const notesForWeek = weekKey === localWeekKey ? personalNotes : loaded.personalNotes[weekKey] ?? [];
@@ -214,8 +234,8 @@ export const useReconstruct = ({
     const worklogs: ReconstructWorklog[] = (sync?.daySummaries?.[selDateKey]?.worklogs ?? []).map((w) => ({
       issueKey: w.issueKey,
       issueSummary: w.issueSummary,
-      startedISO: w.started,
-      timeSpentSeconds: w.timeSpentSeconds,
+      startedISO: getWorklogDisplayStarted(w),
+      timeSpentSeconds: getWorklogDisplaySeconds(w),
       comment: w.comment
     }));
     const reviewSessions = toReconstructReviewSessions(review?.sessions, selDateKey);
@@ -268,6 +288,8 @@ export const useReconstruct = ({
       durations
     );
   }, [
+    allocationSkippedDates,
+    currentDate,
     durations,
     loaded,
     localWeekKey,
@@ -282,9 +304,11 @@ export const useReconstruct = ({
     selIsToday,
     selWeekdayIso,
     settings.workingDays,
+    settings.weeklyTargetHours,
     syncResult,
     targetMinutes,
-    todayKey
+    todayKey,
+    worklogAllocationPreferences
   ]);
 
   // Latest coreDay without making callbacks/effects depend on placement edits.

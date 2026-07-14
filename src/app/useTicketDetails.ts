@@ -8,6 +8,7 @@ import type {
   SyncResult,
   WeekState
 } from "../../shared/types";
+import { getWorklogDisplaySeconds } from "../domain/worklogAllocation";
 import { buildCursorPromptDeeplink } from "../../shared/cursorDeeplink";
 import { nativeApi } from "../api/native";
 
@@ -104,7 +105,7 @@ export const buildTicketWeekStats = ({
 
   if (visibleSyncResult) {
     let loggedSeconds = 0;
-    let worklogCount = 0;
+    const worklogIds = new Set<string>();
 
     for (const [dateKey, bucket] of Object.entries(visibleSyncResult.daySummaries)) {
       if (!visibleDayKeys.has(dateKey)) {
@@ -113,13 +114,13 @@ export const buildTicketWeekStats = ({
 
       for (const worklog of bucket.worklogs) {
         if (worklog.issueKey === normalizedKey) {
-          loggedSeconds += worklog.timeSpentSeconds;
-          worklogCount += 1;
+          loggedSeconds += getWorklogDisplaySeconds(worklog);
+          worklogIds.add(worklog.id);
         }
       }
     }
 
-    return { loggedSeconds, worklogCount };
+    return { loggedSeconds, worklogCount: worklogIds.size };
   }
 
   const loggedSeconds = weekState.days.reduce((weekTotal, day) => {

@@ -6,7 +6,8 @@ import type {
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
-  SyncResult
+  SyncResult,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { ReconstructView } from "../components/ReconstructView";
 import type { AddTimePrefill } from "../components/AddTimeModal";
@@ -23,6 +24,8 @@ export interface AppReconRouteProps {
   personalNotes: PersonalNote[];
   recurringEvents: RecurringEvent[];
   recurringOccurrences: RecurringOccurrence[];
+  allocationSkippedDates?: string[];
+  worklogAllocationPreferences?: WorklogAllocationPreference[];
   dailyTargetHours: number;
   syncState: "synced" | "stale" | "syncing";
   syncLabel: string;
@@ -89,6 +92,8 @@ export const AppReconRoute = ({
   personalNotes,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates,
+  worklogAllocationPreferences,
   dailyTargetHours,
   syncState,
   syncLabel,
@@ -106,6 +111,8 @@ export const AppReconRoute = ({
     personalNotes,
     recurringEvents,
     recurringOccurrences,
+    allocationSkippedDates,
+    worklogAllocationPreferences,
     dailyTargetHours
   });
 

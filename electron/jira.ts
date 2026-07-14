@@ -139,6 +139,8 @@ interface JiraWorklogResponse {
     started: string;
     timeSpentSeconds: number;
     comment?: unknown;
+    created?: string;
+    updated?: string;
   }>;
 }
 
@@ -617,6 +619,26 @@ const searchCandidateIssues = async (settings: AppSettings, weekStart: Date, wee
   return issues;
 };
 
+// A selected week can be affected by a bulk worklog whose Jira `started` date
+// sits in a neighbouring week. Keep this bounded: it is a read-only discovery
+// window, not an unbounded account-history import.
+const BULK_WORKLOG_SCAN_DAYS = 90;
+
+const shiftDate = (date: Date, days: number) => {
+  const shifted = new Date(date);
+  shifted.setDate(shifted.getDate() + days);
+  return shifted;
+};
+
+const bulkWorklogScanBounds = (weekStart: Date, weekEndExclusive: Date, now = new Date()) => {
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const proposedEnd = shiftDate(weekEndExclusive, BULK_WORKLOG_SCAN_DAYS);
+  return {
+    scanStart: shiftDate(weekStart, -BULK_WORKLOG_SCAN_DAYS),
+    scanEndExclusive: proposedEnd < tomorrow ? proposedEnd : tomorrow
+  };
+};
+
 const fetchIssueWorklogs = async (
   settings: AppSettings,
   issueKey: string,
@@ -652,16 +674,19 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   const { settings, weekStartISO, weekEndExclusiveISO, weekKey } = request;
   const weekStart = new Date(weekStartISO);
   const weekEndExclusive = new Date(weekEndExclusiveISO);
+  const { scanStart, scanEndExclusive } = bulkWorklogScanBounds(weekStart, weekEndExclusive);
   const currentUser = await fetchCurrentUser(settings);
-  const candidateIssues = await searchCandidateIssues(settings, weekStart, weekEndExclusive);
+  const candidateIssues = await searchCandidateIssues(settings, scanStart, scanEndExclusive);
   const daySummaries: SyncResult["daySummaries"] = {};
-  const collectedWorklogs: JiraWorklog[] = [];
+  const sourceWorklogs: JiraWorklog[] = [];
+  const visibleWorklogIds = new Set<string>();
+  const visibleIssueKeys = new Set<string>();
 
   for (const issue of candidateIssues) {
     const summary = issue.fields?.summary ?? "Untitled Jira issue";
     const issueType = normalizeIssueType(issue.fields?.issuetype);
     const epic = normalizeEpic(settings, issue.fields?.parent);
-    const worklogs = await fetchIssueWorklogs(settings, issue.key, weekStart, weekEndExclusive);
+    const worklogs = await fetchIssueWorklogs(settings, issue.key, scanStart, scanEndExclusive);
 
     for (const worklog of worklogs) {
       const authorAccountId = worklog.author?.accountId;
@@ -670,13 +695,12 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
       if (
         authorAccountId !== currentUser.accountId ||
         Number.isNaN(startedDate.getTime()) ||
-        startedDate < weekStart ||
-        startedDate >= weekEndExclusive
+        startedDate < scanStart ||
+        startedDate >= scanEndExclusive
       ) {
         continue;
       }
 
-      const dateKey = toDateKey(startedDate);
       const comment = adfToPlainText(worklog.comment);
       const issueUrl = `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`;
       const normalized: JiraWorklog = {
@@ -690,8 +714,17 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         authorAccountId,
         started: worklog.started,
         timeSpentSeconds: worklog.timeSpentSeconds,
-        comment: comment || undefined
+        comment: comment || undefined,
+        created: worklog.created,
+        updated: worklog.updated
       };
+      sourceWorklogs.push(normalized);
+
+      if (startedDate < weekStart || startedDate >= weekEndExclusive) {
+        continue;
+      }
+
+      const dateKey = toDateKey(startedDate);
 
       if (!daySummaries[dateKey]) {
         daySummaries[dateKey] = {
@@ -714,11 +747,12 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         loggedSeconds: worklog.timeSpentSeconds,
         comments: comment ? [comment] : []
       });
-      collectedWorklogs.push(normalized);
+      visibleWorklogIds.add(normalized.id);
+      visibleIssueKeys.add(normalized.issueKey);
     }
   }
 
-  const trackedSeconds = collectedWorklogs.reduce((sum, worklog) => sum + worklog.timeSpentSeconds, 0);
+  const trackedSeconds = Object.values(daySummaries).reduce((sum, bucket) => sum + bucket.trackedSeconds, 0);
 
   return {
     weekKey,
@@ -726,11 +760,15 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
     weekEndExclusiveISO,
     syncedAt: new Date().toISOString(),
     accountId: currentUser.accountId,
+    jiraSite: normalizeBaseUrl(settings.jiraBaseUrl),
     displayName: currentUser.displayName,
     trackedSeconds,
-    issueCount: candidateIssues.length,
-    worklogCount: collectedWorklogs.length,
-    daySummaries
+    issueCount: visibleIssueKeys.size,
+    worklogCount: visibleWorklogIds.size,
+    daySummaries,
+    sourceWorklogs,
+    scanStartISO: scanStart.toISOString(),
+    scanEndExclusiveISO: scanEndExclusive.toISOString()
   };
 };
 

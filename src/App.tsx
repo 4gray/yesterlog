@@ -21,6 +21,7 @@ import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useDemoScenario } from "./app/useDemoScenario";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { buildDaySignals } from "./domain/todaySignals";
+import { projectWorklogsForWeek } from "./domain/worklogAllocation";
 import { useJiraActivitySync } from "./app/useJiraActivitySync";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
@@ -74,14 +75,48 @@ export const App = () => {
     currentDate,
     demoScenario
   });
-  const { syncResult, setSyncResult, personalNotes, setPersonalNotes } = useAppWeekDataState({
+  const {
+    syncResult,
+    setSyncResult,
+    personalNotes,
+    setPersonalNotes,
+    weekOverrides,
+    setWeekOverrides,
+    worklogAllocationPreferences,
+    setWorklogAllocationPreferences
+  } = useAppWeekDataState({
     demoSyncResult: demoScenario?.syncResult,
     demoPersonalNotes: demoScenario?.personalNotes
   });
+  useEffect(() => {
+    setWeekOverrides((current) => {
+      const existing = current.find((override) => override.weekKey === weekOverride.weekKey);
+      if (existing && existing.skippedDates.join(",") === weekOverride.skippedDates.join(",")) {
+        return current;
+      }
+      return [...current.filter((override) => override.weekKey !== weekOverride.weekKey), weekOverride].sort((left, right) =>
+        left.weekKey.localeCompare(right.weekKey)
+      );
+    });
+  }, [setWeekOverrides, weekOverride]);
+  const allocationSkippedDates = useMemo(
+    () => Array.from(new Set(weekOverrides.flatMap((override) => override.skippedDates))).sort(),
+    [weekOverrides]
+  );
   const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
     isDemo,
     demoRecurringOccurrences: demoScenario?.recurringOccurrences
   });
+  const projectedSyncResult = useMemo(
+    () =>
+      projectWorklogsForWeek(syncResult, {
+        settings,
+        skippedDates: allocationSkippedDates,
+        preferences: worklogAllocationPreferences,
+        now: currentDate
+      }),
+    [allocationSkippedDates, currentDate, settings, syncResult, worklogAllocationPreferences]
+  );
   const { reviewTargetMode, setReviewTargetMode } = useAppReviewTargetState();
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
@@ -141,7 +176,7 @@ export const App = () => {
     weekStart,
     settings,
     weekOverride,
-    syncResult,
+    syncResult: projectedSyncResult,
     personalNotes,
     currentDate,
     recurringEvents,
@@ -192,6 +227,8 @@ export const App = () => {
     visibleWeekState: weekState,
     recurringEvents,
     recurringOccurrences,
+    allocationSkippedDates,
+    worklogAllocationPreferences,
     demoWeekStart: demoScenario?.weekStart,
     demoWeekOverride: demoScenario?.weekOverride,
     demoSyncResult: demoScenario?.syncResult,
@@ -206,6 +243,8 @@ export const App = () => {
     visibleWeekState: weekState,
     recurringEvents,
     recurringOccurrences,
+    allocationSkippedDates,
+    worklogAllocationPreferences,
     demoWeekStart: demoScenario?.weekStart,
     demoWeekOverride: demoScenario?.weekOverride,
     demoSyncResult: demoScenario?.syncResult,
@@ -248,7 +287,9 @@ export const App = () => {
     setSettings,
     setSettingsDraft,
     setWeekOverride,
+    setWeekOverrides,
     setSyncResult,
+    setWorklogAllocationPreferences,
     setJiraActivityResult,
     setFavoriteKeys,
     setPersonalNotes,
@@ -277,7 +318,7 @@ export const App = () => {
   } = useIssueMetadata({
     currentDate,
     weekState,
-    syncResult,
+    syncResult: projectedSyncResult,
     bitbucketReviewResult,
     personalNotes,
     tickets,
@@ -301,6 +342,8 @@ export const App = () => {
     visibleWeekState: weekState,
     recurringEvents,
     recurringOccurrences,
+    allocationSkippedDates,
+    worklogAllocationPreferences,
     demoWeekStart: demoScenario?.weekStart,
     demoWeekOverride: demoScenario?.weekOverride,
     demoSyncResult: demoScenario?.syncResult,
@@ -357,6 +400,15 @@ export const App = () => {
     runSync,
     loadTickets,
     onSyncResult: setSyncResult,
+    onWorklogAllocationPreference: (preference) =>
+      setWorklogAllocationPreferences((current) => [
+        ...current.filter((candidate) => candidate.preferenceKey !== preference.preferenceKey),
+        preference
+      ]),
+    onWorklogAllocationPreferenceRemoved: (preferenceKey) =>
+      setWorklogAllocationPreferences((current) =>
+        current.filter((candidate) => candidate.preferenceKey !== preferenceKey)
+      ),
     setEditingWorklog,
     showSuccess,
     showError
@@ -413,7 +465,7 @@ export const App = () => {
 
   const { handleSync, syncLabel, syncState } = useSyncControls({
     settings,
-    syncResult,
+    syncResult: projectedSyncResult,
     isSyncing,
     isSyncingJiraActivity,
     isSyncingReviews,
@@ -432,7 +484,7 @@ export const App = () => {
     settings,
     isDemo,
     weekState,
-    syncResult,
+    syncResult: projectedSyncResult,
     tickets,
     selectedTicket
   });
@@ -510,6 +562,7 @@ export const App = () => {
           isConfigured={isConfigured}
           isLogging={isLogging}
           isDeletingWorklog={isDeletingWorklog}
+          dailyTargetHours={weekState.dailyTargetHours}
           logError={logError}
           onCloseAddTime={addTimeModalActions.closeAddTime}
           onCloseEditingWorklog={addTimeModalActions.closeEditingWorklog}
@@ -576,7 +629,7 @@ export const App = () => {
         weekState={weekState}
         reportsWeekStates={reportsWeekStates}
         personalNotes={personalNotes}
-        syncResult={syncResult}
+        syncResult={projectedSyncResult}
         jiraActivityResult={jiraActivityResult}
         monthState={monthState}
         visibleBitbucketReviewResult={visibleBitbucketReviewResult}
@@ -603,6 +656,8 @@ export const App = () => {
         isCheckingUpdates={isCheckingUpdates}
         recurringEvents={recurringEvents}
         recurringOccurrences={recurringOccurrences}
+        allocationSkippedDates={allocationSkippedDates}
+        worklogAllocationPreferences={worklogAllocationPreferences}
         isImportingPersonalNotes={isImportingPersonalNotes}
         handleAddWorklog={handleAddWorklog}
         handleMoveWorklog={handleMoveWorklog}

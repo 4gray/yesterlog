@@ -70,6 +70,8 @@ export interface AppMainViewProps {
   isCheckingUpdates: AppSettingsRouteProps["isCheckingUpdates"];
   recurringEvents: AppSettingsRouteProps["recurringEvents"];
   recurringOccurrences: AppReconRouteProps["recurringOccurrences"];
+  allocationSkippedDates?: AppReconRouteProps["allocationSkippedDates"];
+  worklogAllocationPreferences?: AppReconRouteProps["worklogAllocationPreferences"];
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
   handleAddWorklog: AppWeekRouteProps["handleAddWorklog"];
   handleMoveWorklog: AppTodayRouteProps["handleMoveWorklog"];
@@ -167,6 +169,8 @@ export const AppMainView = ({
   isCheckingUpdates,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates,
+  worklogAllocationPreferences,
   isImportingPersonalNotes,
   handleAddWorklog,
   handleMoveWorklog,
@@ -281,6 +285,8 @@ export const AppMainView = ({
         personalNotes={personalNotes}
         recurringEvents={recurringEvents}
         recurringOccurrences={recurringOccurrences}
+        allocationSkippedDates={allocationSkippedDates}
+        worklogAllocationPreferences={worklogAllocationPreferences}
         dailyTargetHours={weekState.dailyTargetHours}
         syncState={syncState}
         syncLabel={syncLabel}

@@ -11,6 +11,7 @@ import type {
 import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import { formatClock, formatDuration, formatHours } from "../utils/date";
 import { activitySegments } from "../domain/activity";
+import { getWorklogDisplaySeconds } from "../domain/worklogAllocation";
 import { buildGhostItems } from "../domain/dayCalendar";
 import type { ReconstructSignal } from "../domain/reconstruct";
 import { DayRing } from "./DayRing";
@@ -128,7 +129,7 @@ export const TodayView = ({
   // The day's three rings. Tickets come from worklogs; notes split by category
   // (meeting-tagged ones join the recurring rituals in Meetings, the rest are
   // firefighting); recurring meetings are the tracked remainder on top.
-  const ticketSeconds = todayWorklogs.reduce((sum, worklog) => sum + worklog.timeSpentSeconds, 0);
+  const ticketSeconds = todayWorklogs.reduce((sum, worklog) => sum + getWorklogDisplaySeconds(worklog), 0);
   const meetingNoteSeconds = personalNotes.reduce(
     (sum, note) => sum + (note.category === "meeting" ? note.timeSpentSeconds : 0),
     0

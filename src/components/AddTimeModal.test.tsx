@@ -254,4 +254,42 @@ describe("AddTimeModal", () => {
 
     expect(markup).not.toContain(">Recurring</button>");
   });
+
+  it("offers an explicit local distribution for a multi-day worklog", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 6, 14, 10, 30)}
+        dateOptions={["2026-07-13", "2026-07-14"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        dailyTargetHours={8}
+        editingWorklog={{
+          id: "bulk-1",
+          issueId: ticket.id,
+          issueKey: ticket.key,
+          issueSummary: ticket.summary,
+          authorAccountId: "account-1",
+          started: "2026-07-14T09:00:00.000Z",
+          timeSpentSeconds: 80 * 3600,
+          allocation: {
+            dateKey: "2026-07-14",
+            started: "2026-07-14T09:00:00.000Z",
+            timeSpentSeconds: 8 * 3600,
+            direction: "forward",
+            partIndex: 1,
+            partCount: 10,
+            isApproximate: false
+          }
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+      />
+    );
+
+    expect(markup).toContain("BULK WORKLOG");
+    expect(markup).toContain("One Jira entry, distributed locally");
+    expect(markup).toContain('<label class="active"><input type="radio" name="bulk-worklog-distribution" checked="" value="forward"/>');
+    expect(markup).toContain("<span>Start on date</span>");
+  });
 });

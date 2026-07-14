@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory, RecurringEvent } from "../../shared/types";
+import type {
+  JiraTicket,
+  JiraWorklog,
+  PersonalNote,
+  PersonalNoteCategory,
+  RecurringEvent,
+  WorklogAllocationDirection
+} from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import {
   AddTimeDurationPicker,
@@ -24,6 +31,7 @@ export interface LogPayload {
   timeSpentSeconds: number;
   startedISO: string;
   comment?: string;
+  allocationDirection?: WorklogAllocationDirection;
 }
 
 export interface AddTimePrefill {
@@ -42,6 +50,7 @@ export interface AddTimeModalProps {
   isConfigured: boolean;
   isLogging: boolean;
   isDeleting?: boolean;
+  dailyTargetHours?: number;
   logError?: string;
   prefill?: AddTimePrefill;
   editingWorklog?: JiraWorklog;
@@ -214,6 +223,7 @@ export const AddTimeModal = ({
   isConfigured,
   isLogging,
   isDeleting = false,
+  dailyTargetHours = 8,
   logError,
   prefill,
   editingWorklog,
@@ -233,13 +243,17 @@ export const AddTimeModal = ({
   const activePrefill = isEditing ? undefined : prefill;
   const isRetrospectiveEntry = Boolean(activePrefill?.retrospective && !activePrefill.startedISO);
   const requestedInitialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
-  const retrospectiveInitial = isRetrospectiveEntry
+  const dailyTargetSeconds = dailyTargetHours * 3600;
+  const isInitialBulkDuration = requestedInitialSeconds > dailyTargetSeconds;
+  const retrospectiveInitial = isRetrospectiveEntry && !isInitialBulkDuration
     ? getSelectableRetrospectiveStart(date, requestedInitialSeconds, dateOptions)
     : undefined;
   const initialSeconds = retrospectiveInitial?.timeSpentSeconds ?? requestedInitialSeconds;
   const initialStart =
     retrospectiveInitial?.started ??
-    getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill);
+    (isRetrospectiveEntry && isInitialBulkDuration
+      ? date
+      : getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill));
   const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
@@ -263,6 +277,9 @@ export const AddTimeModal = ({
   );
   const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>(initialPrefillTicket);
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
+  const [allocationDirection, setAllocationDirection] = useState<WorklogAllocationDirection>(
+    editingWorklog?.allocation?.direction ?? "backward"
+  );
   const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
   const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
   const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
@@ -305,6 +322,7 @@ export const AddTimeModal = ({
   const isRecurringView = mode === "recurring" && !isEditing;
   const isTicketView = (mode === "ticket" && !isEditingPersonalNote) || isEditingWorklog;
   const isNoteMode = !isTicketView && !isRecurringView;
+  const isBulkDuration = isTicketView && durationSeconds > dailyTargetHours * 3600;
   const recurringCandidates = isRecurringView && getRecurringCandidates ? getRecurringCandidates(dateStr) : [];
   const recEvent = recurringCandidates.find((event) => event.id === recSelectedId) ?? recurringCandidates[0];
   const modalTitle = isEditingWorklog
@@ -379,7 +397,8 @@ export const AddTimeModal = ({
       ticket: activeTicket,
       timeSpentSeconds: durationSeconds,
       startedISO,
-      comment: note.trim() || undefined
+      comment: note.trim() || undefined,
+      allocationDirection: isBulkDuration ? allocationDirection : undefined
     });
     if (ok) {
       onClose();
@@ -410,13 +429,16 @@ export const AddTimeModal = ({
   useEffect(() => {
     const nextPrefill = editingWorklog || editingPersonalNote ? undefined : prefill;
     const requestedSeconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
-    const retrospectiveStart = nextPrefill?.retrospective && !nextPrefill.startedISO
+    const isBulkRequest = requestedSeconds > dailyTargetSeconds;
+    const retrospectiveStart = nextPrefill?.retrospective && !nextPrefill.startedISO && !isBulkRequest
       ? getSelectableRetrospectiveStart(date, requestedSeconds, dateOptions)
       : undefined;
     const seconds = retrospectiveStart?.timeSpentSeconds ?? requestedSeconds;
     const start =
       retrospectiveStart?.started ??
-      getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill);
+      (nextPrefill?.retrospective && !nextPrefill.startedISO && isBulkRequest
+        ? date
+        : getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill));
     const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
     const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
@@ -432,6 +454,7 @@ export const AddTimeModal = ({
     const startDateKey = toLocalDateKey(start);
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
+    setAllocationDirection(editingWorklog?.allocation?.direction ?? "backward");
     setIsStartEdited(false);
     setNote(editingWorklog?.comment ?? nextPrefill?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
@@ -455,7 +478,8 @@ export const AddTimeModal = ({
     prefill?.retrospective,
     prefill?.startedISO,
     prefill?.ticket?.key,
-    prefill?.timeSpentSeconds
+    prefill?.timeSpentSeconds,
+    dailyTargetSeconds
   ]);
 
   useEffect(() => {
@@ -500,7 +524,7 @@ export const AddTimeModal = ({
   });
 
   const updateRetrospectiveStart = (seconds: number) => {
-    if (!isRetrospectiveEntry || isStartEdited || seconds <= 0) {
+    if (!isRetrospectiveEntry || isStartEdited || seconds <= 0 || seconds > dailyTargetSeconds) {
       return seconds;
     }
 
@@ -605,7 +629,7 @@ export const AddTimeModal = ({
       aria-label={isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
     >
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel">
+      <div className="modal-panel add-time-modal-panel">
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">{modalTitle}</span>
@@ -717,6 +741,46 @@ export const AddTimeModal = ({
                   </div>
                 </div>
               </div>
+
+              {isBulkDuration && (
+                <div className="bulk-allocation-choice">
+                  <div className="bulk-allocation-copy">
+                    <span>BULK WORKLOG</span>
+                    <strong>One Jira entry, distributed locally</strong>
+                    <small>
+                      {allocationDirection === "backward"
+                        ? "The selected day ends the period. Future days stay untouched."
+                        : "The selected day starts the period. Distribution stops at today."}
+                    </small>
+                  </div>
+                  <div className="bulk-direction-toggle" role="radiogroup" aria-label="Bulk worklog distribution">
+                    <label
+                      className={allocationDirection === "backward" ? "active" : ""}
+                    >
+                      <input
+                        type="radio"
+                        name="bulk-worklog-distribution"
+                        value="backward"
+                        checked={allocationDirection === "backward"}
+                        onChange={() => setAllocationDirection("backward")}
+                      />
+                      <span>End on date</span>
+                    </label>
+                    <label
+                      className={allocationDirection === "forward" ? "active" : ""}
+                    >
+                      <input
+                        type="radio"
+                        name="bulk-worklog-distribution"
+                        value="forward"
+                        checked={allocationDirection === "forward"}
+                        onChange={() => setAllocationDirection("forward")}
+                      />
+                      <span>Start on date</span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <div className="modal-label" style={{ marginTop: 22 }}>
                 WORK DESCRIPTION

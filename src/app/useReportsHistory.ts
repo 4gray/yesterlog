@@ -5,9 +5,11 @@ import type {
   RecurringOccurrence,
   SyncResult,
   WeekOverride,
-  WeekState
+  WeekState,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { buildWeekState } from "../domain/week";
+import { projectWorklogsForWeek } from "../domain/worklogAllocation";
 import {
   getPersonalNotes,
   getRecurringOccurrences,
@@ -16,6 +18,9 @@ import {
 } from "../storage/db";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 import type { MonthStateStorageClient } from "./useMonthState";
+
+const EMPTY_ALLOCATION_PREFERENCES: WorklogAllocationPreference[] = [];
+const EMPTY_SKIPPED_DATES: string[] = [];
 
 /** Weeks of history before the visible one — 12 total including it. */
 const DEFAULT_WEEKS_BACK = 11;
@@ -35,6 +40,8 @@ interface UseReportsHistoryOptions {
   visibleWeekState: WeekState;
   recurringEvents: RecurringEvent[];
   recurringOccurrences: RecurringOccurrence[];
+  allocationSkippedDates?: string[];
+  worklogAllocationPreferences?: WorklogAllocationPreference[];
   weeksBack?: number;
   demoWeekStart?: Date;
   demoWeekOverride?: WeekOverride;
@@ -57,6 +64,8 @@ export const useReportsHistory = ({
   visibleWeekState,
   recurringEvents,
   recurringOccurrences,
+  allocationSkippedDates = EMPTY_SKIPPED_DATES,
+  worklogAllocationPreferences = EMPTY_ALLOCATION_PREFERENCES,
   weeksBack = DEFAULT_WEEKS_BACK,
   demoWeekStart,
   demoWeekOverride,
@@ -94,7 +103,12 @@ export const useReportsHistory = ({
               start,
               settings,
               isDemoWeek ? demoWeekOverride : { weekKey, skippedDates: [] },
-              isDemoWeek ? demoSyncResult : undefined,
+              projectWorklogsForWeek(isDemoWeek ? demoSyncResult : undefined, {
+                settings,
+                skippedDates: allocationSkippedDates,
+                preferences: worklogAllocationPreferences,
+                now: currentDate
+              }),
               [],
               currentDate,
               recurringEvents,
@@ -113,7 +127,12 @@ export const useReportsHistory = ({
             start,
             settings,
             storedOverride,
-            storedSyncResult,
+            projectWorklogsForWeek(storedSyncResult, {
+              settings,
+              skippedDates: allocationSkippedDates,
+              preferences: worklogAllocationPreferences,
+              now: currentDate
+            }),
             storedPersonalNotes,
             currentDate,
             recurringEvents,
@@ -139,6 +158,7 @@ export const useReportsHistory = ({
     };
   }, [
     currentDate,
+    allocationSkippedDates,
     demoSyncResult,
     demoWeekOverride,
     demoWeekStart,
@@ -150,6 +170,7 @@ export const useReportsHistory = ({
     settings,
     storage,
     visibleWeekState,
+    worklogAllocationPreferences,
     weeksBack
   ]);
 

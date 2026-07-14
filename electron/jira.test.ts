@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { fetchAssignedTickets, fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity } from "./jira";
+import { fetchAssignedTickets, fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity, syncJiraWorklogs } from "./jira";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -41,6 +41,82 @@ const jsonResponse = (body: unknown) =>
       "Content-Type": "application/json"
     }
   });
+
+describe("syncJiraWorklogs", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the visible week raw while retaining earlier worklogs for bulk projection", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me" });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        return jiraSearchResponse([
+          {
+            id: "10001",
+            key: "OPS-77",
+            fields: { summary: "Long migration" }
+          }
+        ]);
+      }
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/worklog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 2,
+          worklogs: [
+            {
+              id: "bulk",
+              author: { accountId: "me" },
+              started: "2026-07-01T09:00:00.000+0000",
+              created: "2026-07-14T17:00:00.000+0000",
+              updated: "2026-07-14T17:00:00.000+0000",
+              timeSpentSeconds: 80 * 3600
+            },
+            {
+              id: "visible",
+              author: { accountId: "me" },
+              started: "2026-07-14T09:00:00.000+0000",
+              created: "2026-07-14T10:00:00.000+0000",
+              updated: "2026-07-14T10:00:00.000+0000",
+              timeSpentSeconds: 3600
+            }
+          ]
+        });
+      }
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraWorklogs({
+      settings,
+      weekKey: "2026-07-13",
+      weekStartISO: "2026-07-13T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-07-20T00:00:00.000Z"
+    });
+
+    const searchRequest = fetchMock.mock.calls
+      .map(([url]) => new URL(String(url)))
+      .find((url) => url.pathname === "/rest/api/3/search/jql");
+    const worklogRequest = fetchMock.mock.calls
+      .map(([url]) => new URL(String(url)))
+      .find((url) => url.pathname === "/rest/api/3/issue/OPS-77/worklog");
+
+    expect(searchRequest?.searchParams.get("jql")).toContain('worklogDate >= "2026-04-14"');
+    expect(Number(worklogRequest?.searchParams.get("startedAfter"))).toBeLessThan(new Date("2026-07-01").getTime());
+    expect(result.jiraSite).toBe("https://example.atlassian.net");
+    expect(result.sourceWorklogs?.map((worklog) => worklog.id)).toEqual(["bulk", "visible"]);
+    expect(result.sourceWorklogs?.[0]).toMatchObject({
+      created: "2026-07-14T17:00:00.000+0000",
+      updated: "2026-07-14T17:00:00.000+0000"
+    });
+    expect(result.daySummaries["2026-07-14"].worklogs.map((worklog) => worklog.id)).toEqual(["visible"]);
+    expect(result.trackedSeconds).toBe(3600);
+  });
+});
 
 describe("fetchAssignedTickets", () => {
   afterEach(() => {

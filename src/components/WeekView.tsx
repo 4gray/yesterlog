@@ -22,6 +22,7 @@ import {
   overlapsCommitted,
   type CalendarItem
 } from "../domain/dayCalendar";
+import { getWorklogDisplaySeconds, getWorklogDisplayStarted } from "../domain/worklogAllocation";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
@@ -215,8 +216,8 @@ const DayColumn = ({
       ? issue.comments
       : Array.from(new Set(logs.map((log) => log.comment).filter((comment): comment is string => Boolean(comment))));
     const range = logs.length
-      ? `${hm(new Date(Math.min(...logs.map((log) => new Date(log.started).getTime()))))} — ${hm(
-          new Date(Math.max(...logs.map((log) => new Date(log.started).getTime() + log.timeSpentSeconds * 1000)))
+      ? `${hm(new Date(Math.min(...logs.map((log) => new Date(getWorklogDisplayStarted(log)).getTime()))))} — ${hm(
+          new Date(Math.max(...logs.map((log) => new Date(getWorklogDisplayStarted(log)).getTime() + getWorklogDisplaySeconds(log) * 1000)))
         )}`
       : undefined;
     return { issue, color, logs, comments, range, hasPop: comments.length > 0 || logs.length > 1 };
@@ -364,6 +365,7 @@ const DayColumn = ({
                     />
                     <span className="day-log-spacer" />
                     {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
+                    {logs.some((log) => log.allocation) && <span className="day-log-bulk">BULK</span>}
                     <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
                     <span className="day-log-action-slot">
                       {logs.length === 1 && (

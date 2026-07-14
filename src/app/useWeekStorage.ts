@@ -7,7 +7,8 @@ import type {
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
-  WeekOverride
+  WeekOverride,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { buildDefaultRecurringEvents } from "../domain/recurring";
 import {
@@ -19,7 +20,9 @@ import {
   getRecurringOccurrences,
   getSettings,
   getSyncResult,
+  getWorklogAllocationPreferences,
   getWeekOverride,
+  getWeekOverrides,
   saveRecurringEvents
 } from "../storage/db";
 import { toLocalDateKey } from "../utils/date";
@@ -27,7 +30,9 @@ import { toLocalDateKey } from "../utils/date";
 export interface WeekStorageClient {
   getSettings(): Promise<AppSettings>;
   getWeekOverride(weekKey: string): Promise<WeekOverride>;
+  getWeekOverrides(): Promise<WeekOverride[]>;
   getSyncResult(weekKey: string): Promise<SyncResult | undefined>;
+  getWorklogAllocationPreferences(): Promise<WorklogAllocationPreference[]>;
   getJiraActivityResult(weekKey: string): Promise<JiraActivitySyncResult | undefined>;
   getFavoriteKeys(): Promise<string[]>;
   getPersonalNotes(weekKey: string): Promise<PersonalNote[]>;
@@ -45,7 +50,9 @@ interface UseWeekStorageOptions {
   setSettings: (settings: AppSettings) => void;
   setSettingsDraft: (settings: AppSettings) => void;
   setWeekOverride: (override: WeekOverride) => void;
+  setWeekOverrides: (overrides: WeekOverride[]) => void;
   setSyncResult: (result: SyncResult | undefined) => void;
+  setWorklogAllocationPreferences: (preferences: WorklogAllocationPreference[]) => void;
   setJiraActivityResult: (result: JiraActivitySyncResult | undefined) => void;
   setFavoriteKeys: (keys: string[]) => void;
   setPersonalNotes: (notes: PersonalNote[]) => void;
@@ -59,7 +66,9 @@ interface UseWeekStorageOptions {
 const defaultStorage: WeekStorageClient = {
   getSettings,
   getWeekOverride,
+  getWeekOverrides,
   getSyncResult,
+  getWorklogAllocationPreferences,
   getJiraActivityResult,
   getFavoriteKeys,
   getPersonalNotes,
@@ -77,7 +86,9 @@ export const useWeekStorage = ({
   setSettings,
   setSettingsDraft,
   setWeekOverride,
+  setWeekOverrides,
   setSyncResult,
+  setWorklogAllocationPreferences,
   setJiraActivityResult,
   setFavoriteKeys,
   setPersonalNotes,
@@ -101,7 +112,9 @@ export const useWeekStorage = ({
       const [
         storedSettings,
         storedOverride,
+        storedWeekOverrides,
         storedSyncResult,
+        storedWorklogAllocationPreferences,
         storedJiraActivityResult,
         storedFavorites,
         storedPersonalNotes,
@@ -111,7 +124,9 @@ export const useWeekStorage = ({
       ] = await Promise.all([
         storage.getSettings(),
         storage.getWeekOverride(weekKey),
+        storage.getWeekOverrides(),
         storage.getSyncResult(weekKey),
+        storage.getWorklogAllocationPreferences(),
         storage.getJiraActivityResult(weekKey),
         storage.getFavoriteKeys(),
         storage.getPersonalNotes(weekKey),
@@ -139,7 +154,9 @@ export const useWeekStorage = ({
       setSettings(storedSettings);
       setSettingsDraft(storedSettings);
       setWeekOverride(storedOverride);
+      setWeekOverrides(storedWeekOverrides);
       setSyncResult(storedSyncResult);
+      setWorklogAllocationPreferences(storedWorklogAllocationPreferences);
       setJiraActivityResult(storedJiraActivityResult);
       setFavoriteKeys(storedFavorites);
       setPersonalNotes(storedPersonalNotes);
@@ -174,7 +191,9 @@ export const useWeekStorage = ({
     setSettings,
     setSettingsDraft,
     setSyncResult,
+    setWorklogAllocationPreferences,
     setWeekOverride,
+    setWeekOverrides,
     showError,
     storage,
     weekStart

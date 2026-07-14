@@ -298,6 +298,25 @@
   text-overflow: ellipsis;
 }
 
+.cal-block-allocation {
+  flex: none;
+  padding: 2px 4px;
+  border: 1px solid color-mix(in srgb, var(--blue) 42%, transparent);
+  border-radius: 4px;
+  color: var(--blue-soft);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.cal-block-allocation.is-estimate {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--amber) 52%, transparent);
+  color: var(--amber-soft);
+}
+
 .cal-block-meta {
   font-family: var(--font-mono);
   font-size: 11px;

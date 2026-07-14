@@ -25,6 +25,19 @@
   overflow: visible;
 }
 
+.add-time-modal-panel {
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.add-time-modal-panel .modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -177,6 +190,95 @@
 
 .modal-col {
   flex: 1;
+}
+
+.bulk-allocation-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 14px 15px;
+  border: 1px solid color-mix(in srgb, var(--amber) 42%, var(--border));
+  border-radius: 9px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--amber) 9%, transparent), transparent 65%),
+    var(--bg-sunken);
+}
+
+.bulk-allocation-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bulk-allocation-copy span,
+.bulk-direction-toggle label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.bulk-allocation-copy span {
+  color: var(--amber-soft);
+}
+
+.bulk-allocation-copy strong {
+  color: var(--text-bright);
+  font-size: 13px;
+}
+
+.bulk-allocation-copy small {
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+.bulk-direction-toggle {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+}
+
+.bulk-direction-toggle label {
+  position: relative;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dim);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.bulk-direction-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.bulk-direction-toggle label:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.bulk-direction-toggle label.active {
+  background: color-mix(in srgb, var(--amber) 16%, var(--bg-raised));
+  color: var(--amber-soft);
+}
+
+@media (max-width: 620px) {
+  .bulk-allocation-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .bulk-direction-toggle label {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 .modal-duration {

@@ -112,6 +112,45 @@ describe("AddTimeModal retrospective start", () => {
     expect(timeInput?.value).toBe("09:15");
   });
 
+  it("preserves a bulk duration instead of clamping it to the current day", () => {
+    act(() => {
+      root.render(
+        <AddTimeModal
+          date={new Date(2026, 5, 17, 14, 37)}
+          dateOptions={["2026-06-15", "2026-06-16", "2026-06-17"]}
+          ticketOptions={[ticket]}
+          isConfigured={true}
+          isLogging={false}
+          dailyTargetHours={8}
+          prefill={{ retrospective: true }}
+          onClose={() => undefined}
+          onLog={async () => true}
+        />
+      );
+    });
+
+    const customButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "Custom"
+    );
+    act(() => customButton?.click());
+
+    const amountInput = container.querySelector<HTMLInputElement>('input[aria-label="Custom ticket duration amount"]');
+    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    act(() => {
+      valueSetter?.call(amountInput, "2");
+      amountInput?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    const weekButton = [...container.querySelectorAll<HTMLButtonElement>(".custom-unit-toggle button")].find(
+      (button) => button.textContent === "W"
+    );
+    act(() => weekButton?.click());
+
+    expect(container.querySelector(".modal-duration")?.textContent).toBe("80h 00m");
+    expect(container.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe("12:37");
+    expect(container.textContent).toContain("BULK WORKLOG");
+  });
+
   it("keeps the modal end date when a duration change crosses midnight", () => {
     act(() => {
       root.render(

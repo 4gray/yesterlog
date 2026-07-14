@@ -2,7 +2,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, JiraTicket, JiraWorklog, SyncResult } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
 import { useJiraWorklogs, type JiraWorklogPayload, type JiraWorklogsClient } from "./useJiraWorklogs";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -64,6 +64,7 @@ const syncResult = (overrides: Partial<SyncResult> = {}): SyncResult => ({
   weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
   syncedAt: "2026-06-18T08:00:00.000Z",
   accountId: "account-1",
+  jiraSite: "https://example.atlassian.net",
   displayName: "Dev User",
   trackedSeconds: 0,
   issueCount: 0,
@@ -82,6 +83,10 @@ let addWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["addWorklog"]>>;
 let updateWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["updateWorklog"]>>;
 let deleteWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["deleteWorklog"]>>;
 let saveSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => Promise<void>>>;
+let saveWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => Promise<void>>>;
+let deleteWorklogAllocationPreference: ReturnType<typeof vi.fn<(preferenceKey: string) => Promise<void>>>;
+let onWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => void>>;
+let onWorklogAllocationPreferenceRemoved: ReturnType<typeof vi.fn<(preferenceKey: string) => void>>;
 let runSync: ReturnType<typeof vi.fn<(settingsForSync?: AppSettings, options?: { queueAfterCurrent?: boolean }) => Promise<SyncResult | undefined>>>;
 let loadTickets: ReturnType<typeof vi.fn<(settingsForLoad?: AppSettings) => Promise<void>>>;
 let onSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => void>>;
@@ -110,6 +115,10 @@ function Harness({
     isDemo,
     client,
     saveSyncResult,
+    saveWorklogAllocationPreference,
+    deleteWorklogAllocationPreference,
+    onWorklogAllocationPreference,
+    onWorklogAllocationPreferenceRemoved,
     runSync,
     loadTickets,
     onSyncResult,
@@ -140,6 +149,10 @@ beforeEach(() => {
   updateWorklog = vi.fn();
   deleteWorklog = vi.fn();
   saveSyncResult = vi.fn(async () => undefined);
+  saveWorklogAllocationPreference = vi.fn(async () => undefined);
+  deleteWorklogAllocationPreference = vi.fn(async () => undefined);
+  onWorklogAllocationPreference = vi.fn();
+  onWorklogAllocationPreferenceRemoved = vi.fn();
   runSync = vi.fn(async () => syncResult());
   loadTickets = vi.fn(async () => undefined);
   onSyncResult = vi.fn();
@@ -248,6 +261,147 @@ describe("useJiraWorklogs", () => {
     expect(saveSyncResult).not.toHaveBeenCalled();
     expect(onSyncResult).not.toHaveBeenCalled();
     expect(loadTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("stores an exact local distribution preference without sending it to Jira", async () => {
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-20002",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "backward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(addWorklog).toHaveBeenCalledWith({
+      settings,
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600,
+      startedISO: payload.startedISO,
+      comment: payload.comment
+    });
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferenceKey: JSON.stringify(["https://example.atlassian.net", "account-1", "bulk-20002"]),
+        jiraSite: "https://example.atlassian.net",
+        authorAccountId: "account-1",
+        worklogId: "bulk-20002",
+        direction: "backward"
+      })
+    );
+    expect(onWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({ worklogId: "bulk-20002", direction: "backward" })
+    );
+  });
+
+  it("stores the chosen direction after the first sync supplies the current site account", async () => {
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-first-sync",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    runSync.mockResolvedValue(syncResult());
+    renderHarness({
+      currentEditingWorklog: null,
+      currentSyncResult: syncResult({
+        jiraSite: "https://old.atlassian.net",
+        accountId: "old-account"
+      })
+    });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "backward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledTimes(1);
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferenceKey: JSON.stringify([
+          "https://example.atlassian.net",
+          "account-1",
+          "bulk-first-sync"
+        ]),
+        jiraSite: "https://example.atlassian.net",
+        authorAccountId: "account-1",
+        direction: "backward"
+      })
+    );
+  });
+
+  it("keeps a successful Jira write successful when the local direction cannot be saved", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-20003",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    saveWorklogAllocationPreference.mockRejectedValue(new Error("IndexedDB unavailable"));
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "forward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(addWorklog).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalled();
+    expect(showError).not.toHaveBeenCalled();
+    expect(onWorklogAllocationPreference).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Unable to save the local bulk-worklog direction.",
+      expect.any(Error)
+    );
+  });
+
+  it("removes a stale bulk preference when an update becomes a normal worklog", async () => {
+    updateWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      issueKey: editingWorklog.issueKey,
+      timeSpentSeconds: 7 * 3600
+    });
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          timeSpentSeconds: 7 * 3600,
+          allocationDirection: undefined
+        })
+      ).resolves.toBe(true);
+    });
+
+    const preferenceKey = JSON.stringify([
+      "https://example.atlassian.net",
+      "account-1",
+      editingWorklog.id
+    ]);
+    expect(deleteWorklogAllocationPreference).toHaveBeenCalledWith(preferenceKey);
+    expect(onWorklogAllocationPreferenceRemoved).toHaveBeenCalledWith(preferenceKey);
+    expect(saveWorklogAllocationPreference).not.toHaveBeenCalled();
   });
 
   it("reports Jira add failures", async () => {
