@@ -37,6 +37,8 @@ export const TicketKeyLink = ({
           type="button"
           className={`ticket-key-button${keyClassName ? ` ${keyClassName}` : ""}`}
           style={style}
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
             openTicketDetails(issueKey);
@@ -57,8 +59,11 @@ export const TicketKeyLink = ({
           href={url}
           target="_blank"
           rel="noreferrer"
+          draggable={false}
           title={`Open ${issueKey} in Jira`}
           aria-label={`Open ${issueKey} in Jira`}
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
         >
           <ExternalLink size={13} strokeWidth={2} />

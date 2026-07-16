@@ -5,6 +5,7 @@ import { formatHours } from "../utils/date";
 import { buildDockColorMap, formatRelativeTime, getDockStatus } from "./activeWork";
 import { EpicPill } from "./EpicPill";
 import { getIssueTypeBadgeLabel } from "./IssueTypeBadge";
+import { TicketKeyLink } from "./TicketKeyLink";
 
 interface ActiveWorkDockProps {
   /** Ordered tickets — active/in-progress first, then recently closed. */
@@ -83,9 +84,13 @@ const DockCard = ({
     >
       <div className="dock-card-top">
         <span className="dock-card-dot" style={{ background: color.seg }} />
-        <span className="dock-card-key" style={{ color: color.text }}>
-          {ticket.key}
-        </span>
+        <TicketKeyLink
+          issueKey={ticket.key}
+          url={ticket.url}
+          className="dock-card-ticket-links"
+          keyClassName="dock-card-key"
+          style={{ color: color.text }}
+        />
         {badge && <span className={`dock-card-badge is-${badge.toLowerCase()}`}>{badge}</span>}
         <span className="dock-card-spacer" />
         <span className={`dock-card-status is-${status.tone}`} title={`Jira status: ${status.label}`}>

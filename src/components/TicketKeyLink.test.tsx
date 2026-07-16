@@ -25,11 +25,13 @@ describe("TicketKeyLink", () => {
   it("opens in-app ticket details from the key while preserving the Jira browser link", () => {
     const openTicketDetails = vi.fn();
     const parentClick = vi.fn();
+    const parentMouseDown = vi.fn();
+    const parentKeyDown = vi.fn();
 
     act(() => {
       root.render(
         <TicketDetailsProvider value={openTicketDetails}>
-          <div onClick={parentClick}>
+          <div onClick={parentClick} onMouseDown={parentMouseDown} onKeyDown={parentKeyDown}>
             <TicketKeyLink issueKey="FTDM-397" url="https://example.atlassian.net/browse/FTDM-397" />
           </div>
         </TicketDetailsProvider>
@@ -37,19 +39,29 @@ describe("TicketKeyLink", () => {
     });
 
     act(() => {
-      container.querySelector<HTMLButtonElement>(".ticket-key-button")?.click();
+      const key = container.querySelector<HTMLButtonElement>(".ticket-key-button");
+      key?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+      key?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      key?.click();
     });
 
     expect(openTicketDetails).toHaveBeenCalledWith("FTDM-397");
     expect(parentClick).not.toHaveBeenCalled();
+    expect(parentMouseDown).not.toHaveBeenCalled();
+    expect(parentKeyDown).not.toHaveBeenCalled();
 
     act(() => {
-      container.querySelector<HTMLAnchorElement>(".ticket-jira-link")?.click();
+      const jiraLink = container.querySelector<HTMLAnchorElement>(".ticket-jira-link");
+      jiraLink?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
+      jiraLink?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      jiraLink?.click();
     });
 
     expect(container.querySelector<HTMLAnchorElement>(".ticket-jira-link")?.href).toBe(
       "https://example.atlassian.net/browse/FTDM-397"
     );
     expect(parentClick).not.toHaveBeenCalled();
+    expect(parentMouseDown).not.toHaveBeenCalled();
+    expect(parentKeyDown).not.toHaveBeenCalled();
   });
 });

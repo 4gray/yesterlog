@@ -146,6 +146,21 @@
   white-space: nowrap;
 }
 
+.dock-card-ticket-links {
+  gap: 3px;
+}
+
+.dock-card-ticket-links .ticket-jira-link {
+  width: 17px;
+  height: 17px;
+  color: var(--faint);
+}
+
+.dock-card-ticket-links .ticket-jira-link:hover,
+.dock-card-ticket-links .ticket-jira-link:focus-visible {
+  color: var(--blue-soft);
+}
+
 .dock-card-badge {
   flex: none;
   padding: 1px 5px;
