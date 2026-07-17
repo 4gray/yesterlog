@@ -194,7 +194,10 @@ const baseProps = (): AppMainViewProps => ({
   openTicketDetails: noop,
   settingsSection: "jira",
   syncState: "synced",
-  syncLabel: "SYNCED 6:47 PM"
+  syncLabel: "SYNCED 6:47 PM",
+  viewMode: "summary",
+  onViewModeChange: noop,
+  onOpenCommandPalette: noop
 });
 
 let container: HTMLDivElement;

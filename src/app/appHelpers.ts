@@ -9,6 +9,7 @@ import type {
   TicketViewSortMode
 } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
+import { formatRelativeTime } from "../components/activeWork";
 
 export const isJiraConfigured = (settings: AppSettings) =>
   Boolean(settings.jiraBaseUrl.trim() && settings.jiraEmail.trim() && settings.jiraApiToken.trim());
@@ -41,6 +42,28 @@ export const formatSyncTime = (syncResult?: SyncResult) => {
     .format(new Date(syncResult.syncedAt))
     .toUpperCase();
   return `SYNCED ${time}`;
+};
+
+/**
+ * Elapsed-time variant of `formatSyncTime` for the week view strip — "SYNCED 2M
+ * AGO" rather than a wall clock. `now` must be passed a ticking date, otherwise
+ * the label freezes at its first render.
+ *
+ * A sync stamped in the future (clock skew, seeded fixtures) would otherwise
+ * read "SYNCED IN 38M", so anything not in the past collapses to "just now".
+ */
+export const formatRelativeSyncTime = (syncResult?: SyncResult, now: Date = new Date()) => {
+  if (!syncResult) {
+    return "NOT SYNCED";
+  }
+
+  const syncedAt = Date.parse(syncResult.syncedAt);
+  if (!Number.isFinite(syncedAt)) {
+    return "NOT SYNCED";
+  }
+
+  const elapsed = syncedAt > now.getTime() ? "just now" : formatRelativeTime(syncResult.syncedAt, now);
+  return elapsed ? `SYNCED ${elapsed.toUpperCase()}` : "NOT SYNCED";
 };
 
 export const formatReleaseVersion = (version?: string) => {

@@ -14,15 +14,12 @@ const baseProps = (): WeekHeaderProps => ({
   trackedWeekHours: 12,
   billableWeekHours: 8,
   weeklyTargetHours: 40,
-  isSyncing: false,
   isConfigured: true,
-  viewMode: "summary",
-  onViewModeChange: noop,
+  syncState: "synced",
+  syncLabel: "SYNCED 2M AGO",
   onSync: noop,
   onAddTime: noop,
-  onPreviousWeek: noop,
-  onCurrentWeek: noop,
-  onNextWeek: noop
+  onOpenCommandPalette: noop
 });
 
 let container: HTMLDivElement;
@@ -80,43 +77,52 @@ describe("WeekHeader", () => {
     expect(container.querySelector(".time-split")).toBeNull();
   });
 
-  it("wires sync, add time, and week navigation actions", () => {
+  it("wires sync, add time, and the command palette", () => {
     const onSync = vi.fn();
     const onAddTime = vi.fn();
-    const onPreviousWeek = vi.fn();
-    const onCurrentWeek = vi.fn();
-    const onNextWeek = vi.fn();
-    renderHeader({ onSync, onAddTime, onPreviousWeek, onCurrentWeek, onNextWeek });
+    const onOpenCommandPalette = vi.fn();
+    renderHeader({ onSync, onAddTime, onOpenCommandPalette });
 
     act(() => {
       container.querySelector<HTMLButtonElement>(".sync-button")?.click();
       container.querySelector<HTMLButtonElement>(".add-time-button")?.click();
-      container.querySelector<HTMLButtonElement>("[aria-label='Previous week']")?.click();
-      Array.from(container.querySelectorAll("button")).find((button) => button.textContent === "THIS WEEK")?.click();
-      container.querySelector<HTMLButtonElement>("[aria-label='Next week']")?.click();
+      container.querySelector<HTMLButtonElement>(".command-bar")?.click();
     });
 
     expect(onSync).toHaveBeenCalledTimes(1);
     expect(onAddTime).toHaveBeenCalledTimes(1);
     expect(onAddTime).toHaveBeenCalledWith();
-    expect(onPreviousWeek).toHaveBeenCalledTimes(1);
-    expect(onCurrentWeek).toHaveBeenCalledTimes(1);
-    expect(onNextWeek).toHaveBeenCalledTimes(1);
+    expect(onOpenCommandPalette).toHaveBeenCalledTimes(1);
   });
 
-  it("switches between compact summaries and the shared timeline", () => {
-    const onViewModeChange = vi.fn();
-    renderHeader({ viewMode: "summary", onViewModeChange });
+  it("keeps view controls out of the actions row", () => {
+    renderHeader();
 
-    const switcher = container.querySelector("[aria-label='Week view layout']");
-    const summary = switcher?.querySelector<HTMLButtonElement>("button[aria-pressed='true']");
-    const timeline = Array.from(switcher?.querySelectorAll("button") ?? []).find(
-      (button) => button.textContent === "TIMELINE"
-    );
+    // Week nav and the layout switch live in the view strip since toolbar V3.
+    expect(container.querySelector("[aria-label='Week view layout']")).toBeNull();
+    expect(container.querySelector("[aria-label='Week navigation']")).toBeNull();
+  });
 
-    expect(summary?.textContent).toBe("SUMMARY");
-    act(() => timeline?.click());
-    expect(onViewModeChange).toHaveBeenCalledWith("timeline");
+  it("colours the sync dot by state and surfaces the elapsed label in the tooltip", () => {
+    renderHeader();
+    expect(container.querySelector(".sync-dot.is-synced")).not.toBeNull();
+    expect(container.querySelector<HTMLButtonElement>(".sync-button")?.title).toBe("Sync now · synced 2m ago");
+
+    renderHeader({ syncState: "offline", syncLabel: "OFFLINE" });
+    expect(container.querySelector(".sync-dot.is-offline")).not.toBeNull();
+
+    renderHeader({ syncState: "stale", syncLabel: "NOT SYNCED" });
+    expect(container.querySelector(".sync-dot.is-stale")).not.toBeNull();
+  });
+
+  it("goes busy whenever syncState says syncing, not just on a Jira worklog sync", () => {
+    // A Bitbucket/activity sync only shows up in syncState. Deriving from a
+    // narrower flag left the icon idle while the strip below read SYNCING….
+    renderHeader({ syncState: "syncing", syncLabel: "SYNCING…" });
+
+    const button = container.querySelector<HTMLButtonElement>(".sync-button");
+    expect(button?.disabled).toBe(true);
+    expect(button?.querySelector(".spin")).not.toBeNull();
   });
 
   it("disables sync while syncing or before Jira is configured", () => {
@@ -126,11 +132,11 @@ describe("WeekHeader", () => {
     expect(disconnectedSync?.disabled).toBe(true);
     expect(disconnectedSync?.title).toBe("Connect Jira in settings to sync");
 
-    renderHeader({ isSyncing: true, isConfigured: true });
+    renderHeader({ isConfigured: true, syncState: "syncing", syncLabel: "SYNCING…" });
 
     const syncingButton = container.querySelector<HTMLButtonElement>(".sync-button");
     expect(syncingButton?.disabled).toBe(true);
-    expect(syncingButton?.title).toBe("Sync with Jira");
     expect(syncingButton?.querySelector(".spin")).not.toBeNull();
+    expect(syncingButton?.querySelector(".sync-dot.is-syncing")).not.toBeNull();
   });
 });

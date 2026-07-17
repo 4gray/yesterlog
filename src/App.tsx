@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppMainView } from "./app/AppMainView";
+import type { CommandPaletteCommand } from "./components/CommandPalette";
+import { formatShortcut } from "./utils/platform";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppShellFrame } from "./app/AppShellFrame";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
@@ -16,6 +18,8 @@ import { useAppWeekDataState } from "./app/useAppWeekDataState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
+import { useCommandPalette } from "./app/useCommandPalette";
+import { useOnlineStatus } from "./app/useOnlineStatus";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useDemoScenario } from "./app/useDemoScenario";
@@ -42,6 +46,7 @@ import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
+import { useWeekViewMode } from "./components/useWeekViewMode";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 
 // The version this build is running; baked from package.json at build time.
@@ -463,16 +468,19 @@ export const App = () => {
     showError
   });
 
+  const isOnline = useOnlineStatus();
   const { handleSync, syncLabel, syncState } = useSyncControls({
     settings,
     syncResult: projectedSyncResult,
     isSyncing,
     isSyncingJiraActivity,
     isSyncingReviews,
+    isOnline,
     runSync,
     runJiraActivitySync,
     runReviewSync
   });
+  const { mode: weekViewMode, selectMode: selectWeekViewMode } = useWeekViewMode();
   const { handleToggleSkipped, handleExportWeekCsv } = useWeekActions({
     weekState,
     weekOverride,
@@ -521,6 +529,85 @@ export const App = () => {
     setLogError
   });
 
+  // A time-entry modal owns the screen and its own Esc handler; letting the
+  // palette stack on top would leave one Esc closing both and losing the entry.
+  const hasOpenTimeEntryModal = Boolean(addModalDate || editingWorklog || editingPersonalNote);
+  const commandPalette = useCommandPalette({
+    enabled: !welcomeFlow.isWelcomeVisible && !isBooting && !hasOpenTimeEntryModal
+  });
+
+  // TODO(nl-parsing): the brief's headline command is free-text ("Log 2h on
+  // FTDM-352", "go to week 28"). Until the parser lands these are the static
+  // fallbacks the palette offers.
+  const commands = useMemo<CommandPaletteCommand[]>(
+    () => [
+      {
+        id: "log-time",
+        label: "Log time…",
+        hint: formatShortcut("K", { shift: true }),
+        disabled: !isConfigured,
+        run: addTimeModalActions.openTrackingShortcut
+      },
+      { id: "sync-now", label: "Sync now", disabled: !isConfigured || syncState === "syncing", run: handleSync },
+      // Week navigation is invisible from Today/Reports/etc, so these surface the
+      // week view alongside the jump rather than silently moving offscreen state.
+      {
+        id: "go-today",
+        label: "Go to current week",
+        run: () => {
+          handleViewChange("week");
+          goToCurrentWeek();
+        }
+      },
+      {
+        id: "go-prev-week",
+        label: "Go to previous week",
+        run: () => {
+          handleViewChange("week");
+          goToPreviousWeek();
+        }
+      },
+      {
+        id: "go-next-week",
+        label: "Go to next week",
+        run: () => {
+          handleViewChange("week");
+          goToNextWeek();
+        }
+      },
+      {
+        id: "view-summary",
+        label: "Switch to Summary",
+        hint: weekViewMode === "summary" ? "Current" : undefined,
+        run: () => {
+          selectWeekViewMode("summary");
+          handleViewChange("week");
+        }
+      },
+      {
+        id: "view-timeline",
+        label: "Switch to Timeline",
+        hint: weekViewMode === "timeline" ? "Current" : undefined,
+        run: () => {
+          selectWeekViewMode("timeline");
+          handleViewChange("week");
+        }
+      }
+    ],
+    [
+      addTimeModalActions.openTrackingShortcut,
+      goToCurrentWeek,
+      goToNextWeek,
+      goToPreviousWeek,
+      handleSync,
+      handleViewChange,
+      isConfigured,
+      selectWeekViewMode,
+      syncState,
+      weekViewMode
+    ]
+  );
+
   if (welcomeFlow.isWelcomeVisible) {
     return (
       <AppWelcomeScreen
@@ -553,6 +640,9 @@ export const App = () => {
       settingsDirty={isSettingsDirty}
       overlays={
         <AppOverlays
+          commandPaletteOpen={commandPalette.open}
+          commands={commands}
+          onCloseCommandPalette={commandPalette.close}
           addModalDate={addModalDate}
           addTimePrefill={addTimePrefill}
           editingWorklog={editingWorklog}
@@ -610,6 +700,9 @@ export const App = () => {
         view={view}
         reportTab={reportTab}
         isBooting={isBooting}
+        viewMode={weekViewMode}
+        onViewModeChange={selectWeekViewMode}
+        onOpenCommandPalette={commandPalette.toggle}
         currentDate={currentDate}
         ticketOptions={ticketOptions}
         todayWorklogs={todayWorklogs}

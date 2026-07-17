@@ -1,18 +1,23 @@
 /* ============================ WEEK view ============================ */
+/*
+ * Toolbar V3 "split levels": `.week-header` is level 1 (identity + actions) and
+ * `.week-strip` is level 2 (view controls), sitting directly above the grid.
+ * Sizes/spacing follow the design handoff; colours map onto the app's tokens so
+ * the toolbar tracks the light theme.
+ */
 .week-header {
   flex: none;
-  padding: 24px 48px 22px;
+  padding: 26px 28px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  border-bottom: 1px solid var(--line);
 }
 
 .week-headline {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .ring {
@@ -20,6 +25,23 @@
   width: 78px;
   height: 78px;
   flex: none;
+}
+
+/* 52px ring for the toolbar; `.ring` fixes the default box at 78px. */
+.ring.is-compact {
+  width: 52px;
+  height: 52px;
+}
+
+.ring.is-compact .ring-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.ring.is-compact .ring-pct {
+  font-size: 9px;
 }
 
 .ring-label {
@@ -58,9 +80,40 @@
   color: var(--dim-2);
 }
 
+/*
+ * The toolbar identity block is deliberately more compact than the shared
+ * `--figure-standard` header scale (Month/Review/Reports keep that), so the
+ * two-level toolbar stays short. Scoped to `.week-header` on purpose.
+ */
+.week-header .eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+
+.week-header .week-figure {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+
+.week-header .week-figure .unit {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--dim);
+}
+
 /* Billable vs "to log" split under the week figure, mirroring the Today hero. */
 .week-split {
   margin-top: 14px;
+}
+
+.week-header .week-split {
+  margin-top: 8px;
 }
 
 .week-figure-sub {
@@ -71,12 +124,71 @@
   color: var(--muted);
 }
 
+.week-header .week-figure-sub {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--faint);
+}
+
 .week-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
+/* ---- command bar (⌘K trigger) ---- */
+.command-bar {
+  width: 340px;
+  height: 38px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--dim);
+  cursor: text;
+  transition: border-color 150ms ease;
+}
+
+.command-bar:hover {
+  border-color: var(--border-strong);
+}
+
+.command-bar:focus-visible {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.command-bar-placeholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.command-bar-kbd {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+/*
+ * Base `.sync-button` is the labelled variant, still used by ReviewView. Only
+ * the week toolbar's copy is the icon-only square — keep the override scoped.
+ */
 .sync-button {
   display: flex;
   align-items: center;
@@ -100,22 +212,72 @@
   border-color: var(--border-strong);
 }
 
+/* ---- toolbar sync (icon-only, status dot) ---- */
+.week-actions .sync-button {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  gap: 0;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+  border-radius: 9px;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.week-actions .sync-button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.sync-button:focus-visible,
+.week-strip-sync:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.sync-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--green);
+}
+
+.sync-dot.is-syncing {
+  background: var(--amber);
+}
+
+.sync-dot.is-stale {
+  background: var(--faint);
+}
+
+.sync-dot.is-offline {
+  background: var(--red);
+}
+
+.sync-button .sync-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* ---- primary action ---- */
 .add-time-button {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: none;
+  height: 38px;
   white-space: nowrap;
-  font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.12em;
   color: #fff;
   background: var(--blue);
   border: none;
-  border-radius: 8px;
-  padding: 10px 15px;
-  box-shadow: 0 2px 14px rgba(79, 124, 255, 0.45);
+  border-radius: 9px;
+  padding: 0 18px;
   transition: filter 150ms ease;
 }
 
@@ -123,10 +285,53 @@
   filter: brightness(1.08);
 }
 
+.add-time-button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The week toolbar no longer has a divider, but Month and Review still do. */
 .week-divider {
   width: 1px;
   height: 26px;
   background: var(--border);
+}
+
+/* ============ toolbar level 2 · view strip ============ */
+.week-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 10px 28px;
+  background: var(--bg-sunken);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.week-strip-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.week-strip-sync {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.week-strip-sync:hover:not(:disabled) {
+  color: var(--text-strong);
 }
 
 .big-figure {
@@ -199,6 +404,63 @@
 
 .week-nav-arrow:hover {
   color: var(--text-strong);
+}
+
+/* ---- strip variant: chevrons + visible range + TODAY ---- */
+.week-nav.is-strip {
+  gap: 6px;
+}
+
+.week-nav.is-strip .week-nav-arrow {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--text-strong);
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.week-nav.is-strip .week-nav-arrow:hover {
+  background: var(--bg-hover);
+  color: var(--text-bright);
+}
+
+.week-nav-range {
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.week-nav-today {
+  height: 26px;
+  margin-left: 6px;
+  padding: 0 10px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--blue-soft);
+  transition: background 150ms ease;
+}
+
+.week-nav-today:hover {
+  background: var(--bg-active);
+}
+
+.week-nav-arrow:focus-visible,
+.week-nav-today:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .pill {
@@ -1304,27 +1566,26 @@
   display: flex;
   flex: none;
   align-items: center;
-  padding: 3px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--bg-sunken);
+  overflow: hidden;
 }
 
 .week-view-switch button {
-  min-height: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 9px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 0;
   background: transparent;
   color: var(--dim);
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.09em;
-  transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  transition: color 120ms ease, background 120ms ease;
 }
 
 .week-view-switch button:hover {
@@ -1332,14 +1593,15 @@
 }
 
 .week-view-switch button.is-active {
-  color: var(--blue-soft);
+  color: var(--text);
+  font-weight: 700;
   background: var(--bg-active);
-  box-shadow: inset 0 0 0 1px var(--border);
 }
 
+/* Inset, because the segmented container clips overflow. */
 .week-view-switch button:focus-visible {
   outline: 2px solid var(--blue);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .week-timeline {

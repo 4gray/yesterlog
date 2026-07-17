@@ -10,6 +10,7 @@ import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
 import { AppTicketsRoute } from "./AppTicketsRoute";
 import { AppTodayRoute } from "./AppTodayRoute";
+import type { AppSyncState } from "./useSyncControls";
 import { AppWeekRoute } from "./AppWeekRoute";
 
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
@@ -115,8 +116,11 @@ export interface AppMainViewProps {
   openSettings: () => void;
   openTicketDetails: OpenTicketDetails;
   settingsSection: AppSettingsRouteProps["initialSection"];
-  syncState: "synced" | "stale" | "syncing";
+  syncState: AppSyncState;
   syncLabel: string;
+  viewMode: AppWeekRouteProps["viewMode"];
+  onViewModeChange: AppWeekRouteProps["onViewModeChange"];
+  onOpenCommandPalette: AppWeekRouteProps["onOpenCommandPalette"];
 }
 
 export const AppMainView = ({
@@ -213,7 +217,10 @@ export const AppMainView = ({
   openTicketDetails,
   settingsSection,
   syncState,
-  syncLabel
+  syncLabel,
+  viewMode,
+  onViewModeChange,
+  onOpenCommandPalette
 }: AppMainViewProps) => {
   let content;
 
@@ -257,6 +264,10 @@ export const AppMainView = ({
         isSyncing={isSyncing}
         isSyncingReviews={isSyncingReviews}
         isConfigured={isConfigured}
+        syncState={syncState}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        onOpenCommandPalette={onOpenCommandPalette}
         dockTickets={dockTickets}
         activeTicketCount={activeTicketCount}
         isLogging={isLogging}

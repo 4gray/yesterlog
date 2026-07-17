@@ -245,12 +245,13 @@ describe("useAddTimeModalActions", () => {
     expect(toLocalDateKey(weekStartState)).toBe("2026-06-15");
   });
 
-  it("handles Ctrl+K globally and prevents the browser default", () => {
+  it("handles Ctrl+Shift+K globally and prevents the browser default", () => {
     renderHarness();
 
     const event = new KeyboardEvent("keydown", {
       key: "k",
       ctrlKey: true,
+      shiftKey: true,
       bubbles: true,
       cancelable: true
     });
@@ -260,12 +261,28 @@ describe("useAddTimeModalActions", () => {
     expect(toLocalDateKey(addModalDate ?? new Date(0))).toBe("2026-06-17");
   });
 
+  it("leaves bare Cmd+K alone — that opens the command palette", () => {
+    renderHarness();
+
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true
+    });
+    act(() => window.dispatchEvent(event));
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(addModalDate).toBeUndefined();
+  });
+
   it("ignores shortcut keypresses when the app is not ready for logging", () => {
     renderHarness({ isConfigured: false });
 
     const event = new KeyboardEvent("keydown", {
       key: "k",
       metaKey: true,
+      shiftKey: true,
       bubbles: true,
       cancelable: true
     });

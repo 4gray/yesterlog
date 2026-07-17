@@ -10,6 +10,7 @@ import type {
   WorklogAllocationPreference
 } from "../../shared/types";
 import { ReconstructView } from "../components/ReconstructView";
+import type { AppSyncState } from "./useSyncControls";
 import type { AddTimePrefill } from "../components/AddTimeModal";
 import type { ReconstructDay, TimelineRow } from "../domain/reconstruct";
 import { useReconstruct } from "./useReconstruct";
@@ -27,7 +28,7 @@ export interface AppReconRouteProps {
   allocationSkippedDates?: string[];
   worklogAllocationPreferences?: WorklogAllocationPreference[];
   dailyTargetHours: number;
-  syncState: "synced" | "stale" | "syncing";
+  syncState: AppSyncState;
   syncLabel: string;
   onSync: () => void;
   onOpenSettings: () => void;

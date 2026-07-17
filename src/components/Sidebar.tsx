@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import type { AppSyncState } from "../app/useSyncControls";
 import {
   Calendar,
   CalendarDays,
@@ -10,6 +11,13 @@ import {
   Sun,
   Tag
 } from "lucide-react";
+
+const SYNC_DOT_STATE: Record<AppSyncState, string> = {
+  synced: "",
+  syncing: "is-syncing",
+  stale: "is-stale",
+  offline: "is-offline"
+};
 
 export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "settings";
 export type ReportTab = "summary" | "composition" | "focus" | "trends";
@@ -41,7 +49,7 @@ interface SidebarProps {
   onReportTabChange: (tab: ReportTab) => void;
   onToggleCollapse: () => void;
   syncLabel: string;
-  syncState: "synced" | "stale" | "syncing";
+  syncState: AppSyncState;
   showReview: boolean;
   settingsDirty: boolean;
 }
@@ -118,7 +126,7 @@ export const Sidebar = ({
       </button>
 
       <div className="sb-synced" title="Sync status">
-        <span className={`sb-dot ${syncState === "syncing" ? "is-syncing" : syncState === "stale" ? "is-stale" : ""}`} />
+        <span className={`sb-dot ${SYNC_DOT_STATE[syncState]}`} />
         <span className="nav-label sb-synced-label">{syncLabel}</span>
       </div>
     </aside>

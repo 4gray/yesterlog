@@ -7,6 +7,8 @@ interface ProgressRingProps {
   color?: string;
   ariaLabel?: string;
   showLabel?: boolean;
+  /** `.ring` fixes the box at 78px, so any non-default `size` needs a class that resizes it. */
+  className?: string;
 }
 
 /**
@@ -21,7 +23,8 @@ export const ProgressRing = ({
   stroke = 7,
   color = "var(--blue)",
   ariaLabel,
-  showLabel = true
+  showLabel = true,
+  className
 }: ProgressRingProps) => {
   const clamped = Math.max(0, Math.min(pct, 100));
   const circumference = 2 * Math.PI * radius;
@@ -29,7 +32,10 @@ export const ProgressRing = ({
   const center = size / 2;
 
   return (
-    <div className="ring" aria-label={ariaLabel ?? `${Math.round(clamped)} percent`}>
+    <div
+      className={`ring${className ? ` ${className}` : ""}`}
+      aria-label={ariaLabel ?? `${Math.round(clamped)} percent`}
+    >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
         <circle cx={center} cy={center} r={radius} fill="none" stroke="var(--line)" strokeWidth={stroke} />
         <circle

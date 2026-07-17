@@ -62,6 +62,7 @@ interface HarnessProps {
   isSyncing?: boolean;
   isSyncingJiraActivity?: boolean;
   isSyncingReviews?: boolean;
+  isOnline?: boolean;
 }
 
 function Harness({
@@ -69,7 +70,8 @@ function Harness({
   currentSyncResult,
   isSyncing = false,
   isSyncingJiraActivity = false,
-  isSyncingReviews = false
+  isSyncingReviews = false,
+  isOnline = true
 }: HarnessProps) {
   api = useSyncControls({
     settings: currentSettings,
@@ -77,6 +79,7 @@ function Harness({
     isSyncing,
     isSyncingJiraActivity,
     isSyncingReviews,
+    isOnline,
     runSync,
     runJiraActivitySync,
     runReviewSync
@@ -113,6 +116,29 @@ afterEach(() => {
 });
 
 describe("useSyncControls", () => {
+  it("reports offline only when there is data it cannot refresh", () => {
+    renderHarness({ currentSyncResult: syncResult, isOnline: false });
+
+    expect(getApi().syncState).toBe("offline");
+    expect(getApi().syncLabel).toBe("OFFLINE");
+  });
+
+  it("keeps never-synced as stale even while offline", () => {
+    // `stale` drives the "sync for the first time" affordances; connectivity
+    // must not mask the fact that there is no data at all.
+    renderHarness({ isOnline: false });
+
+    expect(getApi().syncState).toBe("stale");
+    expect(getApi().syncLabel).toBe("NOT SYNCED");
+  });
+
+  it("lets an in-flight sync outrank offline", () => {
+    renderHarness({ currentSyncResult: syncResult, isOnline: false, isSyncing: true });
+
+    expect(getApi().syncState).toBe("syncing");
+    expect(getApi().syncLabel).toBe("SYNCING…");
+  });
+
   it("reports stale, synced, and syncing labels from current sync state", () => {
     renderHarness();
 

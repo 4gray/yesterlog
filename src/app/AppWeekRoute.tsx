@@ -12,6 +12,10 @@ export interface AppWeekRouteProps {
   isSyncing: WeekViewProps["isSyncing"];
   isSyncingReviews: WeekViewProps["isSyncing"];
   isConfigured: WeekViewProps["isConfigured"];
+  syncState: WeekViewProps["syncState"];
+  viewMode: WeekViewProps["viewMode"];
+  onViewModeChange: WeekViewProps["onViewModeChange"];
+  onOpenCommandPalette: WeekViewProps["onOpenCommandPalette"];
   dockTickets: WeekViewProps["dockTickets"];
   activeTicketCount: WeekViewProps["activeTicketCount"];
   isLogging: WeekViewProps["isLogging"];
@@ -39,6 +43,10 @@ export const AppWeekRoute = ({
   isSyncing,
   isSyncingReviews,
   isConfigured,
+  syncState,
+  viewMode,
+  onViewModeChange,
+  onOpenCommandPalette,
   dockTickets,
   activeTicketCount,
   isLogging,
@@ -64,6 +72,10 @@ export const AppWeekRoute = ({
     timelineCenterOnNow={timelineCenterOnNow}
     isSyncing={isSyncing || isSyncingReviews}
     isConfigured={isConfigured}
+    syncState={syncState}
+    viewMode={viewMode}
+    onViewModeChange={onViewModeChange}
+    onOpenCommandPalette={onOpenCommandPalette}
     dockTickets={dockTickets}
     activeTicketCount={activeTicketCount}
     isLogging={isLogging}

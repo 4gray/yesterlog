@@ -1,12 +1,12 @@
 /* ============================ responsive ============================ */
+/*
+ * The view switch is text-only since toolbar V3, so it is never collapsed to
+ * icons here — hiding its labels would leave empty buttons. The command bar is
+ * the flexible element instead: it gives up width before anything else.
+ */
 @media (max-width: 1260px) and (min-width: 701px) {
-  .week-view-switch button {
-    width: 32px;
-    padding: 0;
-  }
-
-  .week-view-switch button span {
-    display: none;
+  .command-bar {
+    width: 240px;
   }
 }
 
@@ -21,13 +21,8 @@
     justify-content: flex-end;
   }
 
-  .week-view-switch button {
-    width: auto;
-    padding: 0 9px;
-  }
-
-  .week-view-switch button span {
-    display: inline;
+  .command-bar {
+    width: 200px;
   }
 }
 
@@ -270,6 +265,39 @@
     overflow: hidden;
   }
 
+  /*
+   * The command bar is fixed-width by default; let it shrink to the viewport,
+   * but keep enough width that it still reads as a field rather than a stub.
+   */
+  .command-bar {
+    width: auto;
+    flex: 1;
+    min-width: 132px;
+  }
+
+  /* Nav and the view toggle each get their own line rather than being squeezed. */
+  .week-strip {
+    padding: 10px 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .week-strip-right {
+    flex: 1 1 100%;
+    margin-left: 0;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .week-view-switch {
+    flex: 1;
+  }
+
+  /* Losing the elapsed-sync text keeps the nav and the view toggle usable. */
+  .week-strip-sync {
+    display: none;
+  }
+
   .week-headline {
     gap: 14px;
     min-width: 0;
@@ -305,30 +333,36 @@
     min-width: 0;
   }
 
-  .week-view-switch {
-    flex: 1 1 100%;
-    order: 3;
+  /*
+   * Toolbar V3: sync is a fixed 38px icon button and the switch/nav moved to
+   * the strip, so the actions row only has to fit the command bar + 2 buttons.
+   * The command bar takes the slack, but keeps enough width to read as a field.
+   */
+  .sync-button,
+  .add-time-button {
+    flex: none;
+    justify-content: center;
   }
 
   .week-view-switch button {
     flex: 1;
   }
 
-  .sync-button,
-  .add-time-button {
-    flex: 1 1 132px;
-    justify-content: center;
-    min-width: 0;
-  }
-
+  /* Gone from the week toolbar, but Month and Review still render it. */
   .week-divider {
     display: none;
   }
 
+  /* Reports/Review still use the default nav variant; the strip sizes itself. */
   .week-nav {
     flex: 1 1 100%;
     justify-content: space-between;
     min-width: 0;
+  }
+
+  .week-nav.is-strip {
+    flex: none;
+    justify-content: flex-start;
   }
 
   .pill {

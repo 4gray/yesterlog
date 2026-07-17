@@ -164,6 +164,10 @@ describe("WeekView", () => {
         syncResult={syncResult}
         isSyncing={false}
         isConfigured={true}
+        syncState="synced"
+        viewMode="summary"
+        onViewModeChange={() => undefined}
+        onOpenCommandPalette={() => undefined}
         onSync={() => undefined}
         onPreviousWeek={() => undefined}
         onCurrentWeek={() => undefined}
@@ -228,6 +232,10 @@ describe("WeekView", () => {
         syncResult={syncResult}
         isSyncing={false}
         isConfigured={true}
+        syncState="synced"
+        viewMode="summary"
+        onViewModeChange={() => undefined}
+        onOpenCommandPalette={() => undefined}
         onSync={() => undefined}
         onPreviousWeek={() => undefined}
         onCurrentWeek={() => undefined}
@@ -285,6 +293,10 @@ describe("WeekView", () => {
         syncResult={syncResult}
         isSyncing={false}
         isConfigured={true}
+        syncState="synced"
+        viewMode="summary"
+        onViewModeChange={() => undefined}
+        onOpenCommandPalette={() => undefined}
         onSync={() => undefined}
         onPreviousWeek={() => undefined}
         onCurrentWeek={() => undefined}
@@ -316,6 +328,10 @@ describe("WeekView", () => {
         syncResult={undefined}
         isSyncing={false}
         isConfigured={true}
+        syncState="synced"
+        viewMode="summary"
+        onViewModeChange={() => undefined}
+        onOpenCommandPalette={() => undefined}
         onSync={() => undefined}
         onPreviousWeek={() => undefined}
         onCurrentWeek={() => undefined}

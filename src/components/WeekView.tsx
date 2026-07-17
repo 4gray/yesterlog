@@ -15,6 +15,7 @@ import {
   fromLocalDateKey,
   toLocalDateKey
 } from "../utils/date";
+import { formatShortcut } from "../utils/platform";
 import { dayActivitySeconds } from "../domain/activity";
 import {
   buildCommittedItems,
@@ -33,7 +34,10 @@ import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
 import { useActiveWorkDock } from "./useActiveWorkDock";
 import { WeekHeader } from "./WeekHeader";
 import { WeekTimeline } from "./WeekTimeline";
-import { useWeekViewMode } from "./useWeekViewMode";
+import { WeekViewStrip } from "./WeekViewStrip";
+import type { WeekViewMode } from "./useWeekViewMode";
+import { resolveRelativeSyncLabel, type AppSyncState } from "../app/syncStatus";
+import { getWeekBounds } from "../domain/week";
 import {
   PendingRecurringCard,
   RecurringEntryRow,
@@ -58,6 +62,10 @@ interface WeekViewProps {
   timelineCenterOnNow?: boolean;
   isSyncing: boolean;
   isConfigured: boolean;
+  syncState: AppSyncState;
+  viewMode: WeekViewMode;
+  onViewModeChange: (mode: WeekViewMode) => void;
+  onOpenCommandPalette: () => void;
   dockTickets?: JiraTicket[];
   activeTicketCount?: number;
   isLogging?: boolean;
@@ -430,7 +438,7 @@ const DayColumn = ({
                   <br />
                   for today
                 </span>
-                <span className="kbd">⌘K</span>
+                <span className="kbd">{formatShortcut("K", { shift: true })}</span>
               </button>
             </>
           ) : isFuture ? (
@@ -563,6 +571,10 @@ export const WeekView = ({
   timelineCenterOnNow,
   isSyncing,
   isConfigured,
+  syncState,
+  viewMode,
+  onViewModeChange,
+  onOpenCommandPalette,
   dockTickets = [],
   activeTicketCount,
   isLogging = false,
@@ -583,7 +595,10 @@ export const WeekView = ({
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const now = currentDate ?? new Date();
   const todayKey = toLocalDateKey(now);
-  const { mode: viewMode, selectMode: selectViewMode } = useWeekViewMode();
+  const currentWeekStart = getWeekBounds(now).weekStart;
+  // One label for both toolbar levels: the strip shows it, the header's sync
+  // tooltip echoes it. `now` ticks, so "SYNCED 2M AGO" stays honest.
+  const relativeSyncLabel = resolveRelativeSyncLabel(syncState, now, syncResult);
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
 
@@ -732,12 +747,23 @@ export const WeekView = ({
         trackedWeekHours={weekState.trackedWeekHours}
         billableWeekHours={weekState.jiraTrackedWeekHours}
         weeklyTargetHours={weekState.weeklyTargetHours}
-        isSyncing={isSyncing}
         isConfigured={isConfigured}
-        viewMode={viewMode}
-        onViewModeChange={selectViewMode}
+        syncState={syncState}
+        syncLabel={relativeSyncLabel}
         onSync={onSync}
         onAddTime={onAddTime}
+        onOpenCommandPalette={onOpenCommandPalette}
+      />
+
+      <WeekViewStrip
+        weekStart={weekStart}
+        currentWeekStart={currentWeekStart}
+        syncState={syncState}
+        syncLabel={relativeSyncLabel}
+        isConfigured={isConfigured}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        onSync={onSync}
         onPreviousWeek={onPreviousWeek}
         onCurrentWeek={onCurrentWeek}
         onNextWeek={onNextWeek}

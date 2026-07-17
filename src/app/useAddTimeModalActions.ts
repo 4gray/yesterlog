@@ -94,7 +94,14 @@ export const useAddTimeModalActions = ({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) {
+      // ⌘K now opens the command palette; this flow moved to ⌘⇧K and is also
+      // reachable as a palette command.
+      if (
+        event.defaultPrevented ||
+        event.key.toLowerCase() !== "k" ||
+        !event.shiftKey ||
+        (!event.metaKey && !event.ctrlKey)
+      ) {
         return;
       }
 

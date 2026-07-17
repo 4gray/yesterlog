@@ -33,6 +33,7 @@ import type {
   TimelineRow
 } from "../domain/reconstruct";
 import { formatReconDuration } from "../domain/reconstruct";
+import type { AppSyncState } from "../app/useSyncControls";
 
 export interface ReconstructDateLabels {
   /** "WEDNESDAY 17 JUNE" */
@@ -62,7 +63,7 @@ export interface ReconstructViewProps {
   /** Log entries for this day (opens the existing Add Time write flow). */
   onLogTime: () => void;
   /** Background sync state for Jira worklogs + Bitbucket reviews/commits. */
-  syncState: "synced" | "stale" | "syncing";
+  syncState: AppSyncState;
   /** Human label for the last sync, e.g. "SYNCED 6:47 PM" or "SYNCING…". */
   syncLabel: string;
   /** Re-sync this week's signals from Jira + Bitbucket. */

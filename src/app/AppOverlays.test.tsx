@@ -118,7 +118,10 @@ const baseProps = (): AppOverlaysProps => ({
   onSelectReleaseNotesVersion: noop,
   onRefreshReleaseHistory: noop,
   notifications: [],
-  onDismissNotification: noop
+  onDismissNotification: noop,
+  commandPaletteOpen: false,
+  commands: [],
+  onCloseCommandPalette: noop
 });
 
 let container: HTMLDivElement;

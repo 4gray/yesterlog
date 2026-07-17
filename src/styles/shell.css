@@ -169,6 +169,11 @@
   animation: pulse 1.1s ease-in-out infinite;
 }
 
+.sb-dot.is-offline {
+  background: var(--red);
+  box-shadow: none;
+}
+
 .sb-synced-label {
   font-family: var(--font-mono);
   font-size: 11px;

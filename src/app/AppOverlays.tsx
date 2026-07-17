@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { CommandPalette } from "../components/CommandPalette";
 import { ReleaseNotesDialog } from "../components/ReleaseNotesDialog";
 import { SnackbarStack } from "../components/SnackbarStack";
 import { TicketDetailsDialog } from "../components/TicketDetailsDialog";
@@ -8,8 +9,12 @@ type TimeEntryModalLayerProps = ComponentProps<typeof TimeEntryModalLayer>;
 type ReleaseNotesDialogProps = ComponentProps<typeof ReleaseNotesDialog>;
 type TicketDetailsDialogProps = ComponentProps<typeof TicketDetailsDialog>;
 type SnackbarStackProps = ComponentProps<typeof SnackbarStack>;
+type CommandPaletteProps = ComponentProps<typeof CommandPalette>;
 
 export interface AppOverlaysProps extends TimeEntryModalLayerProps {
+  commandPaletteOpen: CommandPaletteProps["open"];
+  commands: CommandPaletteProps["commands"];
+  onCloseCommandPalette: CommandPaletteProps["onClose"];
   ticketDetailsDialog?: Omit<TicketDetailsDialogProps, "onClose">;
   onCloseTicketDetails?: TicketDetailsDialogProps["onClose"];
   releaseNotesDialogInfo?: ReleaseNotesDialogProps["updateInfo"];
@@ -26,6 +31,9 @@ export interface AppOverlaysProps extends TimeEntryModalLayerProps {
 }
 
 export const AppOverlays = ({
+  commandPaletteOpen,
+  commands,
+  onCloseCommandPalette,
   ticketDetailsDialog,
   onCloseTicketDetails,
   releaseNotesDialogInfo,
@@ -43,6 +51,8 @@ export const AppOverlays = ({
 }: AppOverlaysProps) => (
   <>
     <TimeEntryModalLayer {...timeEntryModalLayerProps} />
+
+    <CommandPalette open={commandPaletteOpen} commands={commands} onClose={onCloseCommandPalette} />
 
     {ticketDetailsDialog && (
       <TicketDetailsDialog {...ticketDetailsDialog} onClose={onCloseTicketDetails ?? (() => undefined)} />
