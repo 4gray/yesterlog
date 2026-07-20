@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.0-4C6EF5?style=flat-square" alt="Version 1.4.0" />
+  <img src="https://img.shields.io/badge/version-2.4.0-4C6EF5?style=flat-square" alt="Version 2.4.0" />
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-2DBF7F?style=flat-square" alt="macOS, Windows, Linux" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-EC9A3C?style=flat-square" alt="Local-first, no telemetry" />
   <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-2A2724?style=flat-square" alt="Built with Electron and React" />
@@ -30,7 +30,7 @@ Your manager gets clean worklogs. You get your Friday back. 🎉
 > 🔒 **No backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB, and the only thing TimeBro ever phones is the Jira site *you* point it at.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-week.png" alt="TimeBro Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
+  <img src="./docs/screenshots/v2.4.0/dark-week.png" alt="TimeBro Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
 </p>
 
 <p align="center">
@@ -59,7 +59,7 @@ Your manager gets clean worklogs. You get your Friday back. 🎉
 Pick a ticket (or search all of Jira), tap a duration preset, jot a note, and you're done. A **"touched today, not logged"** rail nudges you about tickets you clearly worked on but haven't logged yet, and a target bar shows exactly how much is left in the day. Prefer to keep something to yourself? Flip to **Personal note** for a local-only entry that never touches Jira.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-today.png" alt="TimeBro Today view with a daily target bar, a worklog composer with ticket picker and duration presets, today's logged entries, and a sidebar of tickets touched but not yet logged." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-today.png" alt="TimeBro Today view with a daily target bar, a worklog composer with ticket picker and duration presets, today's logged entries, and a sidebar of tickets touched but not yet logged." width="900" />
 </p>
 
 ### 🗓️ Month — the big picture
@@ -67,7 +67,7 @@ Pick a ticket (or search all of Jira), tap a duration preset, jot a note, and yo
 The whole month as a calendar, color-coded by whether each day hit target. The **"jump to next gap"** button walks you straight to the days you forgot, so backfilling a sloppy month takes minutes instead of detective work.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-month.png" alt="TimeBro Month view: a calendar grid of daily hour totals color-coded by target attainment, weekly totals on the right, and a jump-to-next-gap button." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-month.png" alt="TimeBro Month view: a calendar grid of daily hour totals color-coded by target attainment, weekly totals on the right, and a jump-to-next-gap button." width="900" />
 </p>
 
 ### 👀 Review — get credit for code review too *(optional)*
@@ -75,7 +75,7 @@ The whole month as a calendar, color-coded by whether each day hit target. The *
 Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each pull request from your actual review activity. Tick the sessions you want, choose whether they land on **the reviewed ticket** or a dedicated **code-review bucket**, and log them all to Jira in **one batch**. It's strictly read-only on the Bitbucket side — Jira worklogs stay the only thing TimeBro ever writes.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-review.png" alt="TimeBro Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-review.png" alt="TimeBro Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
 </p>
 
 ### 🧩 Reconstruct — rebuild a day you forgot to track *(optional AI)*
@@ -89,7 +89,7 @@ It works **completely without AI**. Optionally, point it at a **local [Ollama](h
 Everything assigned and in progress, plus recently closed tickets and your **starred favorites**, each with a status badge, project context, hours logged this week, and a one-click **LOG** button that drops you into Today with the ticket pre-selected.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-tickets.png" alt="TimeBro Tickets view listing favorite and in-progress tickets with status and issue-type badges, weekly logged hours, project names, and per-row LOG buttons." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-tickets.png" alt="TimeBro Tickets view listing favorite and in-progress tickets with status and issue-type badges, weekly logged hours, project names, and per-row LOG buttons." width="900" />
 </p>
 
 ### 📊 Reports — numbers your manager will love
@@ -97,7 +97,7 @@ Everything assigned and in progress, plus recently closed tickets and your **sta
 Daily average, days on target, tickets touched, billable percentage, an hours-per-day chart, and a per-ticket breakdown. Browse previous weeks, then **export to CSV** for the inevitable "can you send me the spreadsheet?"
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-reports.png" alt="TimeBro Reports view with weekly KPIs, an hours-per-day bar chart, and a by-ticket breakdown showing hours and percentage of the week." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-reports.png" alt="TimeBro Reports view with weekly KPIs, an hours-per-day bar chart, and a by-ticket breakdown showing hours and percentage of the week." width="900" />
 </p>
 
 ### ⚙️ Settings — five minutes, tops
@@ -105,13 +105,13 @@ Daily average, days on target, tickets touched, billable percentage, an hours-pe
 Connect Jira (and optionally Bitbucket), set your weekly target and working days, schedule a gentle end-of-day reminder, import/export your personal notes, and pick **light, dark, or auto**.
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/dark-settings.png" alt="TimeBro Settings view with a Jira Cloud sign-in panel and a left rail of sections: Jira, Bitbucket, Tracking, Recurring, Appearance, Data, and About." width="900" />
+  <img src="./docs/screenshots/v2.4.0/dark-settings.png" alt="TimeBro Settings view with a Jira Cloud sign-in panel and a left rail of sections: Jira, Bitbucket, Tracking, Recurring, Appearance, Data, and About." width="900" />
 </p>
 
 ### 🌗 Looks great in the light, too
 
 <p align="center">
-  <img src="./screenshots/v2.3.0/light-week.png" alt="TimeBro Week view in the light theme, showing the same weekly cockpit with a cooler gray palette." width="900" />
+  <img src="./docs/screenshots/v2.4.0/light-week.png" alt="TimeBro Week view in the light theme, showing the same weekly cockpit with a cooler gray palette." width="900" />
 </p>
 
 ---
