@@ -123,6 +123,7 @@ export const AppReconRoute = ({
       summary={vm.summary}
       dateLabels={vm.dateLabels}
       aiOn={vm.aiOn}
+      aiProvider={vm.aiProvider}
       aiModel={vm.aiModel}
       isEnhancing={vm.isEnhancing}
       canStepBack={vm.canStepBack}

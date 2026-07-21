@@ -36,6 +36,10 @@ export const RecapCard = ({ daySummary, settings }: RecapCardProps) => {
   const model = useMemo(() => (daySummary ? buildRecap(daySummary) : null), [daySummary]);
   const deterministicText = useMemo(() => (model ? recapToPlainText(model) : ""), [model]);
   const { aiOn, polished, isPolishing, polish, reset, aiModel } = useRecapPolish(deterministicText, settings);
+  const isLocalAi = (settings.aiProvider ?? "ollama") === "ollama";
+  const polishedByLabel = isLocalAi
+    ? `Polished on-device by ${aiModel}`
+    : `Polished by ${aiModel} via the ${settings.aiProvider === "codex-cli" ? "codex" : "claude"} CLI`;
 
   // No prior working day resolved yet (e.g. the week's first working day before
   // the cross-week loader lands) — render nothing rather than an empty shell.
@@ -104,7 +108,7 @@ export const RecapCard = ({ daySummary, settings }: RecapCardProps) => {
                   <p className="recap-prose">{polished}</p>
                   <div className="recap-prose-meta">
                     <Sparkles size={11} strokeWidth={1.8} aria-hidden="true" />
-                    <span>Polished on-device by {aiModel}</span>
+                    <span>{polishedByLabel}</span>
                     <button
                       type="button"
                       className="recap-show-list"

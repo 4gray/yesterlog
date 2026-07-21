@@ -19,10 +19,11 @@ export interface AiDrafts {
 export const EMPTY_AI_DRAFTS: AiDrafts = { entries: {}, gaps: {} };
 
 export const ENHANCE_SYSTEM_PROMPT =
-  "You are a senior developer's worklog assistant running locally. You rewrite terse, " +
-  "factual development signals (commit subjects, PR titles, review notes) into short, " +
-  "clear worklog descriptions a manager could read. One sentence per entry. Never invent " +
-  "work that is not implied by the signal. Reply with JSON only — no prose, no code fences.";
+  "You are a senior developer's worklog assistant. You rewrite terse, factual development " +
+  "signals (commit subjects, PR titles, review notes) into short, clear worklog descriptions " +
+  "a manager could read. One sentence per entry. Never invent work that is not implied by the " +
+  "signal. Preserve any TICKET-n and [redacted-…] tokens exactly as written. Reply with JSON " +
+  "only — no prose, no code fences.";
 
 /** Builds the user prompt sent to the model for a single day. */
 export const buildEnhancePrompt = (day: ReconstructDay): string => {

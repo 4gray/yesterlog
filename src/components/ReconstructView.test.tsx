@@ -48,6 +48,7 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
       summary={overrides.summary ?? getReconstructSummary(day)}
       dateLabels={{ longLabel: "WEDNESDAY 17 JUNE", shortLabel: "WED 17 JUN" }}
       aiOn={false}
+      aiProvider="ollama"
       aiModel="llama3.1:8b"
       isEnhancing={false}
       canStepBack
@@ -89,23 +90,33 @@ describe("ReconstructView", () => {
     expect(markup).toContain("Drag a card onto an hour");
   });
 
-  it("invites connecting a local model when AI is off (the LLM mention requirement)", () => {
+  it("invites connecting a model when AI is off (the LLM mention requirement)", () => {
     const markup = render({ aiOn: false });
-    expect(markup).toContain("Local AI is off");
-    expect(markup).toContain("SET UP LOCAL AI");
-    expect(markup).toContain("LOCAL AI OFF");
+    expect(markup).toContain("AI is off");
+    expect(markup).toContain("SET UP AI");
+    expect(markup).toContain("AI OFF");
     expect(markup).toContain("Auto-distribute");
     expect(markup).not.toContain("DRAFTED");
   });
 
-  it("shows on-device drafting affordances when AI is on", () => {
+  it("shows on-device drafting affordances when Ollama is on", () => {
     const day = withDrafts(buildReconstructDay(baseInput()));
     const markup = render({ day, aiOn: true });
     expect(markup).toContain("on-device by llama3.1:8b");
+    expect(markup).toContain("never leave this machine");
     expect(markup).toContain("DRAFTED · llama3.1");
     expect(markup).toContain("Reviewed the schema migration PR.");
     expect(markup).toContain("Auto-draft all");
     expect(markup).toContain("is-ai-drafted"); // AI rows are clearly highlighted
+  });
+
+  it("frames drafting as cloud (not on-device) when a CLI provider is active", () => {
+    const day = withDrafts(buildReconstructDay(baseInput()));
+    const markup = render({ day, aiOn: true, aiProvider: "claude-cli", aiModel: "sonnet" });
+    expect(markup).toContain("via the claude CLI");
+    expect(markup).toContain("Anthropic’s cloud");
+    expect(markup).not.toContain("never leave this machine");
+    expect(markup).not.toContain("localhost:11434");
   });
 
   it("offers a Stop control while a draft is in flight", () => {

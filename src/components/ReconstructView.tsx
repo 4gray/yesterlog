@@ -34,6 +34,7 @@ import type {
 } from "../domain/reconstruct";
 import { formatReconDuration } from "../domain/reconstruct";
 import type { AppSyncState } from "../app/useSyncControls";
+import type { AiProvider } from "../../shared/types";
 
 export interface ReconstructDateLabels {
   /** "WEDNESDAY 17 JUNE" */
@@ -46,9 +47,11 @@ export interface ReconstructViewProps {
   day: ReconstructDay;
   summary: ReconstructSummary;
   dateLabels: ReconstructDateLabels;
-  /** True only when the optional local model is enabled AND reachable/ready. */
+  /** True only when the optional model is enabled AND reachable/ready. */
   aiOn: boolean;
-  /** Full model tag, e.g. "llama3.1:8b". */
+  /** Active provider — drives the on-device vs cloud framing in the banners. */
+  aiProvider: AiProvider;
+  /** Active model label, e.g. "llama3.1:8b" or "sonnet". */
   aiModel: string;
   isEnhancing: boolean;
   canStepBack: boolean;
@@ -126,6 +129,7 @@ export const ReconstructView = ({
   summary,
   dateLabels,
   aiOn,
+  aiProvider,
   aiModel,
   isEnhancing,
   canStepBack,
@@ -145,6 +149,9 @@ export const ReconstructView = ({
   onAdjustDuration
 }: ReconstructViewProps) => {
   const modelShort = aiModel.split(":")[0] || aiModel;
+  const isLocalAi = aiProvider === "ollama";
+  const cliName = aiProvider === "codex-cli" ? "codex" : "claude";
+  const cloudVendor = aiProvider === "codex-cli" ? "OpenAI" : "Anthropic";
   const isWeekend = day.kind === "weekend";
   const isComplete = day.kind === "complete";
   const isActive = !isWeekend && !isComplete;
@@ -246,10 +253,10 @@ export const ReconstructView = ({
             type="button"
             className={`recon-ai-pill ${aiOn ? "is-on" : "is-off"}`}
             onClick={onOpenSettings}
-            title="Local AI status — open Settings"
+            title="AI status — open Settings"
           >
             <Sparkles size={13} strokeWidth={1.9} />
-            <span>{aiOn ? `LOCAL AI · ${modelShort}` : "LOCAL AI OFF"}</span>
+            <span>{aiOn ? `AI · ${modelShort}` : "AI OFF"}</span>
           </button>
 
           {isActive && isEnhancing ? (
@@ -293,16 +300,23 @@ export const ReconstructView = ({
         </div>
       )}
       {isActive && aiOn && (
-        <div className="recon-banner is-ai">
+        <div className={`recon-banner is-ai ${isLocalAi ? "" : "is-cloud"}`}>
           <Bot size={16} strokeWidth={1.9} />
-          <span>
-            Drafts written <strong>on-device by {aiModel}</strong> via Ollama — your commits, diffs and ticket text
-            never leave this machine. Review every line before sending to Jira.
-          </span>
+          {isLocalAi ? (
+            <span>
+              Drafts written <strong>on-device by {aiModel}</strong> via Ollama — your commits, diffs and ticket text
+              never leave this machine. Review every line before sending to Jira.
+            </span>
+          ) : (
+            <span>
+              Drafts written <strong>by {aiModel}</strong> via the {cliName} CLI — your commits, diffs and ticket text
+              are sent to {cloudVendor}’s cloud. Review every line before sending to Jira.
+            </span>
+          )}
           <span className="recon-banner-spacer" />
-          <span className="recon-localhost">
+          <span className={`recon-localhost ${isLocalAi ? "" : "is-cloud"}`}>
             <span className="recon-localhost-dot" />
-            localhost:11434
+            {isLocalAi ? "localhost:11434" : `${cloudVendor} cloud`}
           </span>
         </div>
       )}
@@ -310,12 +324,12 @@ export const ReconstructView = ({
         <div className="recon-banner is-off">
           <AlertTriangle size={16} strokeWidth={1.9} />
           <span>
-            <strong>Local AI is off.</strong> Reconstructing from raw signals only — no written notes or gap
-            suggestions. Connect a local Ollama model to auto-draft worklog descriptions, all on your device.
+            <strong>AI is off.</strong> Reconstructing from raw signals only — no written notes or gap suggestions.
+            Connect a provider to auto-draft worklog descriptions and reason about gaps.
           </span>
           <span className="recon-banner-spacer" />
           <button type="button" className="recon-setup-btn" onClick={onOpenSettings}>
-            SET UP LOCAL AI
+            SET UP AI
           </button>
         </div>
       )}

@@ -13,7 +13,7 @@ import {
   syncJiraWorklogs,
   updateWorklog
 } from "./jira";
-import { generateWithOllama, listOllamaModels } from "./ollama";
+import { generateWithAi, listAiModels } from "./aiProvider";
 import { scheduleReminder } from "./reminders";
 import {
   checkForAppUpdate,
@@ -28,12 +28,12 @@ import { getSafeReleaseUrl } from "../shared/releases";
 import { isCursorPromptDeeplink } from "../shared/cursorDeeplink";
 import type {
   AddWorklogRequest,
+  AiGenerateRequest,
+  AiListModelsRequest,
   AppSettings,
   BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
   IssueDetailsRequest,
-  OllamaGenerateRequest,
-  OllamaListModelsRequest,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -195,12 +195,12 @@ ipcMain.handle("bitbucket:sync-reviews", (_event, request: BitbucketReviewSyncRe
   return syncBitbucketReviewSessions(request);
 });
 
-ipcMain.handle("ollama:list-models", (_event, request: OllamaListModelsRequest) => {
-  return listOllamaModels(request);
+ipcMain.handle("ai:list-models", (_event, request: AiListModelsRequest) => {
+  return listAiModels(request);
 });
 
-ipcMain.handle("ollama:generate", (_event, request: OllamaGenerateRequest) => {
-  return generateWithOllama(request);
+ipcMain.handle("ai:generate", (_event, request: AiGenerateRequest) => {
+  return generateWithAi(request);
 });
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {

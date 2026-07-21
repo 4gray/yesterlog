@@ -21,15 +21,29 @@ export interface AppSettings {
   reminderTime: string;
   remindersEnabled: boolean;
   /**
-   * Optional local-AI (Ollama) enhancement for Day Reconstruction. Off by default —
-   * the reconstruction core works fully without it. When on, drafts are written
-   * on-device by the configured Ollama model. Never sends data off the machine.
+   * Optional AI enhancement for Day Reconstruction. Off by default — the
+   * reconstruction core works fully without it. When on, drafts are written by
+   * the selected {@link aiProvider}. Ollama stays fully on-device; the Claude and
+   * Codex CLI providers send the day's signals to their respective clouds.
    */
   aiEnabled: boolean;
+  /**
+   * Which backend powers the optional enhancement. Optional so settings saved by
+   * older TimeBro versions migrate through defaults to on-device Ollama.
+   */
+  aiProvider?: AiProvider;
   /** Ollama HTTP endpoint, default `http://localhost:11434`. */
   ollamaEndpoint: string;
   /** Selected Ollama model tag, e.g. `llama3.1:8b`. */
   ollamaModel: string;
+  /** Command or absolute path for the Claude CLI. Blank/`claude` → resolve on PATH. */
+  claudeCliPath?: string;
+  /** Model alias/name passed to `claude -p --model`, e.g. `sonnet`. */
+  claudeModel?: string;
+  /** Command or absolute path for the Codex CLI. Blank/`codex` → resolve on PATH. */
+  codexCliPath?: string;
+  /** Model name passed to `codex exec -m`. Blank → the CLI's configured default. */
+  codexModel?: string;
 }
 
 export interface WeekOverride {
@@ -625,6 +639,56 @@ export interface AppAutoUpdateActionResult {
   message: string;
   state: AppAutoUpdateState;
   updateInfo?: AppUpdateInfo;
+}
+
+/**
+ * AI providers that can power the optional Day Reconstruction / recap enhancement.
+ * - `ollama`     — on-device HTTP model at `localhost:11434` (private, no key).
+ * - `claude-cli` — shells out to `claude -p` (Anthropic cloud; uses the user's Claude auth).
+ * - `codex-cli`  — shells out to `codex exec` (OpenAI cloud; uses the user's Codex auth).
+ */
+export type AiProvider = "ollama" | "claude-cli" | "codex-cli";
+
+/**
+ * Provider-agnostic generate/list IPC contracts. All calls go through the Electron
+ * main process — Ollama to avoid renderer CORS, the CLIs because the renderer cannot
+ * spawn child processes. Every call degrades gracefully: on any failure the caller
+ * falls back to the deterministic reconstruction, so `ok: false` is never fatal.
+ */
+export interface AiListModelsRequest {
+  provider: AiProvider;
+  /** Ollama endpoint (ignored by the CLI providers). */
+  endpoint?: string;
+  /** CLI command/path override (ignored by Ollama). */
+  cliPath?: string;
+}
+
+export interface AiListModelsResult {
+  ok: boolean;
+  /** Selectable model tags/aliases. Empty for CLI providers (models are free-text). */
+  models: string[];
+  message?: string;
+}
+
+export interface AiGenerateRequest {
+  provider: AiProvider;
+  prompt: string;
+  system?: string;
+  /** When "json", asks the provider to constrain output to a JSON object (Ollama only). */
+  format?: "json";
+  /** Ollama endpoint (ignored by the CLI providers). */
+  endpoint?: string;
+  /** Model tag/alias/name. Optional for Codex (falls back to its configured default). */
+  model?: string;
+  /** CLI command/path override (ignored by Ollama). */
+  cliPath?: string;
+}
+
+export interface AiGenerateResult {
+  ok: boolean;
+  /** Raw model completion text (JSON when `format: "json"` was requested). */
+  response?: string;
+  message?: string;
 }
 
 /**

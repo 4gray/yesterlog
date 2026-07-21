@@ -206,21 +206,24 @@ describe("SettingsView", () => {
     expect(markup).toContain("SUN");
   });
 
-  it("exposes the optional Local AI subpage and frames it as not required", () => {
+  it("exposes the optional AI subpage and frames it as not required", () => {
     const markup = renderSettings({ initialSection: "reconstruct" });
 
-    expect(markup).toContain("LOCAL AI · OLLAMA");
+    expect(markup).toContain("AI · OLLAMA · ON-DEVICE");
     expect(markup).toContain("OPTIONAL");
     expect(markup).toContain("RECONSTRUCTION WORKS WITHOUT AI");
     expect(markup).toContain("CORE · ALWAYS ON");
-    expect(markup).toContain("WITH LOCAL AI · OPTIONAL");
-    expect(markup).toContain("Use local AI for day reconstruction");
+    expect(markup).toContain("WITH AI · OPTIONAL");
+    expect(markup).toContain("Use AI for day reconstruction");
     expect(markup).toContain("http://localhost:11434");
+    // the provider picker lists all three backends
+    expect(markup).toContain("Claude CLI — cloud");
+    expect(markup).toContain("Codex CLI — cloud");
     // off by default → activation chain reports inactive
     expect(markup).toContain("AI inactive");
   });
 
-  it("reflects the enabled toggle state in the Local AI subpage", () => {
+  it("reflects the enabled toggle state in the AI subpage", () => {
     const enabled = { ...settings, aiEnabled: true };
     const markup = renderSettings({ initialSection: "reconstruct", draft: enabled });
 

@@ -8,7 +8,13 @@ import { useRecapPolish, type RecapPolishState } from "./useRecapPolish";
 
 vi.mock("../api/ollama", () => ({
   probeOllama: vi.fn(),
-  polishRecap: vi.fn()
+  polishRecap: vi.fn(),
+  aiConnectionFromSettings: vi.fn((settings: AppSettings) => ({
+    provider: settings.aiProvider ?? "ollama",
+    endpoint: settings.ollamaEndpoint,
+    model: settings.ollamaModel
+  })),
+  aiModelLabel: vi.fn((settings: AppSettings) => settings.ollamaModel)
 }));
 
 const probeMock = vi.mocked(probeOllama);
@@ -101,6 +107,7 @@ describe("useRecapPolish", () => {
     expect(state.polished).toBe("I shipped ABC-1 yesterday.");
     expect(state.isPolishing).toBe(false);
     expect(polishMock).toHaveBeenCalledWith(recap, {
+      provider: "ollama",
       endpoint: baseSettings.ollamaEndpoint,
       model: baseSettings.ollamaModel
     });

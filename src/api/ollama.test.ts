@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { OllamaGenerateResult } from "../../shared/types";
+import type { AiGenerateResult } from "../../shared/types";
 import { polishRecap } from "./ollama";
 import { nativeApi } from "./native";
 
-const connection = { endpoint: "http://localhost:11434", model: "llama3.1:8b" };
+const connection = { provider: "ollama" as const, endpoint: "http://localhost:11434", model: "llama3.1:8b" };
 const recap = "Yesterday (Fri Jun 19) — 2h tracked.\n\nTickets (2h):\n• ABC-1 Thing — 2h";
 
-const mockGenerate = (impl: () => Promise<OllamaGenerateResult>) =>
-  vi.spyOn(nativeApi, "generateWithOllama").mockImplementation(impl);
+const mockGenerate = (impl: () => Promise<AiGenerateResult>) =>
+  vi.spyOn(nativeApi, "generateWithAi").mockImplementation(impl);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -40,5 +40,39 @@ describe("polishRecap", () => {
     const generate = mockGenerate(async () => ({ ok: true, response: "x" }));
     expect(await polishRecap("   ", connection)).toBe("   ");
     expect(generate).not.toHaveBeenCalled();
+  });
+});
+
+describe("polishRecap redaction", () => {
+  const recapWithKey = "Yesterday (Fri Jun 19) — 2h.\n\nTickets (2h):\n• ABC-1 Thing — 2h";
+
+  it("redacts ticket keys for a cloud provider and restores them in the prose", async () => {
+    let sentPrompt = "";
+    vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
+      sentPrompt = request.prompt;
+      return { ok: true, response: "I shipped TICKET-1 yesterday." };
+    });
+
+    const result = await polishRecap(recapWithKey, {
+      provider: "claude-cli",
+      endpoint: "",
+      model: "sonnet",
+      cliPath: "claude"
+    });
+
+    expect(sentPrompt).not.toContain("ABC-1");
+    expect(sentPrompt).toContain("TICKET-1");
+    expect(result).toBe("I shipped ABC-1 yesterday.");
+  });
+
+  it("does not redact for the on-device Ollama provider", async () => {
+    let sentPrompt = "";
+    vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
+      sentPrompt = request.prompt;
+      return { ok: true, response: "prose" };
+    });
+
+    await polishRecap(recapWithKey, { provider: "ollama", endpoint: "http://localhost:11434", model: "llama3.1:8b" });
+    expect(sentPrompt).toContain("ABC-1");
   });
 });

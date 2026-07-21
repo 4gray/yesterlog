@@ -52,10 +52,10 @@ describe("AppReconRoute", () => {
     expect(markup).toContain("WORKING DAY");
   });
 
-  it("surfaces the optional local-AI call to action when AI is disabled", () => {
+  it("surfaces the optional AI call to action when AI is disabled", () => {
     const markup = render();
-    expect(markup).toContain("Local AI is off");
-    expect(markup).toContain("SET UP LOCAL AI");
+    expect(markup).toContain("AI is off");
+    expect(markup).toContain("SET UP AI");
   });
 
   it("builds an Add Time prefill from the first reconstructed row", () => {

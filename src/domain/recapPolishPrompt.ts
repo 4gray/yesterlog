@@ -5,10 +5,10 @@
  */
 
 export const RECAP_POLISH_SYSTEM_PROMPT =
-  "You are a standup assistant running locally on the user's machine. Rewrite the " +
-  "factual list of yesterday's work into 2-3 natural, first-person spoken sentences " +
-  "for a daily standup update. Never invent work, numbers, or details that are not in " +
-  "the list. Reply with prose only — no lists, no markdown, no preamble.";
+  "You are a standup assistant. Rewrite the factual list of yesterday's work into 2-3 " +
+  "natural, first-person spoken sentences for a daily standup update. Never invent work, " +
+  "numbers, or details that are not in the list. Preserve any TICKET-n and [redacted-…] " +
+  "tokens exactly as written. Reply with prose only — no lists, no markdown, no preamble.";
 
 export const buildRecapPolishPrompt = (recapText: string): string =>
   [

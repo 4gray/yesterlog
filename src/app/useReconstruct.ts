@@ -10,7 +10,8 @@ import type {
   WorklogAllocationPreference,
   WeekdayNumber
 } from "../../shared/types";
-import { computeAiDrafts, probeOllama } from "../api/ollama";
+import { aiModelLabel, computeAiDrafts, probeOllama } from "../api/ollama";
+import { useAiConnection } from "./useAiConnection";
 import { applyAiDrafts, type AiDrafts } from "../domain/enhancePrompt";
 import type { PlacementMap, ReconstructDay, ReconstructLocalEntry, ReconstructWorklog } from "../domain/reconstruct";
 import { buildDayRecurring, indexOccurrences } from "../domain/recurring";
@@ -372,10 +373,7 @@ export const useReconstruct = ({
   const [aiDraftsByDay, setAiDraftsByDay] = useState<Record<string, AiDrafts>>({});
   const enhanceRunId = useRef(0);
 
-  const aiConnection = useMemo(
-    () => ({ endpoint: settings.ollamaEndpoint, model: settings.ollamaModel }),
-    [settings.ollamaEndpoint, settings.ollamaModel]
-  );
+  const aiConnection = useAiConnection(settings);
 
   const runDraft = useCallback(
     async (runId: number) => {
@@ -467,7 +465,8 @@ export const useReconstruct = ({
     summary: getReconstructSummary(day),
     dateLabels: buildDateLabels(selected.date),
     aiOn,
-    aiModel: settings.ollamaModel,
+    aiProvider: settings.aiProvider ?? "ollama",
+    aiModel: aiModelLabel(settings),
     isEnhancing,
     canStepBack: safeIndex > 0,
     canStepForward: safeIndex < lastSelectable,

@@ -36,8 +36,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   reminderTime: "16:30",
   remindersEnabled: true,
   aiEnabled: false,
+  aiProvider: "ollama",
   ollamaEndpoint: "http://localhost:11434",
-  ollamaModel: "llama3.1:8b"
+  ollamaModel: "llama3.1:8b",
+  claudeCliPath: "claude",
+  claudeModel: "sonnet",
+  codexCliPath: "codex",
+  codexModel: ""
 };
 
 export const getWeekBounds = (input: Date) => {

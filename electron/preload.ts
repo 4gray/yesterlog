@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
   AddWorklogRequest,
   AddWorklogResult,
+  AiGenerateRequest,
+  AiGenerateResult,
+  AiListModelsRequest,
+  AiListModelsResult,
   AppAutoUpdateActionResult,
   AppAutoUpdateState,
   AppReleaseHistoryResult,
@@ -16,10 +20,6 @@ import type {
   IssueDetailsResult,
   JiraActivitySyncResult,
   JiraConnectionResult,
-  OllamaGenerateRequest,
-  OllamaGenerateResult,
-  OllamaListModelsRequest,
-  OllamaListModelsResult,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -68,11 +68,11 @@ const timeBroApi = {
   deleteWorklog: (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
     return ipcRenderer.invoke("jira:delete-worklog", request);
   },
-  listOllamaModels: (request: OllamaListModelsRequest): Promise<OllamaListModelsResult> => {
-    return ipcRenderer.invoke("ollama:list-models", request);
+  listAiModels: (request: AiListModelsRequest): Promise<AiListModelsResult> => {
+    return ipcRenderer.invoke("ai:list-models", request);
   },
-  generateWithOllama: (request: OllamaGenerateRequest): Promise<OllamaGenerateResult> => {
-    return ipcRenderer.invoke("ollama:generate", request);
+  generateWithAi: (request: AiGenerateRequest): Promise<AiGenerateResult> => {
+    return ipcRenderer.invoke("ai:generate", request);
   },
   scheduleReminder: (payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> => {
     return ipcRenderer.invoke("reminder:schedule", payload);

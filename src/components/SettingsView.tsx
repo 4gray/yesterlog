@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   Clock3,
+  Cloud,
   Database,
   Download,
   ExternalLink,
@@ -31,9 +32,9 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
-import type { AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
+import type { AiProvider, AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
 import { DEFAULT_WORKING_DAYS, WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
-import { probeOllama, type OllamaStatus } from "../api/ollama";
+import { aiConnectionFromSettings, probeOllama, type OllamaStatus } from "../api/ollama";
 import type { ThemeMode } from "./Sidebar";
 
 export interface RecurringEventDraft {
@@ -99,6 +100,16 @@ const SAVEABLE_SECTIONS: ReadonlySet<SettingsSection> = new Set([
 ]);
 
 const OLLAMA_DOWNLOAD_URL = "https://ollama.com/download";
+const CLAUDE_CLI_DOCS_URL = "https://docs.anthropic.com/en/docs/claude-code/overview";
+const CODEX_CLI_DOCS_URL = "https://developers.openai.com/codex/cli/";
+
+const AI_PROVIDER_ORDER: AiProvider[] = ["ollama", "claude-cli", "codex-cli"];
+
+const AI_PROVIDER_LABELS: Record<AiProvider, string> = {
+  ollama: "Ollama — on-device (private)",
+  "claude-cli": "Claude CLI — cloud",
+  "codex-cli": "Codex CLI — cloud"
+};
 
 const RECURRING_DURATION_MINUTES = [10, 15, 30, 45, 60, 90] as const;
 
@@ -147,10 +158,10 @@ const SECTIONS: SectionMeta[] = [
   },
   {
     id: "reconstruct",
-    label: "Local AI",
-    hint: "Optional model",
-    title: "Day Reconstruction · Local AI",
-    subtitle: "Reconstruction works without a model. Optionally connect a local Ollama model to polish the drafts.",
+    label: "AI",
+    hint: "Optional provider",
+    title: "Day Reconstruction · AI",
+    subtitle: "Reconstruction works without AI. Optionally connect a provider — on-device Ollama or the Claude / Codex CLI — to polish the drafts.",
     icon: Bot
   },
   {
@@ -328,26 +339,29 @@ export const SettingsView = ({
   const [recurringForm, setRecurringForm] = useState<RecurringEventDraft>(EMPTY_RECURRING_FORM);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | undefined>();
   const [isProbingOllama, setIsProbingOllama] = useState(false);
+  const aiProvider = draft.aiProvider ?? "ollama";
 
   const handleTestOllama = async () => {
     setIsProbingOllama(true);
     try {
-      setOllamaStatus(await probeOllama({ endpoint: draft.ollamaEndpoint, model: draft.ollamaModel }));
+      setOllamaStatus(await probeOllama(aiConnectionFromSettings(draft)));
     } finally {
       setIsProbingOllama(false);
     }
   };
 
-  // Auto-probe whenever the Local AI section is shown (or the endpoint/model changes), so
-  // the pulled-model list and the activation chain are live without pressing Test connection.
+  // Auto-probe whenever the AI section is shown (or the provider/endpoint/model/path changes),
+  // so the model list and the activation chain stay live without pressing Test connection.
+  // Reset the previous status first so a stale provider's chip never lingers on switch.
   useEffect(() => {
     if (activeSection !== "reconstruct") {
       return;
     }
     let cancelled = false;
+    setOllamaStatus(undefined);
     const timer = window.setTimeout(() => {
       setIsProbingOllama(true);
-      void probeOllama({ endpoint: draft.ollamaEndpoint, model: draft.ollamaModel })
+      void probeOllama(aiConnectionFromSettings(draft))
         .then((status) => {
           if (!cancelled) {
             setOllamaStatus(status);
@@ -363,7 +377,16 @@ export const SettingsView = ({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeSection, draft.ollamaEndpoint, draft.ollamaModel]);
+  }, [
+    activeSection,
+    aiProvider,
+    draft.ollamaEndpoint,
+    draft.ollamaModel,
+    draft.claudeCliPath,
+    draft.claudeModel,
+    draft.codexCliPath,
+    draft.codexModel
+  ]);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
@@ -662,6 +685,8 @@ export const SettingsView = ({
   );
 
   const renderReconstruct = () => {
+    const provider = aiProvider;
+    const isCli = provider !== "ollama";
     const reachable = ollamaStatus?.reachable ?? false;
     const modelReady = ollamaStatus?.modelReady ?? false;
     const enabled = draft.aiEnabled;
@@ -669,6 +694,26 @@ export const SettingsView = ({
     const modelOptions = Array.from(
       new Set([draft.ollamaModel, ...(ollamaStatus?.models ?? [])].filter(Boolean))
     );
+
+    // Provider-specific field bindings and copy. Ollama stays on-device; the CLIs are cloud.
+    const cliName = provider === "codex-cli" ? "codex" : "claude";
+    const cliPathField = provider === "codex-cli" ? "codexCliPath" : "claudeCliPath";
+    const cliModelField = provider === "codex-cli" ? "codexModel" : "claudeModel";
+    const cliPath = (provider === "codex-cli" ? draft.codexCliPath : draft.claudeCliPath) ?? "";
+    const cliModel = (provider === "codex-cli" ? draft.codexModel : draft.claudeModel) ?? "";
+    const docsUrl = provider === "codex-cli" ? CODEX_CLI_DOCS_URL : CLAUDE_CLI_DOCS_URL;
+    const installHint = provider === "codex-cli" ? "$ npm i -g @openai/codex" : "$ claude --version";
+    const cloudVendor = provider === "codex-cli" ? "OpenAI" : "Anthropic";
+    const cloudLogin = provider === "codex-cli" ? "Codex" : "Claude";
+    const headTitle =
+      provider === "codex-cli" ? "CODEX · CLI" : provider === "claude-cli" ? "CLAUDE · CLI" : "OLLAMA · ON-DEVICE";
+    const privacyBody = `TimeBro runs the ${cliName} CLI on your machine, but your commits, diffs and ticket text are sent to ${cloudVendor}'s cloud under your existing ${cloudLogin} login. Standard ${cloudVendor} terms and costs apply — TimeBro itself stores nothing extra.`;
+    const cliPathHint =
+      ollamaStatus?.message ?? `Leave this as “${cliName}” to resolve it on your PATH, or paste an absolute path.`;
+    const cliModelHint =
+      provider === "codex-cli"
+        ? "Blank uses the Codex CLI’s configured default model."
+        : "Model alias or full name — e.g. sonnet, opus, haiku.";
 
     const coreItems = [
       "Collects commits, PRs, reviews, CI runs & Jira changelog",
@@ -689,7 +734,7 @@ export const SettingsView = ({
       <div className="ai-card">
         <div className="ai-card-head">
           <Bot size={17} strokeWidth={1.8} />
-          <span className="ai-card-title">LOCAL AI · OLLAMA</span>
+          <span className="ai-card-title">AI · {headTitle}</span>
           <span className="ai-card-spacer" />
           <span className="ai-pill-opt">OPTIONAL</span>
           <span className={`ai-pill-status ${aiActive ? "is-active" : ""}`}>
@@ -698,64 +743,137 @@ export const SettingsView = ({
           </span>
         </div>
 
-        <div className="ai-privacy">
-          <span className="ai-privacy-icon">
-            <ShieldCheck size={17} strokeWidth={1.8} />
-          </span>
+        <label className="ai-field ai-provider-field">
+          <span>AI provider</span>
           <div>
-            <strong>Stays on your machine</strong>
-            <p>
-              TimeBro talks to Ollama on <code>localhost</code> only. Your commits, diffs and ticket text are
-              summarised on-device — no cloud, no API key, no telemetry. Same privacy promise as the rest of the app.
-            </p>
+            <select
+              className="ai-model-select"
+              value={provider}
+              onChange={(event) => updateField("aiProvider", event.target.value as AiProvider)}
+            >
+              {AI_PROVIDER_ORDER.map((option) => (
+                <option key={option} value={option}>
+                  {AI_PROVIDER_LABELS[option]}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+          <small className="field-hint-text">
+            Ollama runs fully on your machine. The Claude and Codex CLIs send your day’s signals to their cloud.
+          </small>
+        </label>
 
-        <div className="ai-fields">
-          <label className="ai-field">
-            <span>Ollama endpoint</span>
-            <div className="ai-endpoint">
-              <input
-                type="text"
-                className="ai-endpoint-input"
-                value={draft.ollamaEndpoint}
-                placeholder="http://localhost:11434"
-                spellCheck={false}
-                onChange={(event) => updateField("ollamaEndpoint", event.target.value)}
-              />
-              {ollamaStatus && (
-                <span className={`ai-reach ${reachable ? "is-ok" : "is-bad"}`}>
-                  <span className="ai-reach-dot" />
-                  {reachable ? "REACHABLE" : "UNREACHABLE"}
-                </span>
-              )}
+        {provider === "ollama" ? (
+          <div className="ai-privacy">
+            <span className="ai-privacy-icon">
+              <ShieldCheck size={17} strokeWidth={1.8} />
+            </span>
+            <div>
+              <strong>Stays on your machine</strong>
+              <p>
+                TimeBro talks to Ollama on <code>localhost</code> only. Your commits, diffs and ticket text are
+                summarised on-device — no cloud, no API key, no telemetry. Same privacy promise as the rest of the app.
+              </p>
             </div>
-            <small className="field-hint-text">Default Ollama port. Point it elsewhere if you run it on your LAN.</small>
-          </label>
+          </div>
+        ) : (
+          <div className="ai-privacy is-cloud">
+            <span className="ai-privacy-icon">
+              <Cloud size={17} strokeWidth={1.8} />
+            </span>
+            <div>
+              <strong>Sends your data to {cloudVendor}</strong>
+              <p>{privacyBody}</p>
+            </div>
+          </div>
+        )}
 
-          <label className="ai-field">
-            <span>Model</span>
-            <div className="ai-model">
-              <span className="ai-model-dot" aria-hidden="true" />
-              <select
-                className="ai-model-select"
-                value={draft.ollamaModel}
-                onChange={(event) => updateField("ollamaModel", event.target.value)}
-              >
-                {modelOptions.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <small className="field-hint-text">
-              {ollamaStatus?.models?.length
-                ? `Pulled: ${ollamaStatus.models.join(", ")}`
-                : "Run a Test connection to list pulled models."}
-            </small>
-          </label>
-        </div>
+        {provider === "ollama" ? (
+          <div className="ai-fields">
+            <label className="ai-field">
+              <span>Ollama endpoint</span>
+              <div className="ai-endpoint">
+                <input
+                  type="text"
+                  className="ai-endpoint-input"
+                  value={draft.ollamaEndpoint}
+                  placeholder="http://localhost:11434"
+                  spellCheck={false}
+                  onChange={(event) => updateField("ollamaEndpoint", event.target.value)}
+                />
+                {ollamaStatus && (
+                  <span className={`ai-reach ${reachable ? "is-ok" : "is-bad"}`}>
+                    <span className="ai-reach-dot" />
+                    {reachable ? "REACHABLE" : "UNREACHABLE"}
+                  </span>
+                )}
+              </div>
+              <small className="field-hint-text">Default Ollama port. Point it elsewhere if you run it on your LAN.</small>
+            </label>
+
+            <label className="ai-field">
+              <span>Model</span>
+              <div className="ai-model">
+                <span className="ai-model-dot" aria-hidden="true" />
+                <select
+                  className="ai-model-select"
+                  value={draft.ollamaModel}
+                  onChange={(event) => updateField("ollamaModel", event.target.value)}
+                >
+                  {modelOptions.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <small className="field-hint-text">
+                {ollamaStatus?.models?.length
+                  ? `Pulled: ${ollamaStatus.models.join(", ")}`
+                  : "Run a Test connection to list pulled models."}
+              </small>
+            </label>
+          </div>
+        ) : (
+          <div className="ai-fields">
+            <label className="ai-field">
+              <span>{cliName} CLI path</span>
+              <div className="ai-endpoint">
+                <input
+                  type="text"
+                  className="ai-endpoint-input"
+                  value={cliPath}
+                  placeholder={cliName}
+                  spellCheck={false}
+                  onChange={(event) => updateField(cliPathField, event.target.value)}
+                />
+                {ollamaStatus && (
+                  <span className={`ai-reach ${reachable ? "is-ok" : "is-bad"}`}>
+                    <span className="ai-reach-dot" />
+                    {reachable ? "FOUND" : "NOT FOUND"}
+                  </span>
+                )}
+              </div>
+              <small className="field-hint-text">{cliPathHint}</small>
+            </label>
+
+            <label className="ai-field">
+              <span>Model</span>
+              <div className="ai-model">
+                <span className="ai-model-dot" aria-hidden="true" />
+                <input
+                  type="text"
+                  className="ai-model-select"
+                  value={cliModel}
+                  placeholder={provider === "codex-cli" ? "(CLI default)" : "sonnet"}
+                  spellCheck={false}
+                  onChange={(event) => updateField(cliModelField, event.target.value)}
+                />
+              </div>
+              <small className="field-hint-text">{cliModelHint}</small>
+            </label>
+          </div>
+        )}
 
         <div className="ai-compare-label">RECONSTRUCTION WORKS WITHOUT AI</div>
         <div className="ai-compare">
@@ -774,9 +892,9 @@ export const SettingsView = ({
           <div className="ai-col is-ai">
             <div className="ai-col-head">
               <Sparkles size={15} strokeWidth={2} />
-              WITH LOCAL AI · OPTIONAL
+              WITH AI · OPTIONAL
             </div>
-            <p>A local model polishes the raw signals into something send-ready:</p>
+            <p>A model polishes the raw signals into something send-ready:</p>
             <ul>
               {aiItems.map((item) => (
                 <li key={item}>{item}</li>
@@ -787,14 +905,14 @@ export const SettingsView = ({
 
         <div className="ai-toggle-row">
           <div>
-            <strong>Use local AI for day reconstruction</strong>
+            <strong>Use AI for day reconstruction</strong>
             <small>Draft worklog descriptions, group related commits, and suggest fills for gaps. Off by default — you stay in control.</small>
           </div>
           <button
             type="button"
             className={`switch is-ai ${enabled ? "on" : ""}`}
             aria-pressed={enabled}
-            aria-label={enabled ? "Disable local AI" : "Enable local AI"}
+            aria-label={enabled ? "Disable AI" : "Enable AI"}
             onClick={() => updateField("aiEnabled", !enabled)}
           >
             <span />
@@ -804,19 +922,31 @@ export const SettingsView = ({
         <div className="inline-actions">
           <button className="secondary-button" type="button" onClick={handleTestOllama} disabled={isProbingOllama}>
             {isProbingOllama ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
-            Test connection
+            {isCli ? "Test CLI" : "Test connection"}
           </button>
-          <a className="secondary-button" href={OLLAMA_DOWNLOAD_URL} target="_blank" rel="noreferrer">
-            <ExternalLink size={16} />
-            Install Ollama
-          </a>
-          <code className="ai-pull-hint">$ ollama pull llama3.1</code>
+          {provider === "ollama" ? (
+            <>
+              <a className="secondary-button" href={OLLAMA_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+                <ExternalLink size={16} />
+                Install Ollama
+              </a>
+              <code className="ai-pull-hint">$ ollama pull llama3.1</code>
+            </>
+          ) : (
+            <>
+              <a className="secondary-button" href={docsUrl} target="_blank" rel="noreferrer">
+                <ExternalLink size={16} />
+                {cliName} CLI docs
+              </a>
+              <code className="ai-pull-hint">{installHint}</code>
+            </>
+          )}
         </div>
 
         <div className="ai-chain">
-          <ChainStep label="Endpoint reachable" done={reachable} />
+          <ChainStep label={isCli ? `${cliName} CLI found` : "Endpoint reachable"} done={reachable} />
           <span className="ai-chain-line" />
-          <ChainStep label="Model ready" done={modelReady} />
+          <ChainStep label={isCli ? "Model set" : "Model ready"} done={modelReady} />
           <span className="ai-chain-line" />
           <ChainStep label="Enabled" done={enabled} />
           <span className="ai-chain-line" />

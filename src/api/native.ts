@@ -1,6 +1,10 @@
 import type {
   AddWorklogRequest,
   AddWorklogResult,
+  AiGenerateRequest,
+  AiGenerateResult,
+  AiListModelsRequest,
+  AiListModelsResult,
   AppAutoUpdateActionResult,
   AppAutoUpdateState,
   AppReleaseHistoryResult,
@@ -15,10 +19,6 @@ import type {
   IssueDetailsResult,
   JiraActivitySyncResult,
   JiraConnectionResult,
-  OllamaGenerateRequest,
-  OllamaGenerateResult,
-  OllamaListModelsRequest,
-  OllamaListModelsResult,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -201,31 +201,31 @@ export const nativeApi = {
     return bridge.deleteWorklog(request);
   },
 
-  listOllamaModels(request: OllamaListModelsRequest): Promise<OllamaListModelsResult> {
-    const bridge = getNativeBridgeWithMethod("listOllamaModels");
+  listAiModels(request: AiListModelsRequest): Promise<AiListModelsResult> {
+    const bridge = getNativeBridgeWithMethod("listAiModels");
 
     if (!bridge) {
       return Promise.resolve({
         ok: false,
         models: [],
-        message: "Open the Electron app to reach a local Ollama model."
+        message: "Open the TimeBro desktop app to reach an AI provider."
       });
     }
 
-    return bridge.listOllamaModels(request);
+    return bridge.listAiModels(request);
   },
 
-  generateWithOllama(request: OllamaGenerateRequest): Promise<OllamaGenerateResult> {
-    const bridge = getNativeBridgeWithMethod("generateWithOllama");
+  generateWithAi(request: AiGenerateRequest): Promise<AiGenerateResult> {
+    const bridge = getNativeBridgeWithMethod("generateWithAi");
 
     if (!bridge) {
       return Promise.resolve({
         ok: false,
-        message: "Open the Electron app to reach a local Ollama model."
+        message: "Open the TimeBro desktop app to reach an AI provider."
       });
     }
 
-    return bridge.generateWithOllama(request);
+    return bridge.generateWithAi(request);
   },
 
   scheduleReminder(payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> {

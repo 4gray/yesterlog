@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppSettings } from "../../shared/types";
-import { polishRecap, probeOllama } from "../api/ollama";
+import { aiModelLabel, polishRecap, probeOllama } from "../api/ollama";
+import { useAiConnection } from "./useAiConnection";
 
 export interface RecapPolishState {
   /** True only when AI is enabled AND the model is reachable + pulled. */
@@ -29,10 +30,7 @@ export const useRecapPolish = (recapText: string, settings: AppSettings): RecapP
   const [isPolishing, setIsPolishing] = useState(false);
   const runId = useRef(0);
 
-  const aiConnection = useMemo(
-    () => ({ endpoint: settings.ollamaEndpoint, model: settings.ollamaModel }),
-    [settings.ollamaEndpoint, settings.ollamaModel]
-  );
+  const aiConnection = useAiConnection(settings);
 
   // Probe once to gate the button — never per click.
   useEffect(() => {
@@ -96,5 +94,5 @@ export const useRecapPolish = (recapText: string, settings: AppSettings): RecapP
     setIsPolishing(false);
   }, []);
 
-  return { aiOn, polished, isPolishing, polish, reset, aiModel: settings.ollamaModel };
+  return { aiOn, polished, isPolishing, polish, reset, aiModel: aiModelLabel(settings) };
 };

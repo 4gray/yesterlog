@@ -358,6 +358,23 @@
   background: var(--ai);
 }
 
+/* Cloud provider (Claude/Codex CLI) drafting banner — amber tone, no on-device accent/flow. */
+.recon-banner.is-ai.is-cloud {
+  border-color: color-mix(in srgb, var(--amber-soft) 34%, transparent);
+  background: color-mix(in srgb, var(--amber-soft) 9%, transparent);
+  animation: none;
+}
+
+.recon-banner.is-ai.is-cloud > svg,
+.recon-localhost.is-cloud,
+.recon-localhost.is-cloud .recon-localhost-dot {
+  color: var(--amber-soft);
+}
+
+.recon-localhost.is-cloud .recon-localhost-dot {
+  background: var(--amber-soft);
+}
+
 .recon-banner.is-off {
   border: 1px solid color-mix(in srgb, var(--amber-soft) 36%, transparent);
   background: color-mix(in srgb, var(--amber-soft) 8%, transparent);
@@ -1215,6 +1232,27 @@
 .ai-pull-hint {
   font-family: var(--font-mono);
   color: var(--text-strong);
+}
+
+/* Cloud-provider (Claude/Codex CLI) privacy note — amber tone, not the on-device green. */
+.ai-privacy.is-cloud {
+  border-color: color-mix(in srgb, var(--amber-soft) 34%, transparent);
+  background: color-mix(in srgb, var(--amber-soft) 8%, transparent);
+}
+
+.ai-privacy.is-cloud .ai-privacy-icon {
+  color: var(--amber-soft);
+  background: color-mix(in srgb, var(--amber-soft) 16%, transparent);
+}
+
+/* Full-width provider picker above the per-provider fields. */
+.ai-provider-field {
+  display: block;
+  margin: 22px 26px 0;
+}
+
+.ai-provider-field .ai-model-select {
+  padding-left: 13px;
 }
 
 .ai-fields {
