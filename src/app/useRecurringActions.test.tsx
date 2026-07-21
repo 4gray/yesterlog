@@ -224,6 +224,7 @@ describe("useRecurringActions", () => {
   it("preserves an existing occurrence createdAt when confirming again", async () => {
     const existing = buildOccurrence({
       status: "skipped",
+      localTime: "10:15",
       timeSpentSeconds: undefined,
       note: undefined,
       createdAt: "2026-06-18T07:00:00.000Z"
@@ -240,9 +241,47 @@ describe("useRecurringActions", () => {
 
     expect(getApi().occurrences[0]).toMatchObject({
       status: "confirmed",
+      localTime: "10:15",
       timeSpentSeconds: 900,
       createdAt: "2026-06-18T07:00:00.000Z"
     });
+  });
+
+  it("moves and resizes a confirmed occurrence without changing its global event or local note", async () => {
+    const existing = buildOccurrence({
+      localTime: "09:15",
+      timeSpentSeconds: 900,
+      note: "Occurrence-specific blockers"
+    });
+    renderHarness({ initialOccurrences: [existing] });
+
+    await act(async () => {
+      await expect(
+        getApi().handleMoveRecurring(
+          {
+            eventId: existing.eventId,
+            dateKey: existing.dateKey,
+            title: "Daily Standup",
+            localTime: "09:15",
+            timeSpentSeconds: 900,
+            note: existing.note
+          },
+          { localTime: "10:30", timeSpentSeconds: 1800 }
+        )
+      ).resolves.toBe(true);
+    });
+
+    expect(getApi().events[0].localTime).toBe("09:15");
+    expect(getApi().occurrences[0]).toMatchObject({
+      eventId: existing.eventId,
+      dateKey: existing.dateKey,
+      status: "confirmed",
+      localTime: "10:30",
+      timeSpentSeconds: 1800,
+      note: "Occurrence-specific blockers",
+      createdAt: existing.createdAt
+    });
+    expect(showSuccess).not.toHaveBeenCalled();
   });
 
   it("skips a stored occurrence outside the visible week without changing visible state", async () => {

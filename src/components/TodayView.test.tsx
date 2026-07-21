@@ -116,6 +116,7 @@ const renderToday = (
       remindersEnabled={true}
       onCreateAt={() => undefined}
       onMoveWorklog={async () => true}
+      onMoveRecurring={async () => true}
       onConfirmRecurring={async () => true}
       onSkipRecurring={async () => true}
       onEditWorklog={() => undefined}
@@ -183,6 +184,7 @@ describe("TodayView calendar", () => {
     // The standup shows on the grid as a recurring, meeting-colored committed block.
     expect(markup).toContain("cal-block--recurring");
     expect(markup).toContain("cal-block--meeting");
+    expect(markup).toContain("is-draggable");
     expect(markup).toContain("Daily Standup");
     // It is not part of the ghost layer.
     expect(markup).not.toContain("cal-block--ghost");

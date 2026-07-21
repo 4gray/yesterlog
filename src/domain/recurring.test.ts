@@ -92,6 +92,7 @@ describe("recurring domain", () => {
         eventId: "rec-plan",
         dateKey: "2026-06-08",
         status: "confirmed",
+        localTime: "11:30",
         timeSpentSeconds: 30 * 60,
         note: "Trimmed planning"
       })
@@ -108,6 +109,7 @@ describe("recurring domain", () => {
     expect(result.confirmedSeconds).toBe(15 * 60 + 30 * 60);
     const planEntry = result.entries.find((entry) => entry.eventId === "rec-plan");
     expect(planEntry?.note).toBe("Trimmed planning");
+    expect(planEntry?.localTime).toBe("11:30");
     expect(planEntry?.timeSpentSeconds).toBe(30 * 60);
   });
 

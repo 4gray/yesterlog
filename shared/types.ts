@@ -398,13 +398,15 @@ export type RecurringOccurrenceStatus = "confirmed" | "skipped";
 /**
  * Per-date resolution of a {@link RecurringEvent}. Stored per week (like
  * personal notes). A confirmed occurrence may override the event's default
- * duration and note for that single day.
+ * time, duration and note for that single day.
  */
 export interface RecurringOccurrence {
   eventId: string;
   weekKey: string;
   dateKey: string;
   status: RecurringOccurrenceStatus;
+  /** Per-day wall-clock override, "HH:MM"; falls back to the recurring event schedule. */
+  localTime?: string;
   timeSpentSeconds?: number;
   note?: string;
   createdAt: string;

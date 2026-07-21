@@ -18,7 +18,7 @@ interface CalendarBlockProps {
   /** Week's narrow overlap columns show only the strongest identifier. */
   minimal?: boolean;
   onSelect: (item: CalendarItem) => void;
-  /** Stable drag starter (worklogs only); receives the gesture kind. */
+  /** Stable drag starter for movable committed blocks; receives the gesture kind. */
   onBlockDrag?: (event: ReactPointerEvent<HTMLElement>, item: CalendarItem, kind: DragKind) => void;
 }
 
@@ -55,8 +55,9 @@ const detailFor = (item: CalendarItem) => {
 };
 
 /**
- * A single positioned block on the day grid. Worklogs are draggable (move) with
- * top/bottom resize handles; notes and ghosts fall back to click-to-edit / promote.
+ * A single positioned block on the day grid. Worklogs and confirmed recurring events
+ * are draggable (move) with top/bottom resize handles; notes and ghosts fall back to
+ * click-to-edit / promote.
  * Memoized: non-dragged blocks skip re-render while another block is being dragged.
  */
 const CalendarBlockImpl = ({

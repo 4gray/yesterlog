@@ -112,7 +112,7 @@ export const buildDayRecurring = (
         eventId: event.id,
         dateKey,
         title: event.title,
-        localTime: event.localTime,
+        localTime: occurrence.localTime ?? event.localTime,
         timeSpentSeconds,
         note: note?.trim() ? note : undefined
       });

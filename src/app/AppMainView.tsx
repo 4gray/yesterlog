@@ -76,6 +76,7 @@ export interface AppMainViewProps {
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
   handleAddWorklog: AppWeekRouteProps["handleAddWorklog"];
   handleMoveWorklog: AppTodayRouteProps["handleMoveWorklog"];
+  handleMoveRecurring: AppTodayRouteProps["handleMoveRecurring"];
   handleSync: AppWeekRouteProps["handleSync"];
   goToPreviousWeek: AppWeekRouteProps["goToPreviousWeek"];
   goToCurrentWeek: AppWeekRouteProps["goToCurrentWeek"];
@@ -178,6 +179,7 @@ export const AppMainView = ({
   isImportingPersonalNotes,
   handleAddWorklog,
   handleMoveWorklog,
+  handleMoveRecurring,
   handleSync,
   goToPreviousWeek,
   goToCurrentWeek,
@@ -246,6 +248,7 @@ export const AppMainView = ({
         reminderTime={settings.reminderTime}
         remindersEnabled={settings.remindersEnabled}
         handleMoveWorklog={handleMoveWorklog}
+        handleMoveRecurring={handleMoveRecurring}
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         openAddTime={openAddTime}
@@ -277,6 +280,7 @@ export const AppMainView = ({
         goToNextWeek={goToNextWeek}
         openAddTime={openAddTime}
         handleMoveWorklog={handleMoveWorklog}
+        handleMoveRecurring={handleMoveRecurring}
         openEditWorklog={openEditWorklog}
         openEditPersonalNote={openEditPersonalNote}
         handleToggleSkipped={handleToggleSkipped}

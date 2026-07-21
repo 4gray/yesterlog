@@ -104,6 +104,7 @@ describe("WeekTimeline", () => {
         todayKey="2026-06-16"
         onAddTime={() => undefined}
         onMoveWorklog={async () => true}
+        onMoveRecurring={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}

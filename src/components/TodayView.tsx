@@ -8,7 +8,7 @@ import type {
   PersonalNote,
   RecurringEntry
 } from "../../shared/types";
-import type { RecurringConfirmPayload } from "../app/useRecurringActions";
+import type { RecurringConfirmPayload, RecurringMovePatch } from "../app/useRecurringActions";
 import { formatClock, formatDuration, formatHours } from "../utils/date";
 import { activitySegments } from "../domain/activity";
 import { getWorklogDisplaySeconds } from "../domain/worklogAllocation";
@@ -50,6 +50,8 @@ interface TodayViewProps {
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a calendar drag move/resize to an existing worklog (optimistic). */
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Commit a local per-day move/resize of a confirmed recurring event. */
+  onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   /** Confirm a pending recurring ritual from the calendar (defaults, like the Week card). */
   onConfirmRecurring: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
   /** Skip a pending recurring ritual for the day. */
@@ -79,6 +81,7 @@ export const TodayView = ({
   remindersEnabled,
   onCreateAt,
   onMoveWorklog,
+  onMoveRecurring,
   onConfirmRecurring,
   onSkipRecurring,
   onEditWorklog,
@@ -213,6 +216,7 @@ export const TodayView = ({
           centerOnNow={settings.timelineCenterOnNow ?? true}
           onCreateAt={onCreateAt}
           onMoveWorklog={onMoveWorklog}
+          onMoveRecurring={onMoveRecurring}
           onPromoteGhost={promoteGhost}
           onConfirmRecurring={onConfirmRecurring}
           onSkipRecurring={onSkipRecurring}

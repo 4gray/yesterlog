@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import { LockKeyhole, Palmtree, Plus, Undo2 } from "lucide-react";
-import type { DayTrackingSummary, JiraWorklog, PersonalNote, SyncResult, WeekState } from "../../shared/types";
+import type {
+  DayTrackingSummary,
+  JiraWorklog,
+  PersonalNote,
+  RecurringEntry,
+  SyncResult,
+  WeekState
+} from "../../shared/types";
 import {
   buildCommittedItems,
   buildPendingRecurringItems,
@@ -16,6 +23,7 @@ import { formatHours, fromLocalDateKey } from "../utils/date";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { DayCalendar } from "./DayCalendar";
 import type { RecurringConfirmPayload } from "./WeekRecurringRows";
+import type { RecurringMovePatch } from "../app/useRecurringActions";
 
 interface WeekTimelineProps {
   weekState: WeekState;
@@ -26,6 +34,7 @@ interface WeekTimelineProps {
   timelineCenterOnNow?: boolean;
   onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
@@ -108,6 +117,7 @@ export const WeekTimeline = ({
   timelineCenterOnNow = true,
   onAddTime,
   onMoveWorklog,
+  onMoveRecurring,
   onEditWorklog,
   onEditPersonalNote,
   onToggleSkipped,
@@ -157,7 +167,9 @@ export const WeekTimeline = ({
   }, [
     containsToday,
     currentDate,
-    layout,
+    layout.endMin,
+    layout.pxPerHour,
+    layout.startMin,
     timelineCenterOnNow,
     timelineFocusTime,
     weekState.weekKey
@@ -218,6 +230,7 @@ export const WeekTimeline = ({
                       dropDateKey={day.dateKey}
                       onCreateAt={(prefill) => onAddTime(date, prefill)}
                       onMoveWorklog={onMoveWorklog}
+                      onMoveRecurring={onMoveRecurring}
                       onPromoteGhost={noGhostPromotion}
                       onConfirmRecurring={onConfirmRecurring ?? noRecurringConfirm}
                       onSkipRecurring={onSkipRecurring ?? noRecurringSkip}

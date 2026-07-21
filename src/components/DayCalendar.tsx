@@ -13,6 +13,7 @@ import {
   layoutHeight,
   minutesFromMidnight,
   minuteToLabel,
+  minutesToClockTime,
   minuteToY,
   rectForRange,
   startedISOForMinute,
@@ -23,6 +24,7 @@ import {
 import { isAllocatedWorklog } from "../domain/worklogAllocation";
 import type { ReconstructSignal } from "../domain/reconstruct";
 import type { RecurringConfirmPayload } from "../app/useRecurringActions";
+import type { RecurringMovePatch } from "../app/useRecurringActions";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { CalendarBlock } from "./CalendarBlock";
 import { useDayCalendarInteraction } from "./useDayCalendarInteraction";
@@ -56,6 +58,8 @@ interface DayCalendarProps {
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a drag move/resize of an existing worklog (optimistic). */
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Commit a local per-day move/resize of a confirmed recurring event. */
+  onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   /** Promote a ghost to a real worklog (opens the prefilled popup). */
   onPromoteGhost: (signal: ReconstructSignal, startedISO: string) => void;
   /** Confirm a pending recurring ritual with its defaults (mirrors the Week card's ✓). */
@@ -99,6 +103,7 @@ export const DayCalendar = ({
   dropDateKey,
   onCreateAt,
   onMoveWorklog,
+  onMoveRecurring,
   onPromoteGhost,
   onConfirmRecurring,
   onSkipRecurring,
@@ -219,16 +224,24 @@ export const DayCalendar = ({
     onCreate: (range) =>
       onCreateAt({ startedISO: startedISOForMinute(date, range.startMin), timeSpentSeconds: rangeToSeconds(range) }),
     onCommitMove: (item, range) => {
-      if (!item.worklog) {
+      if (item.recurring) {
+        void onMoveRecurring(item.recurring, {
+          localTime: minutesToClockTime(range.startMin),
+          timeSpentSeconds: Math.max(60, Math.round((range.endMin - range.startMin) * 60))
+        });
+        return;
+      }
+      const worklog = item.worklog;
+      if (!worklog) {
         return;
       }
       // Preserve the untouched edge: when the start didn't move (resize-end), keep the
       // original started (seconds and all) so only the duration changes.
       const startUnchanged = range.startMin === item.startMin;
-      const startedISO = startUnchanged ? item.worklog.started : startedISOForMinute(date, range.startMin);
+      const startedISO = startUnchanged ? worklog.started : startedISOForMinute(date, range.startMin);
       const baseStartMin = startUnchanged ? item.startMin : range.startMin;
       const timeSpentSeconds = Math.max(60, Math.round((range.endMin - baseStartMin) * 60));
-      void onMoveWorklog(item.worklog, { startedISO, timeSpentSeconds });
+      void onMoveWorklog(worklog, { startedISO, timeSpentSeconds });
     },
     onSelect: selectItem
   });
@@ -311,12 +324,16 @@ export const DayCalendar = ({
                   labelEndMin={range.endMin}
                   dragging={isDragging}
                   draggable={
-                    !readOnly && item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)
+                    !readOnly &&
+                    ((item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)) ||
+                      (item.kind === "recurring" && Boolean(item.recurring)))
                   }
                   minimal={embedded && columns > 1}
                   onSelect={selectItem}
                   onBlockDrag={
-                    !readOnly && item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)
+                    !readOnly &&
+                    ((item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)) ||
+                      (item.kind === "recurring" && item.recurring))
                       ? startBlockDrag
                       : undefined
                   }

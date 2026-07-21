@@ -71,6 +71,17 @@ vi.mock("../components/WeekView", () => ({
         >
           move
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            (props.onMoveRecurring as (entry: Record<string, unknown>, patch: Record<string, unknown>) => void)(
+              { eventId: "standup", dateKey: "2026-06-17" },
+              { localTime: "10:15", timeSpentSeconds: 1800 }
+            )
+          }
+        >
+          move recurring
+        </button>
       </section>
     );
   }
@@ -123,6 +134,7 @@ const baseProps = (): AppWeekRouteProps => ({
   goToNextWeek: noop,
   openAddTime: noop,
   handleMoveWorklog: asyncTrue,
+  handleMoveRecurring: asyncTrue,
   openEditWorklog: noop,
   openEditPersonalNote: noop,
   handleToggleSkipped: noop,
@@ -185,6 +197,7 @@ describe("AppWeekRoute", () => {
     const handleAddWorklog = vi.fn();
     const handleConfirmRecurring = vi.fn();
     const handleMoveWorklog = vi.fn();
+    const handleMoveRecurring = vi.fn();
     renderRoute({
       handleSync,
       goToPreviousWeek,
@@ -194,7 +207,8 @@ describe("AppWeekRoute", () => {
       handleToggleSkipped,
       handleAddWorklog,
       handleConfirmRecurring,
-      handleMoveWorklog
+      handleMoveWorklog,
+      handleMoveRecurring
     });
 
     act(() => {
@@ -207,6 +221,7 @@ describe("AppWeekRoute", () => {
       container.querySelectorAll("button")[6]?.click();
       container.querySelectorAll("button")[7]?.click();
       container.querySelectorAll("button")[8]?.click();
+      container.querySelectorAll("button")[9]?.click();
     });
 
     expect(handleSync).toHaveBeenCalledTimes(1);
@@ -224,6 +239,10 @@ describe("AppWeekRoute", () => {
     expect(handleMoveWorklog).toHaveBeenCalledWith(
       { id: "wl-1", issueKey: "FTDM-101" },
       { startedISO: "2026-06-17T09:00:00.000Z", timeSpentSeconds: 3600 }
+    );
+    expect(handleMoveRecurring).toHaveBeenCalledWith(
+      { eventId: "standup", dateKey: "2026-06-17" },
+      { localTime: "10:15", timeSpentSeconds: 1800 }
     );
   });
 });

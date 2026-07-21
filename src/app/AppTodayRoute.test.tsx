@@ -87,6 +87,17 @@ vi.mock("../components/TodayView", () => ({
         >
           skip-recurring
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            (props.onMoveRecurring as (entry: RecurringEntry, patch: Record<string, unknown>) => void)(recurring[0], {
+              localTime: "10:15",
+              timeSpentSeconds: 1800
+            })
+          }
+        >
+          move-recurring
+        </button>
       </section>
     );
   }
@@ -156,6 +167,7 @@ const baseProps = (): AppTodayRouteProps => ({
   reminderTime: "17:30",
   remindersEnabled: true,
   handleMoveWorklog: asyncTrue,
+  handleMoveRecurring: asyncTrue,
   handleConfirmRecurring: asyncTrue,
   handleSkipRecurring: asyncTrue,
   openAddTime: noop,
@@ -251,5 +263,19 @@ describe("AppTodayRoute", () => {
       timeSpentSeconds: 1800
     });
     expect(handleSkipRecurring).toHaveBeenCalledWith("rec-sync", "2026-06-17");
+  });
+
+  it("wires confirmed recurring moves through to the local occurrence handler", () => {
+    const handleMoveRecurring = vi.fn();
+    renderRoute({ handleMoveRecurring });
+
+    act(() => {
+      container.querySelectorAll("button")[5]?.click();
+    });
+
+    expect(handleMoveRecurring).toHaveBeenCalledWith(recurringEntry, {
+      localTime: "10:15",
+      timeSpentSeconds: 1800
+    });
   });
 });

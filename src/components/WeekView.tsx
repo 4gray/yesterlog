@@ -6,6 +6,7 @@ import type {
   JiraTicket,
   JiraWorklog,
   PersonalNote,
+  RecurringEntry,
   SyncResult,
   WeekState
 } from "../../shared/types";
@@ -36,6 +37,7 @@ import { WeekHeader } from "./WeekHeader";
 import { WeekTimeline } from "./WeekTimeline";
 import { WeekViewStrip } from "./WeekViewStrip";
 import type { WeekViewMode } from "./useWeekViewMode";
+import type { RecurringMovePatch } from "../app/useRecurringActions";
 import { resolveRelativeSyncLabel, type AppSyncState } from "../app/syncStatus";
 import { getWeekBounds } from "../domain/week";
 import {
@@ -75,6 +77,7 @@ interface WeekViewProps {
   onNextWeek: () => void;
   onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
@@ -584,6 +587,7 @@ export const WeekView = ({
   onNextWeek,
   onAddTime,
   onMoveWorklog,
+  onMoveRecurring,
   onEditWorklog,
   onEditPersonalNote,
   onToggleSkipped,
@@ -806,6 +810,7 @@ export const WeekView = ({
           timelineCenterOnNow={timelineCenterOnNow}
           onAddTime={onAddTime}
           onMoveWorklog={onMoveWorklog}
+          onMoveRecurring={onMoveRecurring}
           onEditWorklog={onEditWorklog}
           onEditPersonalNote={onEditPersonalNote}
           onToggleSkipped={onToggleSkipped}

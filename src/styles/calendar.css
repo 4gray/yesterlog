@@ -356,6 +356,13 @@
   touch-action: none;
 }
 
+/* Short blocks can be only 15px tall when the next item starts immediately.
+   Keep a usable center strip for moving instead of letting the two resize grips
+   consume nearly the whole block. */
+.cal-block.is-compact .cal-resize {
+  height: 4px;
+}
+
 .cal-resize--top {
   top: 0;
 }

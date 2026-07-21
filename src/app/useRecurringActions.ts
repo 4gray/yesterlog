@@ -1,5 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { RecurringEvent, RecurringOccurrence, WeekdayNumber } from "../../shared/types";
+import type { RecurringEntry, RecurringEvent, RecurringOccurrence, WeekdayNumber } from "../../shared/types";
 import { getRecurringCandidates, indexOccurrences } from "../domain/recurring";
 import { getWeekBounds } from "../domain/week";
 import {
@@ -23,6 +23,11 @@ export interface RecurringConfirmPayload {
   dateKey: string;
   timeSpentSeconds: number;
   note?: string;
+}
+
+export interface RecurringMovePatch {
+  localTime: string;
+  timeSpentSeconds: number;
 }
 
 interface UseRecurringActionsOptions {
@@ -191,6 +196,7 @@ export const useRecurringActions = ({
         weekKey,
         dateKey: payload.dateKey,
         status: "confirmed",
+        localTime: existing?.localTime,
         timeSpentSeconds: Math.round(payload.timeSpentSeconds),
         note: payload.note?.trim() || undefined,
         createdAt: existing?.createdAt ?? now,
@@ -202,6 +208,28 @@ export const useRecurringActions = ({
       return ok;
     },
     [recurringEvents, recurringOccurrences, showSuccess, upsertRecurringOccurrence]
+  );
+
+  const handleMoveRecurring = useCallback(
+    async (entry: RecurringEntry, patch: RecurringMovePatch) => {
+      const weekKey = getWeekKeyForDate(entry.dateKey);
+      const existing = recurringOccurrences.find(
+        (item) => item.eventId === entry.eventId && item.dateKey === entry.dateKey
+      );
+      const now = new Date().toISOString();
+      return upsertRecurringOccurrence({
+        ...existing,
+        eventId: entry.eventId,
+        weekKey,
+        dateKey: entry.dateKey,
+        status: "confirmed",
+        localTime: patch.localTime,
+        timeSpentSeconds: Math.max(60, Math.round(patch.timeSpentSeconds)),
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now
+      });
+    },
+    [recurringOccurrences, upsertRecurringOccurrence]
   );
 
   const handleSkipRecurring = useCallback(
@@ -274,6 +302,7 @@ export const useRecurringActions = ({
     handleDeleteRecurringEvent,
     handleToggleRecurringEvent,
     handleConfirmRecurring,
+    handleMoveRecurring,
     handleSkipRecurring,
     handleDeleteRecurringOccurrence,
     recurringCandidatesForDate

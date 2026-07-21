@@ -155,6 +155,7 @@ const baseProps = (): AppMainViewProps => ({
   isImportingPersonalNotes: false,
   handleAddWorklog: asyncFalse as AppMainViewProps["handleAddWorklog"],
   handleMoveWorklog: asyncFalse as AppMainViewProps["handleMoveWorklog"],
+  handleMoveRecurring: asyncFalse as AppMainViewProps["handleMoveRecurring"],
   handleSync: noop,
   goToPreviousWeek: noop,
   goToCurrentWeek: noop,

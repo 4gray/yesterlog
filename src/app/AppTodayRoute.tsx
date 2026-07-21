@@ -22,6 +22,7 @@ export interface AppTodayRouteProps {
   reminderTime: TodayViewProps["reminderTime"];
   remindersEnabled: TodayViewProps["remindersEnabled"];
   handleMoveWorklog: TodayViewProps["onMoveWorklog"];
+  handleMoveRecurring: TodayViewProps["onMoveRecurring"];
   handleConfirmRecurring: TodayViewProps["onConfirmRecurring"];
   handleSkipRecurring: TodayViewProps["onSkipRecurring"];
   openAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
@@ -47,6 +48,7 @@ export const AppTodayRoute = ({
   reminderTime,
   remindersEnabled,
   handleMoveWorklog,
+  handleMoveRecurring,
   handleConfirmRecurring,
   handleSkipRecurring,
   openAddTime,
@@ -72,6 +74,7 @@ export const AppTodayRoute = ({
     remindersEnabled={remindersEnabled}
     onCreateAt={(prefill) => openAddTime(currentDate, prefill)}
     onMoveWorklog={handleMoveWorklog}
+    onMoveRecurring={handleMoveRecurring}
     onConfirmRecurring={handleConfirmRecurring}
     onSkipRecurring={handleSkipRecurring}
     onEditWorklog={openEditWorklog}

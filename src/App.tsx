@@ -442,6 +442,7 @@ export const App = () => {
     handleDeleteRecurringEvent,
     handleToggleRecurringEvent,
     handleConfirmRecurring,
+    handleMoveRecurring,
     handleSkipRecurring,
     handleDeleteRecurringOccurrence,
     recurringCandidatesForDate
@@ -754,6 +755,7 @@ export const App = () => {
         isImportingPersonalNotes={isImportingPersonalNotes}
         handleAddWorklog={handleAddWorklog}
         handleMoveWorklog={handleMoveWorklog}
+        handleMoveRecurring={handleMoveRecurring}
         handleSync={handleSync}
         goToPreviousWeek={goToPreviousWeek}
         goToCurrentWeek={goToCurrentWeek}
