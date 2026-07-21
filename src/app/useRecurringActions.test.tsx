@@ -49,6 +49,7 @@ const draft = (overrides: Partial<RecurringEventDraft> = {}): RecurringEventDraf
 type RecurringActionsApi = ReturnType<typeof useRecurringActions> & {
   events: RecurringEvent[];
   occurrences: RecurringOccurrence[];
+  replaceOccurrences: (next: RecurringOccurrence[]) => void;
 };
 
 let container: HTMLDivElement;
@@ -64,11 +65,13 @@ let showError: ReturnType<typeof vi.fn<(message: string) => void>>;
 function Harness({
   initialEvents = [buildEvent()],
   initialOccurrences = [],
-  isDemo = false
+  isDemo = false,
+  currentWeekKey = visibleWeekKey
 }: {
   initialEvents?: RecurringEvent[];
   initialOccurrences?: RecurringOccurrence[];
   isDemo?: boolean;
+  currentWeekKey?: string;
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [occurrences, setOccurrences] = useState(initialOccurrences);
@@ -77,7 +80,7 @@ function Harness({
     setRecurringEvents: setEvents,
     recurringOccurrences: occurrences,
     setRecurringOccurrences: setOccurrences,
-    visibleWeekKey,
+    visibleWeekKey: currentWeekKey,
     isDemo,
     saveRecurringEvents,
     getRecurringOccurrences,
@@ -85,7 +88,7 @@ function Harness({
     showSuccess,
     showError
   });
-  api = { ...hook, events, occurrences };
+  api = { ...hook, events, occurrences, replaceOccurrences: setOccurrences };
   return null;
 }
 
@@ -282,6 +285,162 @@ describe("useRecurringActions", () => {
       createdAt: existing.createdAt
     });
     expect(showSuccess).not.toHaveBeenCalled();
+  });
+
+  it("serializes rapid recurring moves so later saves retain earlier occurrence changes", async () => {
+    const refinement = buildEvent({ id: "rec-refine", title: "Refinement", localTime: "14:00" });
+    const standupOccurrence = buildOccurrence();
+    const refinementOccurrence = buildOccurrence({
+      eventId: refinement.id,
+      localTime: "14:00",
+      timeSpentSeconds: 2700,
+      note: "Refined the backlog"
+    });
+    let releaseFirstSave: () => void = () => undefined;
+    let markFirstSaveStarted: () => void = () => undefined;
+    const firstSaveGate = new Promise<void>((resolve) => {
+      releaseFirstSave = resolve;
+    });
+    const firstSaveStarted = new Promise<void>((resolve) => {
+      markFirstSaveStarted = resolve;
+    });
+    saveRecurringOccurrences = vi.fn(async (weekKey, occurrences) => {
+      if (saveRecurringOccurrences.mock.calls.length === 1) {
+        markFirstSaveStarted();
+        await firstSaveGate;
+      }
+      storedOccurrences.set(weekKey, occurrences);
+    });
+    renderHarness({
+      initialEvents: [buildEvent(), refinement],
+      initialOccurrences: [standupOccurrence, refinementOccurrence]
+    });
+
+    let standupMove!: Promise<boolean>;
+    let refinementMove!: Promise<boolean>;
+    act(() => {
+      standupMove = getApi().handleMoveRecurring(
+        {
+          eventId: standupOccurrence.eventId,
+          dateKey: standupOccurrence.dateKey,
+          title: "Daily Standup",
+          localTime: "09:15",
+          timeSpentSeconds: 900
+        },
+        { localTime: "10:00", timeSpentSeconds: 900 }
+      );
+      refinementMove = getApi().handleMoveRecurring(
+        {
+          eventId: refinementOccurrence.eventId,
+          dateKey: refinementOccurrence.dateKey,
+          title: "Refinement",
+          localTime: "14:00",
+          timeSpentSeconds: 2700
+        },
+        { localTime: "15:00", timeSpentSeconds: 3600 }
+      );
+    });
+
+    await firstSaveStarted;
+    expect(saveRecurringOccurrences).toHaveBeenCalledTimes(1);
+
+    releaseFirstSave();
+    await act(async () => {
+      await expect(Promise.all([standupMove, refinementMove])).resolves.toEqual([true, true]);
+    });
+
+    expect(saveRecurringOccurrences).toHaveBeenCalledTimes(2);
+    expect(storedOccurrences.get(visibleWeekKey)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ eventId: "rec-standup", localTime: "10:00", timeSpentSeconds: 900 }),
+        expect.objectContaining({ eventId: "rec-refine", localTime: "15:00", timeSpentSeconds: 3600 })
+      ])
+    );
+    expect(getApi().occurrences).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ eventId: "rec-standup", localTime: "10:00" }),
+        expect.objectContaining({ eventId: "rec-refine", localTime: "15:00" })
+      ])
+    );
+  });
+
+  it("does not install queued writes after the user navigates to another week", async () => {
+    const refinement = buildEvent({ id: "rec-refine", title: "Refinement", localTime: "14:00" });
+    const standupOccurrence = buildOccurrence();
+    const refinementOccurrence = buildOccurrence({
+      eventId: refinement.id,
+      localTime: "14:00",
+      timeSpentSeconds: 2700
+    });
+    const nextWeekOccurrence = buildOccurrence({
+      eventId: "rec-next-week",
+      weekKey: nextWeekKey,
+      dateKey: "2026-06-23",
+      localTime: "11:00"
+    });
+    storedOccurrences.set(visibleWeekKey, [standupOccurrence, refinementOccurrence]);
+    let releaseFirstSave: () => void = () => undefined;
+    let markFirstSaveStarted: () => void = () => undefined;
+    const firstSaveGate = new Promise<void>((resolve) => {
+      releaseFirstSave = resolve;
+    });
+    const firstSaveStarted = new Promise<void>((resolve) => {
+      markFirstSaveStarted = resolve;
+    });
+    saveRecurringOccurrences = vi.fn(async (weekKey, occurrences) => {
+      if (saveRecurringOccurrences.mock.calls.length === 1) {
+        markFirstSaveStarted();
+        await firstSaveGate;
+      }
+      storedOccurrences.set(weekKey, occurrences);
+    });
+    const harnessProps = {
+      initialEvents: [buildEvent(), refinement],
+      initialOccurrences: [standupOccurrence, refinementOccurrence]
+    };
+    renderHarness(harnessProps);
+
+    let standupMove!: Promise<boolean>;
+    let refinementMove!: Promise<boolean>;
+    act(() => {
+      standupMove = getApi().handleMoveRecurring(
+        {
+          eventId: standupOccurrence.eventId,
+          dateKey: standupOccurrence.dateKey,
+          title: "Daily Standup",
+          localTime: "09:15",
+          timeSpentSeconds: 900
+        },
+        { localTime: "10:00", timeSpentSeconds: 900 }
+      );
+      refinementMove = getApi().handleMoveRecurring(
+        {
+          eventId: refinementOccurrence.eventId,
+          dateKey: refinementOccurrence.dateKey,
+          title: "Refinement",
+          localTime: "14:00",
+          timeSpentSeconds: 2700
+        },
+        { localTime: "15:00", timeSpentSeconds: 2700 }
+      );
+    });
+
+    await firstSaveStarted;
+    renderHarness({ ...harnessProps, currentWeekKey: nextWeekKey });
+    act(() => getApi().replaceOccurrences([nextWeekOccurrence]));
+
+    releaseFirstSave();
+    await act(async () => {
+      await expect(Promise.all([standupMove, refinementMove])).resolves.toEqual([true, true]);
+    });
+
+    expect(getApi().occurrences).toEqual([nextWeekOccurrence]);
+    expect(storedOccurrences.get(visibleWeekKey)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ eventId: "rec-standup", localTime: "10:00" }),
+        expect.objectContaining({ eventId: "rec-refine", localTime: "15:00" })
+      ])
+    );
   });
 
   it("skips a stored occurrence outside the visible week without changing visible state", async () => {

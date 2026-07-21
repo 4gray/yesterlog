@@ -1,4 +1,4 @@
-import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useRef, type Dispatch, type SetStateAction } from "react";
 import type { RecurringEntry, RecurringEvent, RecurringOccurrence, WeekdayNumber } from "../../shared/types";
 import { getRecurringCandidates, indexOccurrences } from "../domain/recurring";
 import { getWeekBounds } from "../domain/week";
@@ -46,6 +46,11 @@ interface UseRecurringActionsOptions {
 
 const getWeekKeyForDate = (dateKey: string) => toLocalDateKey(getWeekBounds(fromLocalDateKey(dateKey)).weekStart);
 
+const replaceOccurrence = (list: RecurringOccurrence[], occurrence: RecurringOccurrence) => [
+  ...list.filter((item) => !(item.eventId === occurrence.eventId && item.dateKey === occurrence.dateKey)),
+  occurrence
+];
+
 export const useRecurringActions = ({
   recurringEvents,
   setRecurringEvents,
@@ -59,6 +64,10 @@ export const useRecurringActions = ({
   showSuccess,
   showError
 }: UseRecurringActionsOptions) => {
+  const visibleWeekStateRef = useRef({ weekKey: visibleWeekKey, occurrences: recurringOccurrences });
+  const occurrenceWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
+  visibleWeekStateRef.current = { weekKey: visibleWeekKey, occurrences: recurringOccurrences };
+
   const persistRecurringEvents = useCallback(
     async (next: RecurringEvent[]) => {
       setRecurringEvents(next);
@@ -144,42 +153,56 @@ export const useRecurringActions = ({
     [persistRecurringEvents, recurringEvents, showError]
   );
 
-  const upsertRecurringOccurrence = useCallback(
-    async (occurrence: RecurringOccurrence) => {
-      const replace = (list: RecurringOccurrence[]) => [
-        ...list.filter((item) => !(item.eventId === occurrence.eventId && item.dateKey === occurrence.dateKey)),
-        occurrence
-      ];
-
+  const mutateRecurringOccurrences = useCallback(
+    (
+      weekKey: string,
+      mutate: (current: RecurringOccurrence[]) => RecurringOccurrence[],
+      failureMessage = "Unable to save the recurring entry locally."
+    ): Promise<boolean> => {
       if (isDemo) {
-        setRecurringOccurrences((current) => replace(current));
-        return true;
+        setRecurringOccurrences((current) => {
+          const next = mutate(current);
+          if (weekKey === visibleWeekStateRef.current.weekKey) {
+            visibleWeekStateRef.current = { weekKey, occurrences: next };
+          }
+          return next;
+        });
+        return Promise.resolve(true);
       }
 
-      try {
-        const current =
-          occurrence.weekKey === visibleWeekKey
-            ? recurringOccurrences
-            : await getRecurringOccurrences(occurrence.weekKey);
-        const next = replace(current);
-        await saveRecurringOccurrences(occurrence.weekKey, next);
-        if (occurrence.weekKey === visibleWeekKey) {
-          setRecurringOccurrences(next);
+      const persist = async () => {
+        try {
+          const visibleAtStart = visibleWeekStateRef.current;
+          const current =
+            weekKey === visibleAtStart.weekKey
+              ? visibleAtStart.occurrences
+              : await getRecurringOccurrences(weekKey);
+          const next = mutate(current);
+          await saveRecurringOccurrences(weekKey, next);
+          if (weekKey === visibleWeekStateRef.current.weekKey) {
+            visibleWeekStateRef.current = { weekKey, occurrences: next };
+            setRecurringOccurrences(next);
+          }
+          return true;
+        } catch (error) {
+          showError(error instanceof Error ? error.message : failureMessage);
+          return false;
         }
-        return true;
-      } catch (error) {
-        showError(error instanceof Error ? error.message : "Unable to save the recurring entry locally.");
-        return false;
-      }
+      };
+
+      const result = occurrenceWriteQueueRef.current.then(persist);
+      occurrenceWriteQueueRef.current = result.then(
+        () => undefined,
+        () => undefined
+      );
+      return result;
     },
     [
       getRecurringOccurrences,
       isDemo,
-      recurringOccurrences,
       saveRecurringOccurrences,
       setRecurringOccurrences,
-      showError,
-      visibleWeekKey
+      showError
     ]
   );
 
@@ -187,66 +210,70 @@ export const useRecurringActions = ({
     async (payload: RecurringConfirmPayload) => {
       const event = recurringEvents.find((candidate) => candidate.id === payload.eventId);
       const weekKey = getWeekKeyForDate(payload.dateKey);
-      const existing = recurringOccurrences.find(
-        (item) => item.eventId === payload.eventId && item.dateKey === payload.dateKey
-      );
       const now = new Date().toISOString();
-      const ok = await upsertRecurringOccurrence({
-        eventId: payload.eventId,
-        weekKey,
-        dateKey: payload.dateKey,
-        status: "confirmed",
-        localTime: existing?.localTime,
-        timeSpentSeconds: Math.round(payload.timeSpentSeconds),
-        note: payload.note?.trim() || undefined,
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now
+      const ok = await mutateRecurringOccurrences(weekKey, (current) => {
+        const existing = current.find(
+          (item) => item.eventId === payload.eventId && item.dateKey === payload.dateKey
+        );
+        return replaceOccurrence(current, {
+          eventId: payload.eventId,
+          weekKey,
+          dateKey: payload.dateKey,
+          status: "confirmed",
+          localTime: existing?.localTime,
+          timeSpentSeconds: Math.round(payload.timeSpentSeconds),
+          note: payload.note?.trim() || undefined,
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now
+        });
       });
       if (ok) {
         showSuccess(`Logged ${formatClock(payload.timeSpentSeconds)} to ${event?.title ?? "recurring event"} locally.`);
       }
       return ok;
     },
-    [recurringEvents, recurringOccurrences, showSuccess, upsertRecurringOccurrence]
+    [mutateRecurringOccurrences, recurringEvents, showSuccess]
   );
 
   const handleMoveRecurring = useCallback(
     async (entry: RecurringEntry, patch: RecurringMovePatch) => {
       const weekKey = getWeekKeyForDate(entry.dateKey);
-      const existing = recurringOccurrences.find(
-        (item) => item.eventId === entry.eventId && item.dateKey === entry.dateKey
-      );
       const now = new Date().toISOString();
-      return upsertRecurringOccurrence({
-        ...existing,
-        eventId: entry.eventId,
-        weekKey,
-        dateKey: entry.dateKey,
-        status: "confirmed",
-        localTime: patch.localTime,
-        timeSpentSeconds: Math.max(60, Math.round(patch.timeSpentSeconds)),
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now
+      return mutateRecurringOccurrences(weekKey, (current) => {
+        const existing = current.find((item) => item.eventId === entry.eventId && item.dateKey === entry.dateKey);
+        return replaceOccurrence(current, {
+          ...existing,
+          eventId: entry.eventId,
+          weekKey,
+          dateKey: entry.dateKey,
+          status: "confirmed",
+          localTime: patch.localTime,
+          timeSpentSeconds: Math.max(60, Math.round(patch.timeSpentSeconds)),
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now
+        });
       });
     },
-    [recurringOccurrences, upsertRecurringOccurrence]
+    [mutateRecurringOccurrences]
   );
 
   const handleSkipRecurring = useCallback(
     async (eventId: string, dateKey: string) => {
       const weekKey = getWeekKeyForDate(dateKey);
-      const existing = recurringOccurrences.find((item) => item.eventId === eventId && item.dateKey === dateKey);
       const now = new Date().toISOString();
-      return upsertRecurringOccurrence({
-        eventId,
-        weekKey,
-        dateKey,
-        status: "skipped",
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now
+      return mutateRecurringOccurrences(weekKey, (current) => {
+        const existing = current.find((item) => item.eventId === eventId && item.dateKey === dateKey);
+        return replaceOccurrence(current, {
+          eventId,
+          weekKey,
+          dateKey,
+          status: "skipped",
+          createdAt: existing?.createdAt ?? now,
+          updatedAt: now
+        });
       });
     },
-    [recurringOccurrences, upsertRecurringOccurrence]
+    [mutateRecurringOccurrences]
   );
 
   const handleDeleteRecurringOccurrence = useCallback(
@@ -256,37 +283,17 @@ export const useRecurringActions = ({
       const remove = (list: RecurringOccurrence[]) =>
         list.filter((item) => !(item.eventId === eventId && item.dateKey === dateKey));
 
-      if (isDemo) {
-        setRecurringOccurrences((current) => remove(current));
+      const ok = await mutateRecurringOccurrences(
+        weekKey,
+        remove,
+        "Unable to remove the recurring entry locally."
+      );
+      if (ok) {
         showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
-        return true;
       }
-
-      try {
-        const current = weekKey === visibleWeekKey ? recurringOccurrences : await getRecurringOccurrences(weekKey);
-        const next = remove(current);
-        await saveRecurringOccurrences(weekKey, next);
-        if (weekKey === visibleWeekKey) {
-          setRecurringOccurrences(next);
-        }
-        showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
-        return true;
-      } catch (error) {
-        showError(error instanceof Error ? error.message : "Unable to remove the recurring entry locally.");
-        return false;
-      }
+      return ok;
     },
-    [
-      getRecurringOccurrences,
-      isDemo,
-      recurringEvents,
-      recurringOccurrences,
-      saveRecurringOccurrences,
-      setRecurringOccurrences,
-      showError,
-      showSuccess,
-      visibleWeekKey
-    ]
+    [mutateRecurringOccurrences, recurringEvents, showSuccess]
   );
 
   const recurringCandidatesForDate = useCallback(
