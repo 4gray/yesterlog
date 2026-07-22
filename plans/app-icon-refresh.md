@@ -26,3 +26,8 @@ Replace every production copy of the legacy stacked-card icon with the selected 
 - [x] Confirm transparent corners and readable 1024/64/32/16 rendering.
 - [x] Run tests and production build.
 - [x] Confirm fallback variants are visible to Git and no legacy icon references remain.
+
+## Follow-up CI hotfix
+
+- [x] Update the concurrently merged Recap view to import the production PNG instead of the retired SVG.
+- [x] Re-run tests and the production build on the combined `main` state.

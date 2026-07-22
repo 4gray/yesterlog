@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { RecapDetail, RecapFormat, RecapPeriod, RecapSourceItem, RecapTheme } from "../../shared/types";
 import type { useRecapWorkspace } from "../app/useRecapWorkspace";
-import appIcon from "../assets/app-icon.svg";
+import appIcon from "../assets/app-icon.png";
 import { formatReconDuration } from "../domain/reconstruct";
 import { recapFormatMeta, recapTitle, recapToMarkdown, recapToPlainText } from "../domain/recapWorkspace";
 
