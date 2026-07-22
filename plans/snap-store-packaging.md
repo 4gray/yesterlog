@@ -30,9 +30,9 @@ workflow, and prepare controlled publication through the Snap Store.
 - [x] Add Snap build and `edge` publication to release CI.
 - [x] Document Store metadata, testing, and promotion.
 - [x] Verify tests, production build, workflow, and packaging config.
-- [ ] Repair the hosted Ubuntu Snap build after the v2.7.1 LXD networking
+- [x] Repair the hosted Ubuntu Snap build after the v2.7.1 LXD networking
   failure by using Canonical's supported GitHub build action.
-- [ ] Verify the repaired tagged release uploads `timebro` to the Store's
+- [x] Verify the repaired tagged release uploads `timebro` to the Store's
   `edge` channel.
 
 ## External actions
@@ -61,6 +61,10 @@ workflow, and prepare controlled publication through the Snap Store.
   command outside the action's LXD group session. Snapcraft already ran its
   linters during the successful pack, so the duplicate workflow step was
   removed.
+- Release run `29950292613` passed all jobs. Snapcraft created Store revision 1
+  for `timebro` version `2.7.2` (`amd64`) and released it to `latest/edge` on
+  2026-07-22. The public Store API reports the MIT license and
+  <https://snapcraft.io/timebro> listing URL.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.
