@@ -10,6 +10,11 @@ const execFileAsync = promisify(execFile);
 const pngToIco = pngToIcoModule.default ?? pngToIcoModule;
 const source = new URL("../assets/app-icon.png", import.meta.url);
 const sourcePath = fileURLToPath(source);
+const markSource = new URL(
+  "../assets/app-icon-variants/legacy-flat/flat-cobalt-mark.png",
+  import.meta.url
+);
+const markSourcePath = fileURLToPath(markSource);
 const buildDir = new URL("../build/", import.meta.url);
 const rendererAssetsDir = new URL("../src/assets/", import.meta.url);
 const docsAssetsDir = new URL("../docs/", import.meta.url);
@@ -34,6 +39,17 @@ const renderPng = async (size, outputUrl) => {
     .toFile(fileURLToPath(outputUrl));
 };
 
+const renderTransparentPng = async (inputPath, size, outputUrl) => {
+  await sharp(inputPath)
+    .resize(size, size, {
+      fit: "fill",
+      kernel: sharp.kernel.lanczos3
+    })
+    .ensureAlpha()
+    .png({ compressionLevel: 9 })
+    .toFile(fileURLToPath(outputUrl));
+};
+
 await mkdir(buildDir, { recursive: true });
 await mkdir(rendererAssetsDir, { recursive: true });
 await mkdir(docsAssetsDir, { recursive: true });
@@ -45,6 +61,11 @@ await mkdir(icoPngDir, { recursive: true });
 await renderPng(1024, new URL("../build/icon.png", import.meta.url));
 await renderPng(256, new URL("../src/assets/app-icon.png", import.meta.url));
 await renderPng(512, new URL("../docs/app-icon.png", import.meta.url));
+await renderTransparentPng(
+  markSourcePath,
+  512,
+  new URL("../docs/app-mark.png", import.meta.url)
+);
 
 const webIconSizes = [
   [16, "favicon-16x16.png"],

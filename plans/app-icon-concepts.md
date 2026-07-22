@@ -20,6 +20,14 @@ Audit TimeBro's current product and icon, then develop the selected Ticket Stopw
 - User selected the explicit Ticket Bezel study. Explore an asymmetric checkmark-shaped pair of clock hands while keeping the clock mechanism legible, and test alternate palettes without losing the ticket silhouette.
 - User chose the Midnight Cyan checkmark study for refinement: reduce the neon intensity, restore a warm amber pivot, and shorten the left hand while locking the remaining construction.
 - User approved the refined Midnight Cyan Ticket Clock for production. Preserve Cobalt Check, Safety Orange, and Light Cobalt as versioned fallback sources.
+- The installed Dock result exposed a small-scale failure: the polished outer rim reads as a white halo, the screws and minute ticks disappear, and the dark layered housing loses optical mass against a dark Dock. Treat this as a design-frequency problem, not an SVG/ICNS packaging problem.
+- Explore a Dock-first eighth round with three simplified families: Hardware Flat, Ticket Dial, and Light Enamel. Keep each concept non-destructive and judge the 64/32/16 px renders before proposing a replacement.
+- The Dock-first clock studies improved legibility but moved too far from the earlier TimeBro identity. Recover the exact pre-Ticket-Stopwatch production icon from Git and use it as the locked reference for a ninth round.
+- Preserve the legacy icon's core recognition stack: cobalt system squircle, one dominant white ticket/card, a compact blue checkbox/task chip, and one clock badge. Apply the new small-size constraints by removing rear-card clutter, enlarging the front ticket, simplifying its lines/fold, strengthening the task/time relationship, and avoiding baked outer frames or micro-detail.
+- User selected Legacy XL as the new direction. Explore a tenth round that locks its geometry while testing a warm light inversion, a dark appearance palette, and a shadowless source-art treatment.
+- Follow current Apple guidance by keeping source artwork frontal, simple, and suitable for layers. Compare fully flat internal layers against the selected softly shaded raster baseline; avoid hard baked drop shadows either way.
+- User selected the shadowless Flat Source direction for final comparison. Preserve its exact geometry as a 1024px cobalt asset, generate strict monochrome black and inverse-white variants, and extract the color task-card/clock mark onto transparency without the outer squircle.
+- Store the three full app-icon candidates plus the frameless mark under tracked `assets/app-icon-variants/legacy-flat/`; do not promote any candidate to production until the user chooses.
 
 ## Audit notes
 
@@ -49,6 +57,20 @@ Audit TimeBro's current product and icon, then develop the selected Ticket Stopw
 - [x] Generate a sixth round of Ticket Bezel variants with checkmark-shaped clock hands and alternate color systems.
 - [x] Inspect checkmark readability versus generic todo-app risk at 64/32/16 px.
 - [x] Generate and inspect a targeted Midnight Cyan refinement with a calmer bezel, amber pivot, and stronger checkmark asymmetry.
+- [x] Generate the Dock-first eighth-round studies without changing production icon assets.
+- [x] Build 64/32/16 px previews and a Dock-scale comparison strip.
+- [x] Inspect silhouette, haloing, contrast, and ticket/time-tracking recognition; recommend the strongest direction.
+- [x] Recover and verify the exact legacy production icon from Git history.
+- [x] Generate three Dock-first legacy-icon reinterpretations without changing production assets.
+- [x] Build 64/32/16 px previews and compare them with both the legacy and current production icons.
+- [x] Recommend the strongest legacy-derived direction.
+- [x] Generate light, dark, and shadowless Legacy XL color/material studies with locked composition.
+- [x] Build a side-by-side Dock comparison against the selected Legacy XL baseline at 64/32/16px.
+- [x] Recommend whether the flattened Electron asset should be fully flat or retain minimal ambient separation.
+- [x] Generate black and white Flat Source variants with locked geometry and no shadows.
+- [x] Extract the color inner mark without the outer app-icon body.
+- [x] Normalize all deliverables to 1024px transparent PNG assets and document them.
+- [x] Verify the three app-icon candidates at 64/32/16px and keep production assets unchanged.
 
 ## Verification
 
@@ -61,3 +83,7 @@ Audit TimeBro's current product and icon, then develop the selected Ticket Stopw
 - [x] Confirm every ticket-tracking variant is saved non-destructively and production icon assets remain unchanged.
 - [x] Confirm every checkmark-hand color variant is saved non-destructively and production icon assets remain unchanged.
 - [x] Save the selected refinement non-destructively, verify 64/32/16 px, and confirm production assets remain unchanged.
+- [x] Confirm every eighth-round study is square, saved in the workspace, and production icon assets remain unchanged.
+- [x] Confirm every ninth-round study has transparent corners, no chroma fringe, and remains legible at 32px.
+- [x] Confirm every tenth-round study preserves the Legacy XL geometry and production assets remain unchanged.
+- [x] Confirm all tracked Flat Source candidate assets have transparent corners/backgrounds, no chroma fringe, and readable small-size previews.

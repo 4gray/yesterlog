@@ -1,13 +1,10 @@
-# App icon fallback variants
+# App icon variants
 
-These 1024x1024 transparent PNG sources are preserved for future TimeBro icon experiments:
+The active production icon is the Flat Cobalt artwork in `../app-icon.png`. Its source and the retained alternatives live under [`legacy-flat/`](legacy-flat/README.md):
 
-- `01-cobalt-check.png`: original cobalt Ticket Bezel with checkmark-shaped clock hands.
-- `03-safety-orange.png`: warm graphite and safety-orange industrial treatment.
-- `04-light-cobalt.png`: light ivory and cobalt treatment.
+- `01-flat-cobalt.png` — active full-color app icon.
+- `02-flat-black.png` — retained monochrome-dark alternative.
+- `03-flat-white.png` — retained monochrome-light alternative.
+- `flat-cobalt-mark.png` — frameless brand mark for large marketing artwork.
 
-The active production source is `../app-icon.png`. To promote a fallback, replace that file with the chosen variant and run:
-
-```bash
-npm run assets:icons
-```
+Run `npm run assets:icons` after changing the production source to regenerate the Electron, platform, renderer, favicon, README, and website assets.
