@@ -16,6 +16,7 @@ import type {
 import { enhanceRecapWorkspace } from "../api/ollama";
 import {
   buildDeterministicRecap,
+  carryRecapUserImpacts,
   RECAP_SCHEMA_VERSION,
   recapIntervalForDate,
   recapIntervalFromKey,
@@ -71,32 +72,6 @@ const evidenceChangeCount = (current: RecapDraftVersion, latest: RecapDraftVersi
   const changedSources = [...ids].filter((id) => currentSources.get(id) !== latestSources.get(id)).length;
   const coverageChanged = JSON.stringify(current.coverage) !== JSON.stringify(latest.coverage);
   return Math.max(changedSources, coverageChanged ? 1 : 0);
-};
-
-const carryUserImpacts = (current: RecapDraftVersion | undefined, next: RecapDraftVersion): RecapDraftVersion => {
-  if (!current) return next;
-  const impacts = current.themes.flatMap((theme) => theme.copy.cv.lines)
-    .filter((line) => line.userImpact?.trim());
-  if (!impacts.length) return next;
-  return {
-    ...next,
-    themes: next.themes.map((theme) => ({
-      ...theme,
-      copy: {
-        ...theme.copy,
-        cv: {
-          ...theme.copy.cv,
-          lines: theme.copy.cv.lines.map((line) => {
-            const match = impacts
-              .map((candidate) => ({ candidate, overlap: candidate.refs.filter((ref) => line.refs.includes(ref)).length }))
-              .filter(({ overlap }) => overlap > 0)
-              .sort((a, b) => b.overlap - a.overlap)[0]?.candidate;
-            return match ? { ...line, needsImpact: false, userImpact: match.userImpact } : line;
-          })
-        }
-      }
-    }))
-  };
 };
 
 const routeParams = () => {
@@ -285,7 +260,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
         return;
       }
       const version = stored?.versions.length ? Math.max(...stored.versions.map((item) => item.version)) + 1 : 1;
-      const first = carryUserImpacts(storedActive, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
+      const first = carryRecapUserImpacts(storedActive, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
       const created = {
         intervalKey: interval.key,
         activeVersion: version,
@@ -314,13 +289,24 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   const refreshActivity = useCallback(async () => {
     if (operation) return;
     const request = ++requestRef.current;
+    const sourceVersion = activeDraft?.version;
+    const sourceEditedAt = activeDraft?.editedAt;
     setOperation("refreshing");
     try {
       const nextEvidence = await loadEvidence(interval);
       if (request !== requestRef.current) return;
-      const version = Math.max(0, ...(record?.versions.map((item) => item.version) ?? [])) + 1;
-      const draft = carryUserImpacts(activeDraft, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
-      persistRecord({ intervalKey: interval.key, activeVersion: version, versions: [...(record?.versions ?? []), draft] });
+      const latest = recordRef.current;
+      if (!latest || latest.intervalKey !== interval.key) return;
+      const version = Math.max(0, ...latest.versions.map((item) => item.version)) + 1;
+      const latestSource = latest.versions.find((item) => item.version === sourceVersion);
+      const draft = carryRecapUserImpacts(latestSource, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
+      const sourceChangedWhileRefreshing = latestSource?.editedAt !== sourceEditedAt;
+      const keepCurrentSelection = latest.activeVersion !== sourceVersion || sourceChangedWhileRefreshing;
+      persistRecord({
+        ...latest,
+        activeVersion: keepCurrentSelection ? latest.activeVersion : version,
+        versions: [...latest.versions, draft]
+      });
       setNewEvidenceCount(0);
       onSuccess(`Refreshed from cached activity as version ${version}`);
     } catch (error) {
@@ -329,7 +315,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     } finally {
       if (request === requestRef.current) setOperation(undefined);
     }
-  }, [activeDraft, currentDateMs, interval, loadEvidence, onError, onSuccess, operation, persistRecord, record]);
+  }, [activeDraft, currentDateMs, interval, loadEvidence, onError, onSuccess, operation, persistRecord]);
 
   const rewriteWithAi = useCallback(async () => {
     if (!activeDraft || operation || !settings.aiEnabled || !activeDraft.themes.length) return;

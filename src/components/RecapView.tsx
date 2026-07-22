@@ -12,6 +12,7 @@ import {
   recapCoverageNote,
   recapFormatMeta,
   recapLineText,
+  recapSourceRef,
   recapTitle,
   recapToMarkdown,
   recapToPlainText,
@@ -196,7 +197,7 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
             {!ws.selectedSaved && ws.record && <select aria-label="Draft version" value={ws.record.activeVersion} onChange={(event) => ws.setActiveVersion(Number(event.target.value))}>{ws.record.versions.map((version) => <option key={version.version} value={version.version}>Version {version.version}</option>)}</select>}
             <span>{ws.selectedSaved ? `Saved ${new Date(ws.selectedSaved.savedAt).toLocaleDateString()}` : ws.isRefreshing ? "Rebuilding from cached activity" : ws.isRewriting ? "Creating a separate AI version" : `${currentFormatEnhanced ? "AI-assisted" : "Local"} ${meta.label.toLowerCase()} · ${draft.editedAt ? "edited" : "not yet saved"}`}</span>
           </div>
-          {draft.themes.map((theme) => <ThemeBlock key={theme.id} theme={theme} format={ws.format} detail={ws.detail} readOnly={Boolean(ws.selectedSaved)} sourceRefs={draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map((source) => source.issueKey ?? (source.pullRequestId ? `#${source.pullRequestId}` : source.title))} onSources={() => setSourceThemeId(theme.id)} onUpdate={(next) => ws.updateTheme(theme.id, () => next)} />)}
+          {draft.themes.map((theme) => <ThemeBlock key={theme.id} theme={theme} format={ws.format} detail={ws.detail} readOnly={Boolean(ws.selectedSaved)} sourceRefs={draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map(recapSourceRef)} onSources={() => setSourceThemeId(theme.id)} onUpdate={(next) => ws.updateTheme(theme.id, () => next)} />)}
         </>}
       </main>
       {bragOpen && <button type="button" className="recap-brag-scrim" aria-label="Close brag doc" onClick={() => setBragOpen(false)} />}

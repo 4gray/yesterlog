@@ -39,7 +39,7 @@ const MONTH_LONG = new Intl.DateTimeFormat(undefined, { month: "long", year: "nu
 const MONTH_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" });
 const DAY_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const COLORS: RecapColorToken[] = ["blue", "purple", "teal", "amber", "coral"];
-export const RECAP_SCHEMA_VERSION = 2;
+export const RECAP_SCHEMA_VERSION = 3;
 
 export interface RecapReconstructDraft {
   placements: Record<string, number>;
@@ -403,8 +403,44 @@ export const buildRecapSources = (input: RecapEvidenceInput): RecapSourceItem[] 
   return [...sources.values()].sort((a, b) => b.timeSpentSeconds - a.timeSpentSeconds || a.title.localeCompare(b.title));
 };
 
-const sourceRef = (source: RecapSourceItem) =>
-  source.issueKey || (source.pullRequestId ? `#${source.pullRequestId}` : source.id);
+export const recapSourceRef = (source: RecapSourceItem) =>
+  source.issueKey || (source.pullRequestId ? `${source.repository ?? source.id}#${source.pullRequestId}` : source.id);
+
+const sourceIdsForLine = (draft: RecapDraftVersion, theme: RecapTheme, line: RecapCopyLine) => {
+  const refs = new Set(line.refs);
+  const matched = draft.sources
+    .filter((source) => theme.sourceIds.includes(source.id) && refs.has(recapSourceRef(source)))
+    .map((source) => source.id);
+  return matched.length || theme.copy.cv.lines.length !== 1 ? matched : theme.sourceIds;
+};
+
+export const carryRecapUserImpacts = (current: RecapDraftVersion | undefined, next: RecapDraftVersion): RecapDraftVersion => {
+  if (!current) return next;
+  const impacts = current.themes.flatMap((theme) => theme.copy.cv.lines
+    .filter((line) => line.userImpact?.trim())
+    .map((line) => ({ line, sourceIds: sourceIdsForLine(current, theme, line) })));
+  if (!impacts.length) return next;
+  return {
+    ...next,
+    themes: next.themes.map((theme) => ({
+      ...theme,
+      copy: {
+        ...theme.copy,
+        cv: {
+          ...theme.copy.cv,
+          lines: theme.copy.cv.lines.map((line) => {
+            const sourceIds = sourceIdsForLine(next, theme, line);
+            const match = impacts
+              .map((candidate) => ({ candidate, overlap: candidate.sourceIds.filter((id) => sourceIds.includes(id)).length }))
+              .filter(({ overlap }) => overlap > 0)
+              .sort((a, b) => b.overlap - a.overlap)[0]?.candidate.line;
+            return match ? { ...line, needsImpact: false, userImpact: match.userImpact } : line;
+          })
+        }
+      }
+    }))
+  };
+};
 
 const formatSourceDuration = (seconds: number) => {
   const minutes = Math.max(0, Math.round(seconds / 60));
@@ -433,7 +469,7 @@ const humanList = (values: string[]) => {
   return `${items.slice(0, -1).join(", ")}, and ${items.at(-1)}`;
 };
 
-const refsFor = (sources: RecapSourceItem[]) => Array.from(new Set(sources.map(sourceRef)));
+const refsFor = (sources: RecapSourceItem[]) => Array.from(new Set(sources.map(recapSourceRef)));
 
 const lineForSource = (source: RecapSourceItem): RecapCopyLine => {
   const details = source.details ?? (source.detail ? [source.detail] : []);
@@ -444,7 +480,7 @@ const lineForSource = (source: RecapSourceItem): RecapCopyLine => {
     id: `line:${source.id}`,
     short: `${cleanFragment(source.title)}.`,
     long,
-    refs: [sourceRef(source)],
+    refs: [recapSourceRef(source)],
     emphasis: formatSourceDuration(source.timeSpentSeconds)
   };
 };

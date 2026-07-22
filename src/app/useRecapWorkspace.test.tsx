@@ -209,4 +209,22 @@ describe("useRecapWorkspace generation", () => {
       userImpact: "Unblocked the release review"
     });
   });
+
+  it("preserves an edit made while activity refresh is loading", async () => {
+    act(() => root.render(<Harness />));
+    await flush();
+    const theme = getWorkspace().activeDraft!.themes[0];
+
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = getWorkspace().refreshActivity();
+      getWorkspace().updateTheme(theme.id, (current) => ({ ...current, name: "Edited while refresh was loading" }));
+    });
+    await act(async () => { await refresh; });
+
+    expect(getWorkspace().record?.versions).toHaveLength(2);
+    expect(getWorkspace().record?.activeVersion).toBe(1);
+    expect(getWorkspace().record?.versions[0].themes[0].name).toBe("Edited while refresh was loading");
+    expect(getWorkspace().record?.versions[1]).toMatchObject({ version: 2, generator: "deterministic" });
+  });
 });

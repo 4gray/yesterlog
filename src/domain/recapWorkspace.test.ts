@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { PersonalNote, RecapSourceItem } from "../../shared/types";
+import type { PersonalNote, RecapDraftVersion, RecapSourceItem } from "../../shared/types";
 import {
   buildDeterministicRecap,
   buildRecapSources,
   buildRecapThemes,
+  carryRecapUserImpacts,
   recapCoverageNote,
   recapIntervalForDate,
   recapToMarkdown,
@@ -156,5 +157,44 @@ describe("Recap evidence", () => {
     expect(recapToMarkdown(draft, "cv", "detailed")).toContain(
       "Unblocked the release review for the platform team."
     );
+  });
+
+  it("carries CV outcomes by stable source identity when repositories reuse a PR number", () => {
+    const sources: RecapSourceItem[] = ["repo-a", "repo-b"].map((repository) => ({
+      id: `pr:workspace:${repository}:42`,
+      kind: "pull-request",
+      dateKey: "2026-06-17",
+      title: `Review ${repository}`,
+      timeSpentSeconds: 3600,
+      repository,
+      pullRequestId: 42,
+      role: "reviewed",
+      clusterKey: `repo:${repository}`
+    }));
+    const makeDraft = (version: number): RecapDraftVersion => ({
+      version,
+      generatedAt: `2026-06-1${version}T12:00:00.000Z`,
+      generator: "deterministic",
+      interval: evidence().interval,
+      sources: structuredClone(sources),
+      themes: buildRecapThemes(structuredClone(sources), "week"),
+      coverage: { requestedWeeks: 1, elapsedWeeks: 1, jiraWeeks: 0, bitbucketWeeks: 1, ticketCount: 0, pullRequestCount: 2, commitCount: 0 }
+    });
+    const current = makeDraft(1);
+    const repoA = current.themes.find((theme) => theme.sourceIds.includes("pr:workspace:repo-a:42"))!;
+    repoA.copy.cv.lines[0].userImpact = "Helped repo A adopt the review flow";
+    repoA.copy.cv.lines[0].needsImpact = false;
+
+    const carried = carryRecapUserImpacts(current, makeDraft(2));
+    const nextA = carried.themes.find((theme) => theme.sourceIds.includes("pr:workspace:repo-a:42"))!;
+    const nextB = carried.themes.find((theme) => theme.sourceIds.includes("pr:workspace:repo-b:42"))!;
+
+    expect(nextA.copy.cv.lines[0]).toMatchObject({
+      refs: ["repo-a#42"],
+      needsImpact: false,
+      userImpact: "Helped repo A adopt the review flow"
+    });
+    expect(nextB.copy.cv.lines[0]).toMatchObject({ refs: ["repo-b#42"], needsImpact: true });
+    expect(nextB.copy.cv.lines[0].userImpact).toBeUndefined();
   });
 });

@@ -6,6 +6,7 @@ import type {
   RecapFormat,
   RecapTheme
 } from "../../shared/types";
+import { recapSourceRef } from "./recapWorkspace";
 
 export const RECAP_WORKSPACE_SYSTEM_PROMPT = [
   "You are an evidence editor for a developer's private work journal.",
@@ -79,7 +80,7 @@ export const buildRecapWorkspacePrompt = (
         .map((line) => ({ lineId: line.id, refs: line.refs, userImpact: line.userImpact })),
       evidence: draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map((source) => ({
         sourceId: source.id,
-        ref: source.issueKey || (source.pullRequestId ? `#${source.pullRequestId}` : source.id),
+        ref: recapSourceRef(source),
         kind: source.kind,
         dates: source.dateKeys ?? [source.dateKey],
         title: source.title,
@@ -122,7 +123,7 @@ const allowedNumbersForTheme = (theme: RecapTheme, fallback: RecapDraftVersion) 
   for (const source of fallback.sources.filter((item) => theme.sourceIds.includes(item.id))) {
     values.push(
       source.issueKey ?? "",
-      source.pullRequestId ? `#${source.pullRequestId}` : "",
+      source.pullRequestId ? recapSourceRef(source) : "",
       source.title,
       ...(source.details ?? (source.detail ? [source.detail] : [])),
       String(Math.round(source.timeSpentSeconds / 60)),
@@ -222,7 +223,7 @@ export const parseRecapWorkspaceDraft = (
       const allowed = new Set(
         fallback.sources
           .filter((source) => base.sourceIds.includes(source.id))
-          .map((source) => source.issueKey || (source.pullRequestId ? `#${source.pullRequestId}` : source.id))
+          .map(recapSourceRef)
       );
       const allowedNumbers = allowedNumbersForTheme(base, fallback);
       const name = typeof incoming.name === "string" && incoming.name.trim() ? incoming.name.trim() : base.name;

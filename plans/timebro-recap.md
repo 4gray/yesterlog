@@ -93,13 +93,14 @@ Make Recap feel immediate and trustworthy: local reconstruction may happen autom
 - [x] Add explicit refresh and AI rewrite operations with independent loading states and immutable version creation.
 - [x] Protect manual edits and user impact statements across versioning and AI parsing.
 - [x] Preserve edits and version selection made while an AI rewrite is pending, and allow saved CV outcomes to be removed.
+- [x] Preserve edits while activity refresh is pending and carry CV outcomes by stable source identity.
 - [x] Add the guided CV impact editor and grounded export formatting.
 - [x] Update the action row, status copy, responsive styles, and accessibility states.
 - [x] Add lifecycle, version-protection, impact, component, export, and rendered UI verification.
 
 ### Verification status
 
-- Passed: `npm run test` (123 files, 798 tests).
+- Passed: `npm run test` (123 files, 800 tests).
 - Passed: `npm run build`.
 - Passed: `npm run e2e:renderer` (8 flows), including refresh versioning and CV outcome entry.
 - Passed: Playwright inspection at 1440×960 light and 1040×720 dark with no fresh-page console errors, broken action wrapping, or horizontal clipping.
