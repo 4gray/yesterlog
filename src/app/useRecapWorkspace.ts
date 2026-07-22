@@ -21,6 +21,7 @@ import {
   recapIntervalForDate,
   recapIntervalFromKey,
   recapIntervalParam,
+  recapRecordHasCurrentSchema,
   recapWeekKeys,
   shiftRecapInterval,
   type RecapEvidenceInput
@@ -253,7 +254,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     void Promise.all([loadEvidenceRef.current(interval), isDemo ? Promise.resolve(undefined) : getRecapDraft(interval.key)]).then(([nextEvidence, stored]) => {
       if (request !== requestRef.current) return;
       const storedActive = stored?.versions.find((version) => version.version === stored.activeVersion);
-      if (stored?.versions.length && storedActive?.schemaVersion === RECAP_SCHEMA_VERSION) {
+      if (stored?.versions.length && storedActive && recapRecordHasCurrentSchema(stored)) {
         setRecord(stored);
         setNewEvidenceCount(evidenceChangeCount(storedActive, buildDeterministicRecap(nextEvidence, storedActive.version, new Date(currentDateMs))));
         setIsLoading(false);

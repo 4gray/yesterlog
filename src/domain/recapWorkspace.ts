@@ -7,6 +7,7 @@ import type {
   RecapCopyParagraph,
   RecapCoverage,
   RecapDetail,
+  RecapDraftRecord,
   RecapDraftVersion,
   RecapFormat,
   RecapFormatCopy,
@@ -40,6 +41,9 @@ const MONTH_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", year: "
 const DAY_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const COLORS: RecapColorToken[] = ["blue", "purple", "teal", "amber", "coral"];
 export const RECAP_SCHEMA_VERSION = 3;
+
+export const recapRecordHasCurrentSchema = (record: RecapDraftRecord | undefined) =>
+  Boolean(record?.versions.some((version) => version.schemaVersion === RECAP_SCHEMA_VERSION));
 
 export interface RecapReconstructDraft {
   placements: Record<string, number>;

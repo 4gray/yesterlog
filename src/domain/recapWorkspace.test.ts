@@ -5,6 +5,7 @@ import {
   buildRecapSources,
   buildRecapThemes,
   carryRecapUserImpacts,
+  recapRecordHasCurrentSchema,
   recapCoverageNote,
   recapIntervalForDate,
   recapToMarkdown,
@@ -52,6 +53,24 @@ describe("Recap intervals", () => {
       startDateKey: "2026-04-01",
       endDateKeyExclusive: "2026-07-01"
     });
+  });
+});
+
+describe("Recap schema migration", () => {
+  it("treats a record as migrated even when its selected version is legacy", () => {
+    const current = buildDeterministicRecap(evidence(), 2, new Date("2026-06-18T12:00:00.000Z"));
+    const legacy = { ...structuredClone(current), schemaVersion: 2, version: 1 };
+
+    expect(recapRecordHasCurrentSchema({
+      intervalKey: current.interval.key,
+      activeVersion: legacy.version,
+      versions: [legacy, current]
+    })).toBe(true);
+    expect(recapRecordHasCurrentSchema({
+      intervalKey: current.interval.key,
+      activeVersion: legacy.version,
+      versions: [legacy]
+    })).toBe(false);
   });
 });
 
