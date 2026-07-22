@@ -95,6 +95,8 @@ const unavailableReleaseHistory = (
 const matchesExtension = (assetName: string, extension: string) =>
   assetName.toLowerCase().endsWith(extension.toLowerCase());
 
+const isSnapEnvironment = (env: NodeJS.ProcessEnv) => Boolean(env.SNAP || env.SNAP_NAME);
+
 const findAsset = (
   assets: GitHubReleaseAssetResponse[] | undefined,
   predicate: (assetName: string) => boolean
@@ -110,6 +112,10 @@ const selectPlatformDownloadAsset = (
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env
 ): ReleaseDownloadAsset | undefined => {
+  if (platform === "linux" && isSnapEnvironment(env)) {
+    return undefined;
+  }
+
   const linuxAsset = env.APPIMAGE
     ? findAsset(assets, (assetName) => matchesExtension(assetName, ".AppImage")) ??
       findAsset(assets, (assetName) => matchesExtension(assetName, ".deb"))
@@ -205,6 +211,15 @@ export const getAutoUpdateCapability = (
   }
 
   if (platform === "linux") {
+    if (isSnapEnvironment(env)) {
+      return {
+        supported: false,
+        phase: "unsupported",
+        platform: "linux-snap",
+        reason: "Snap installs updates automatically. Run `sudo snap refresh timebro` to check for an update now."
+      };
+    }
+
     if (env.APPIMAGE) {
       return {
         supported: true,
@@ -289,7 +304,8 @@ export const checkForAppUpdate = async (
       downloadPlatform: downloadAsset?.platform,
       publishedAt: release.published_at ?? undefined,
       checkedAt,
-      updateAvailable: isNewerReleaseVersion(releaseVersion, currentVersion),
+      updateAvailable:
+        autoUpdate.platform !== "linux-snap" && isNewerReleaseVersion(releaseVersion, currentVersion),
       autoUpdate
     };
   } catch (error) {

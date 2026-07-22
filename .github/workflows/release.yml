@@ -154,9 +154,49 @@ jobs:
           path: ${{ matrix.artifact_paths }}
           if-no-files-found: error
 
+  snap:
+    name: Build Snap (amd64)
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install Snapcraft and LXD
+        run: |
+          sudo snap install snapcraft --classic
+          sudo snap install lxd
+          sudo lxd waitready
+          sudo lxd init --auto
+          sudo usermod -aG lxd "$USER"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Snap
+        run: sg lxd -c 'npm run dist:snap -- --x64 -c.snapcraft.core24.useLXD=true'
+
+      - name: Lint Snap
+        run: sg lxd -c 'snapcraft lint release/*.snap'
+
+      - name: Upload Snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: timebro-snap
+          path: release/*.snap
+          if-no-files-found: error
+
   publish:
     name: Publish GitHub release
-    needs: build
+    needs:
+      - build
+      - snap
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -189,3 +229,33 @@ jobs:
               --generate-notes \
               --verify-tag
           fi
+
+  publish_snap:
+    name: Publish Snap to edge
+    needs: snap
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') && vars.SNAP_STORE_PUBLISH_ENABLED == 'true'
+    steps:
+      - name: Download Snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: timebro-snap
+          path: release
+
+      - name: Locate Snap
+        id: snap
+        run: |
+          snap_path="$(find release -maxdepth 1 -type f -name '*.snap' -print -quit)"
+          if [ -z "$snap_path" ]; then
+            echo "No Snap artifact was downloaded."
+            exit 1
+          fi
+          echo "path=$snap_path" >> "$GITHUB_OUTPUT"
+
+      - name: Upload and release to edge
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.snap.outputs.path }}
+          release: edge

@@ -156,6 +156,29 @@ describe("SettingsView", () => {
     expect(markup).toContain("Restart to install");
   });
 
+  it("explains that Snap manages updates without offering another installer", () => {
+    const markup = renderSettings({
+      initialSection: "about",
+      updateInfo: {
+        ...updateInfo,
+        downloadUrl: undefined,
+        downloadName: undefined,
+        updateAvailable: false,
+        autoUpdate: {
+          supported: false,
+          phase: "unsupported",
+          platform: "linux-snap",
+          reason: "Snap installs updates automatically. Run `sudo snap refresh timebro` to check for an update now."
+        }
+      }
+    });
+
+    expect(markup).toContain("Updates are managed by Snap.");
+    expect(markup).toContain("sudo snap refresh timebro");
+    expect(markup).toContain("Refresh release notes");
+    expect(markup).not.toContain(">Download<");
+  });
+
   it("renders import and export controls in the data panel", () => {
     const markup = renderSettings({ initialSection: "data" });
 

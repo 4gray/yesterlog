@@ -3,7 +3,16 @@
   "version": "2.7.0",
   "private": true,
   "description": "TimeBro is a local Electron assistant for weekly Jira time tracking.",
+  "license": "MIT",
   "author": "fourgray <fourgray@proton.me>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/4gray/time-bro.git"
+  },
+  "homepage": "https://github.com/4gray/time-bro#readme",
+  "bugs": {
+    "url": "https://github.com/4gray/time-bro/issues"
+  },
   "desktopName": "timebro.desktop",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -16,6 +25,7 @@
     "dist:mac": "npm run build && electron-builder --mac dmg zip --publish never",
     "dist:win": "npm run build && electron-builder --win nsis zip --publish never",
     "dist:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
+    "dist:snap": "npm run build && electron-builder --linux snap --publish never",
     "release:dry-run": "npm run test && npm run e2e:renderer && npm run build",
     "release:patch": "npm version patch -m \"chore(release): v%s\"",
     "release:minor": "npm version minor -m \"chore(release): v%s\"",
@@ -97,14 +107,36 @@
       ]
     },
     "linux": {
-      "icon": "build/icons",
+      "icon": "build/icons/512x512.png",
       "category": "Office",
+      "synopsis": "Local weekly Jira time tracking",
+      "description": "TimeBro is a local desktop companion for weekly Jira time tracking. Sync and review your Jira worklogs, reconstruct forgotten days from Jira and Bitbucket signals, and optionally polish drafts with a local Ollama model. Credentials and synced data stay on your device; there is no TimeBro backend or telemetry.",
       "syncDesktopName": true,
       "target": [
         "AppImage",
         "deb",
         "tar.gz"
       ]
+    },
+    "snapcraft": {
+      "base": "core24",
+      "core24": {
+        "title": "TimeBro",
+        "summary": "Local weekly Jira time tracking for your desktop",
+        "confinement": "strict",
+        "grade": "stable",
+        "extensions": [
+          "gnome"
+        ],
+        "plugs": [
+          "network",
+          "home",
+          "browser-support"
+        ],
+        "executableArgs": [
+          "--no-sandbox"
+        ]
+      }
     }
   }
 }

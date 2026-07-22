@@ -201,7 +201,7 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 
 - 🍎 **macOS** — `.dmg` (signed &amp; notarized) or `.zip`
 - 🪟 **Windows** — `.exe` installer or `.zip`
-- 🐧 **Linux** — `AppImage`, `.deb`, or `.tar.gz`
+- 🐧 **Linux** — `AppImage`, `.deb`, `.tar.gz`, or `sudo snap install timebro` after the first stable Snap Store release
 
 Then head to **Settings → Jira** and paste in your site, email, and API token (see [Connect Jira](#connect-jira) below). That's the whole setup.
 
@@ -234,6 +234,7 @@ npm run lint          # type-check renderer + Electron
 npm run dist:mac      # macOS DMG + ZIP
 npm run dist:win      # Windows NSIS installer + ZIP
 npm run dist:linux    # Linux AppImage + DEB + tar.gz
+npm run dist:snap     # Linux Snap (requires Snapcraft + a build provider)
 npm run screenshots   # capture release screenshots with demo data
 npm audit             # check dependency advisories
 ```
@@ -362,6 +363,12 @@ Pushes to `main` run unit tests, renderer E2E, and the production build via [`.g
 
 Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will install deps, run tests + E2E, build, package macOS/Windows/Linux on native runners, and create/update a GitHub Release with the installers plus updater metadata (`latest*.yml` and blockmaps) attached. It uses the built-in `GITHUB_TOKEN`, so no extra release token is needed for same-repo releases.
 
+The same workflow builds an `amd64` Snap on Ubuntu 24.04 and attaches it to the
+GitHub Release. When the repository variable `SNAP_STORE_PUBLISH_ENABLED` is
+`true`, tagged builds are also uploaded to the Store's `edge` channel with the
+`SNAPCRAFT_STORE_CREDENTIALS` secret. Candidate and stable promotion stay
+manual so the Store revision can be tested first.
+
 **One-command version bumps:**
 
 ```bash
@@ -371,6 +378,68 @@ npm run release:push      # push commit + tag → starts the release workflow
 ```
 
 `npm version` updates `package.json` / `package-lock.json`, commits, and tags `vX.Y.Z`. `release:push` pushes the commit and tags; the pushed tag triggers the workflow.
+
+</details>
+
+<details>
+<summary>Snap Store packaging &amp; publishing</summary>
+
+TimeBro uses electron-builder's `core24` Snap target with strict confinement.
+The Snap has outbound network access for Jira, Bitbucket, GitHub, and Ollama;
+home-directory access for CSV import/export; and the normal Electron desktop
+interfaces. Snap installs manage their own updates, so the app does not offer
+Snap users a GitHub `.deb` installer.
+
+To build locally, install Snapcraft and one of its supported build providers,
+then run:
+
+```bash
+npm run dist:snap
+sudo snap install --dangerous release/*.snap
+snap connections timebro
+timebro
+```
+
+One-time Store setup:
+
+1. Sign in with the long-term publisher account and reserve the name:
+
+   ```bash
+   snapcraft login
+   snapcraft register timebro
+   ```
+
+2. Export a login restricted to TimeBro and `edge`. Set `SNAP_LOGIN_EXPIRES`
+   to an ISO-8601 UTC timestamp around 90 days in the future:
+
+   ```bash
+   export SNAP_LOGIN_EXPIRES="YYYY-MM-DDTHH:MM:SSZ"
+   snapcraft export-login \
+     --snaps=timebro \
+     --channels=edge \
+     --acls=package_access,package_push,package_update,package_release \
+     --expires="$SNAP_LOGIN_EXPIRES" \
+     snapcraft-login.txt
+   ```
+
+3. Add the contents of `snapcraft-login.txt` as the GitHub Actions secret
+   `SNAPCRAFT_STORE_CREDENTIALS`, then add the repository variable
+   `SNAP_STORE_PUBLISH_ENABLED=true`.
+4. Complete the listing using [`docs/snap-store-listing.md`](./docs/snap-store-listing.md).
+
+Tagged releases go to `edge`. After installing and testing the Store revision
+on Ubuntu, promote the exact revision without rebuilding it:
+
+```bash
+snapcraft revisions timebro
+snapcraft release timebro <revision> candidate
+snapcraft release timebro <revision> stable
+```
+
+Test both Wayland and X11. Check launch and icon integration, Jira worklog
+reads/writes, Bitbucket sync, Ollama on `localhost:11434`, external links,
+reminders, clipboard, CSV import/export, settings persistence across refresh,
+and the Snap-managed update message.
 
 </details>
 

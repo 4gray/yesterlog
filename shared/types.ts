@@ -730,7 +730,7 @@ export interface OpenReleasePageResult {
 
 export type OpenCursorPromptResult = { ok: true; url: string } | { ok: false; error: string };
 
-export type AppAutoUpdatePlatform = "macos" | "linux-appimage";
+export type AppAutoUpdatePlatform = "macos" | "linux-appimage" | "linux-snap";
 
 export type AppAutoUpdatePhase =
   | "unsupported"

@@ -111,6 +111,41 @@ describe("checkForAppUpdate", () => {
     });
   });
 
+  it("does not advertise GitHub installers as Snap updates", async () => {
+    const env = {
+      SNAP: "/snap/timebro/current",
+      SNAP_NAME: "timebro"
+    };
+    const result = await checkForAppUpdate(
+      "1.0.0",
+      async () =>
+        jsonResponse({
+          tag_name: "v1.1.0",
+          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          assets: [
+            {
+              name: "TimeBro-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+            }
+          ]
+        }),
+      "linux",
+      getAutoUpdateCapability("linux", true, env),
+      env
+    );
+
+    expect(result.latestVersion).toBe("1.1.0");
+    expect(result.updateAvailable).toBe(false);
+    expect(result.downloadUrl).toBeUndefined();
+    expect(result.downloadName).toBeUndefined();
+    expect(result.autoUpdate).toMatchObject({
+      supported: false,
+      phase: "unsupported",
+      platform: "linux-snap",
+      reason: expect.stringContaining("snap refresh timebro")
+    });
+  });
+
   it("selects an exe asset on Windows", async () => {
     const result = await checkForAppUpdate(
       "1.0.0",
@@ -225,6 +260,20 @@ describe("getAutoUpdateCapability", () => {
     expect(getAutoUpdateCapability("win32", true)).toMatchObject({
       supported: false,
       phase: "unsupported"
+    });
+  });
+
+  it("delegates packaged Snap updates to Snap", () => {
+    expect(
+      getAutoUpdateCapability("linux", true, {
+        SNAP: "/snap/timebro/current",
+        SNAP_NAME: "timebro"
+      })
+    ).toMatchObject({
+      supported: false,
+      phase: "unsupported",
+      platform: "linux-snap",
+      reason: expect.stringContaining("Snap installs updates automatically")
     });
   });
 });

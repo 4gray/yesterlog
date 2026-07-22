@@ -254,6 +254,10 @@ const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
     return "Release status has not been checked yet.";
   }
 
+  if (updateInfo.autoUpdate?.platform === "linux-snap") {
+    return "Updates are managed by Snap.";
+  }
+
   if (updateInfo.error) {
     return updateInfo.error;
   }
@@ -278,6 +282,10 @@ const getUpdateDetail = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
     return updateInfo.autoUpdate.progress?.total
       ? `${Math.round((updateInfo.autoUpdate.progress.transferred ?? 0) / 1024 / 1024)} MB downloaded.`
       : "Keep TimeBro open while the update downloads.";
+  }
+
+  if (updateInfo?.autoUpdate?.platform === "linux-snap") {
+    return updateInfo.autoUpdate.reason ?? "Snap refreshes TimeBro automatically.";
   }
 
   if (updateInfo?.updateAvailable && updateInfo.autoUpdate?.supported) {
@@ -1174,7 +1182,15 @@ export const SettingsView = ({
 
       <div
         className={`update-status ${
-          updateInfo?.error ? "error" : updateInfo?.updateAvailable ? "available" : updateInfo ? "current" : ""
+          updateInfo?.autoUpdate?.platform === "linux-snap"
+            ? "current"
+            : updateInfo?.error
+              ? "error"
+              : updateInfo?.updateAvailable
+                ? "available"
+                : updateInfo
+                  ? "current"
+                  : ""
         }`}
       >
         <strong>{getUpdateStatus(updateInfo, isCheckingUpdates)}</strong>
@@ -1189,7 +1205,7 @@ export const SettingsView = ({
           disabled={isCheckingUpdates}
         >
           {isCheckingUpdates ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
-          Check updates
+          {updateInfo?.autoUpdate?.platform === "linux-snap" ? "Refresh release notes" : "Check updates"}
         </button>
         <button
           className="secondary-button"
