@@ -26,6 +26,7 @@
     "dist:win": "npm run build && electron-builder --win nsis zip --publish never",
     "dist:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
     "dist:snap": "npm run build && electron-builder --linux snap --publish never",
+    "dist:snap:stage": "npm run build && node scripts/stage-snap.mjs",
     "release:dry-run": "npm run test && npm run e2e:renderer && npm run build",
     "release:patch": "npm version patch -m \"chore(release): v%s\"",
     "release:minor": "npm version minor -m \"chore(release): v%s\"",

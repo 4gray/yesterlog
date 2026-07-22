@@ -30,6 +30,10 @@ workflow, and prepare controlled publication through the Snap Store.
 - [x] Add Snap build and `edge` publication to release CI.
 - [x] Document Store metadata, testing, and promotion.
 - [x] Verify tests, production build, workflow, and packaging config.
+- [ ] Repair the hosted Ubuntu Snap build after the v2.7.1 LXD networking
+  failure by using Canonical's supported GitHub build action.
+- [ ] Verify the repaired tagged release uploads `timebro` to the Store's
+  `edge` channel.
 
 ## External actions
 
@@ -48,8 +52,10 @@ workflow, and prepare controlled publication through the Snap Store.
 - Release workflow YAML, Store media, and whitespace checks: passed.
 - Browser review of Settings → About: no clipping, overflow, console warnings,
   or console errors.
-- A real `.snap` is intentionally delegated to the Ubuntu 24.04 release job,
-  which installs and uses LXD for the build and lint pass.
+- The first v2.7.1 hosted build reached Snapcraft, but GitHub runner forwarding
+  prevented LXD from downloading its Ubuntu 24.04 base image. The repair keeps
+  the real `.snap` build on Ubuntu 24.04 and delegates LXD/network setup to
+  Canonical's `snapcore/action-build` action.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.
