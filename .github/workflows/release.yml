@@ -180,9 +180,6 @@ jobs:
         with:
           path: release/__snap-amd64
 
-      - name: Lint Snap
-        run: snapcraft lint "${{ steps.snapcraft.outputs.snap }}"
-
       - name: Upload Snap artifact
         uses: actions/upload-artifact@v4
         with:

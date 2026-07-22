@@ -56,6 +56,11 @@ workflow, and prepare controlled publication through the Snap Store.
   prevented LXD from downloading its Ubuntu 24.04 base image. The repair keeps
   the real `.snap` build on Ubuntu 24.04 and delegates LXD/network setup to
   Canonical's `snapcore/action-build` action.
+- Repair-branch run `29948870381` successfully packed
+  `timebro_2.7.1_amd64.snap`; its only failure was the redundant post-pack lint
+  command outside the action's LXD group session. Snapcraft already ran its
+  linters during the successful pack, so the duplicate workflow step was
+  removed.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.
