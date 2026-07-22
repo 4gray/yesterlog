@@ -112,4 +112,29 @@ describe("Recap AI grounding", () => {
       "Unblocked the release review for the platform team"
     );
   });
+
+  it("rejects responses with no visible copy for the requested detail", () => {
+    const draft = fallback();
+    expect(parseRecapWorkspaceDraft(responseFor(draft, "cv", (copy) => {
+      copy.lines = [];
+    }), draft, "cv", "detailed")).toBeUndefined();
+    expect(parseRecapWorkspaceDraft(responseFor(draft, "standup", (copy) => {
+      copy.lead = undefined;
+      copy.lines = [];
+    }), draft, "standup", "headline")).toBeUndefined();
+  });
+
+  it("preserves richer fallback content when applying a headline rewrite", () => {
+    const draft = fallback();
+    const original = structuredClone(draft.themes[0].copy.perf);
+    const parsed = parseRecapWorkspaceDraft(responseFor(draft, "perf", (copy) => {
+      copy.lead = "AI brief.";
+      copy.paragraphs = [];
+      copy.lines = [];
+    }), draft, "perf", "headline");
+
+    expect(parsed?.themes[0].copy.perf.lead).toBe("AI brief.");
+    expect(parsed?.themes[0].copy.perf.paragraphs).toEqual(original.paragraphs);
+    expect(parsed?.themes[0].copy.perf.lines).toEqual(original.lines);
+  });
 });

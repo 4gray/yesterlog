@@ -48,7 +48,7 @@ const FORMAT_INSTRUCTIONS: Record<RecapFormat, string[]> = {
 };
 
 const DETAIL_INSTRUCTIONS: Record<RecapDetail, string> = {
-  headline: "Headline mode: write only a useful lead and the minimum copy required by the format.",
+  headline: "Headline mode: return a useful non-empty lead (or version for changelog). Keep paragraphs and lines empty because richer local detail is preserved by the app.",
   balanced: "Standard mode: for narrative formats write one paragraph of 2 to 4 sentences; for list formats keep only the strongest items.",
   detailed: "Detailed mode: for narrative formats write 2 or 3 paragraphs of 2 to 4 complete sentences each, then up to 4 evidence highlights; for list formats add useful context without repeating source metadata."
 };
@@ -223,6 +223,24 @@ const parseLines = (
   });
 };
 
+const mergeParagraphsForDetail = (
+  incoming: RecapCopyParagraph[],
+  fallback: RecapCopyParagraph[] | undefined,
+  detail: RecapDetail
+) => {
+  const existing = fallback ?? [];
+  if (detail === "headline") return existing;
+  if (detail === "detailed") return incoming;
+  return [...incoming, ...existing.slice(incoming.length)];
+};
+
+const mergeLinesForDetail = (incoming: RecapCopyLine[], fallback: RecapCopyLine[], detail: RecapDetail) => {
+  if (detail === "headline") return fallback;
+  if (detail === "detailed") return incoming;
+  const coveredRefs = new Set(incoming.flatMap((line) => line.refs));
+  return [...incoming, ...fallback.filter((line) => !line.refs.some((ref) => coveredRefs.has(ref)))];
+};
+
 export const parseRecapWorkspaceDraft = (
   raw: string,
   fallback: RecapDraftVersion,
@@ -249,15 +267,21 @@ export const parseRecapWorkspaceDraft = (
       const version = block.version ? String(block.version).trim() : undefined;
       validateNumbers([lead, version], allowedNumbers);
       const paragraphs = parseParagraphs(block.paragraphs, allowed, allowedNumbers, base.id, format);
-      if ((format === "perf" || format === "manager") && detail !== "headline" && !paragraphs.length) throw new Error("missing narrative");
+      const lines = parseLines(block.lines, allowed, allowedNumbers, base.id, format, base.copy[format].lines);
+      const isNarrative = format === "perf" || format === "manager";
+      const headline = format === "changelog" ? version : lead;
+      if (detail === "headline" && !headline) throw new Error("missing headline copy");
+      if (isNarrative && detail !== "headline" && !paragraphs.length) throw new Error("missing narrative");
+      if (!isNarrative && detail !== "headline" && !lines.length) throw new Error("missing lines");
       if (format !== "perf" && format !== "manager" && paragraphs.length) throw new Error("unexpected narrative");
+      const fallbackCopy = base.copy[format];
       const copy = {
         ...base.copy,
         [format]: {
-          lead,
-          version,
-          paragraphs,
-          lines: parseLines(block.lines, allowed, allowedNumbers, base.id, format, base.copy[format].lines)
+          lead: lead ?? fallbackCopy.lead,
+          version: version ?? fallbackCopy.version,
+          paragraphs: mergeParagraphsForDetail(paragraphs, fallbackCopy.paragraphs, detail),
+          lines: mergeLinesForDetail(lines, fallbackCopy.lines, detail)
         }
       };
       return { ...base, name, copy };

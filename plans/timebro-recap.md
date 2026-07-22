@@ -97,13 +97,14 @@ Make Recap feel immediate and trustworthy: local reconstruction may happen autom
 - [x] Assign each trusted CV outcome to at most one AI-generated accomplishment line.
 - [x] Keep local impact carry one-to-one across regrouping and restore repository-qualified refs after cloud redaction.
 - [x] Avoid repeated schema migration when a user browses a legacy draft version.
+- [x] Reject empty AI copy and preserve richer local detail when applying Brief rewrites.
 - [x] Add the guided CV impact editor and grounded export formatting.
 - [x] Update the action row, status copy, responsive styles, and accessibility states.
 - [x] Add lifecycle, version-protection, impact, component, export, and rendered UI verification.
 
 ### Verification status
 
-- Passed: `npm run test` (123 files, 804 tests).
+- Passed: `npm run test` (123 files, 806 tests).
 - Passed: `npm run build`.
 - Passed: `npm run e2e:renderer` (8 flows), including refresh versioning and CV outcome entry.
 - Passed: Playwright inspection at 1440×960 light and 1040×720 dark with no fresh-page console errors, broken action wrapping, or horizontal clipping.
