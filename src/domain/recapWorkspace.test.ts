@@ -158,6 +158,40 @@ describe("Recap evidence", () => {
     expect(recapCoverageNote(draft)).toContain("0 of 1 elapsed week");
   });
 
+  it("counts Jira coverage only when a persisted scan covers the elapsed interval", () => {
+    const input = evidence("week");
+    input.syncResults = [{
+      weekKey: "2026-06-15",
+      scanStartISO: "2026-06-14T00:00:00.000Z",
+      scanEndExclusiveISO: "2026-06-19T00:00:00.000Z",
+      daySummaries: {}
+    } as unknown as RecapEvidenceInput["syncResults"][number]];
+
+    const covered = buildDeterministicRecap(input, 1, new Date("2026-06-18T12:00:00.000Z"));
+    expect(covered.coverage).toMatchObject({ status: "complete", jiraWeeks: 1, elapsedWeeks: 1 });
+
+    delete input.syncResults[0].scanStartISO;
+    delete input.syncResults[0].scanEndExclusiveISO;
+    const projectedOnly = buildDeterministicRecap(input, 2, new Date("2026-06-18T12:00:00.000Z"));
+    expect(projectedOnly.coverage).toMatchObject({ status: "sparse", jiraWeeks: 0, elapsedWeeks: 1 });
+  });
+
+  it("keeps an older month partial when projected ledger weeks fall outside the persisted scan", () => {
+    const input = evidence("month");
+    input.syncResults = ["2026-06-01", "2026-06-08", "2026-06-15", "2026-06-22", "2026-06-29"].map((weekKey) => ({
+      weekKey,
+      daySummaries: {},
+      ...(weekKey === "2026-06-15" ? {
+        scanStartISO: new Date(2026, 5, 15).toISOString(),
+        scanEndExclusiveISO: new Date(2026, 6, 1).toISOString()
+      } : {})
+    } as unknown as RecapEvidenceInput["syncResults"][number]));
+
+    const draft = buildDeterministicRecap(input, 1, new Date(2026, 5, 30, 12));
+    expect(draft.coverage).toMatchObject({ status: "partial", jiraWeeks: 3, elapsedWeeks: 5 });
+    expect(recapCoverageNote(draft)).toContain("3 of 5 elapsed weeks");
+  });
+
   it("only assigns changelog tags when evidence explicitly records a completed change", () => {
     const sources: RecapSourceItem[] = [
       { id: "investigate", kind: "local", dateKey: "2026-06-17", title: "Investigate payment bug", timeSpentSeconds: 3600, clusterKey: "work" },

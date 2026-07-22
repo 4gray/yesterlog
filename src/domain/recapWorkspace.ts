@@ -628,7 +628,23 @@ export const buildRecapCoverage = (input: RecapEvidenceInput, sources: RecapSour
   const requested = new Set(requestedWeekKeys);
   const currentWeekKey = toLocalDateKey(startOfWeekMonday(now));
   const elapsedWeekKeys = requestedWeekKeys.filter((weekKey) => weekKey <= currentWeekKey);
-  const jiraWeeks = new Set(input.syncResults.filter((result) => requested.has(result.weekKey) && result.weekKey <= currentWeekKey).map((result) => result.weekKey)).size;
+  const intervalStart = fromLocalDateKey(input.interval.startDateKey);
+  const intervalEnd = fromLocalDateKey(input.interval.endDateKeyExclusive);
+  const jiraWeeks = elapsedWeekKeys.filter((weekKey) => {
+    const weekStart = fromLocalDateKey(weekKey);
+    const coveredStart = weekStart > intervalStart ? weekStart : intervalStart;
+    const weekEnd = addDays(weekStart, 7);
+    const intervalBoundedEnd = weekEnd < intervalEnd ? weekEnd : intervalEnd;
+    const coveredEnd = intervalBoundedEnd < now ? intervalBoundedEnd : now;
+    if (coveredEnd <= coveredStart) return false;
+    return input.syncResults.some((result) => {
+      if (!result.scanStartISO || !result.scanEndExclusiveISO) return false;
+      const scanStart = new Date(result.scanStartISO);
+      const scanEnd = new Date(result.scanEndExclusiveISO);
+      return !Number.isNaN(scanStart.getTime()) && !Number.isNaN(scanEnd.getTime()) &&
+        scanStart <= coveredStart && scanEnd >= coveredEnd;
+    });
+  }).length;
   const ratio = elapsedWeekKeys.length ? jiraWeeks / elapsedWeekKeys.length : 1;
   return {
     requestedWeeks: requestedWeekKeys.length,

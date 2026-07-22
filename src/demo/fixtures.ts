@@ -361,7 +361,9 @@ const buildSyncResult = ({
     trackedSeconds,
     issueCount: issueKeys.size,
     worklogCount: logs.length,
-    daySummaries
+    daySummaries,
+    scanStartISO: weekStart.toISOString(),
+    scanEndExclusiveISO: addDays(today, 1).toISOString()
   };
 };
 

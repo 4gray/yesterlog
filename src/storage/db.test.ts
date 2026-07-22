@@ -172,6 +172,15 @@ describe("Jira worklog ledger", () => {
     const synthesizedLatestWeek = await getSyncResult("2026-08-03");
     expect(synthesizedLatestWeek?.jiraSite).toBe(siteB);
     expect(synthesizedLatestWeek?.sourceWorklogs).toEqual([b2]);
+    expect(synthesizedLatestWeek).toMatchObject({
+      scanStartISO: "2026-04-01T00:00:00.000Z",
+      scanEndExclusiveISO: "2026-08-10T00:00:00.000Z"
+    });
+
+    const outsidePersistedScan = await getSyncResult("2026-08-17");
+    expect(outsidePersistedScan?.sourceWorklogs).toEqual([b2]);
+    expect(outsidePersistedScan?.scanStartISO).toBeUndefined();
+    expect(outsidePersistedScan?.scanEndExclusiveISO).toBeUndefined();
   });
 
   it("orders synthesized sync timestamps by instant instead of Jira date syntax", async () => {
