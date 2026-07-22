@@ -34,6 +34,7 @@
   --red: #e05d5d;
   --purple: #bda6f5;
   --teal: #6bd0c2;
+  --coral: #e8806c;
   /* AI accent — used ONLY for optional local-AI affordances */
   --ai: #9c8cff;
 
@@ -84,6 +85,7 @@
     --amber-soft: #9a6a16;
     --purple: #7a52d6;
     --teal: #1f8a7c;
+    --coral: #c0503a;
     --ai: #6d4fd6;
   }
 }
@@ -115,6 +117,7 @@
   --amber-soft: #9a6a16;
   --purple: #7a52d6;
   --teal: #1f8a7c;
+  --coral: #c0503a;
   --ai: #6d4fd6;
 }
 
@@ -180,4 +183,3 @@ a {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-

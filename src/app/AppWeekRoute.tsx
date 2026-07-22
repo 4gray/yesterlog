@@ -33,6 +33,9 @@ export interface AppWeekRouteProps {
   handleConfirmRecurring: WeekViewProps["onConfirmRecurring"];
   handleSkipRecurring: WeekViewProps["onSkipRecurring"];
   handleDeleteRecurringOccurrence: WeekViewProps["onDeleteRecurring"];
+  savedRecaps?: WeekViewProps["savedRecaps"];
+  onOpenRecap?: WeekViewProps["onOpenRecap"];
+  onOpenSavedRecap?: WeekViewProps["onOpenSavedRecap"];
 }
 
 export const AppWeekRoute = ({
@@ -64,7 +67,10 @@ export const AppWeekRoute = ({
   handleAddWorklog,
   handleConfirmRecurring,
   handleSkipRecurring,
-  handleDeleteRecurringOccurrence
+  handleDeleteRecurringOccurrence,
+  savedRecaps,
+  onOpenRecap,
+  onOpenSavedRecap
 }: AppWeekRouteProps) => (
   <WeekView
     weekState={weekState}
@@ -95,5 +101,8 @@ export const AppWeekRoute = ({
     onConfirmRecurring={handleConfirmRecurring}
     onSkipRecurring={handleSkipRecurring}
     onDeleteRecurring={handleDeleteRecurringOccurrence}
+    savedRecaps={savedRecaps}
+    onOpenRecap={onOpenRecap}
+    onOpenSavedRecap={onOpenSavedRecap}
   />
 );

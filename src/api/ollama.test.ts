@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AiGenerateResult } from "../../shared/types";
-import { polishRecap } from "./ollama";
+import { buildDeterministicRecap, recapIntervalForDate, type RecapEvidenceInput } from "../domain/recapWorkspace";
+import { enhanceRecapWorkspace, polishRecap } from "./ollama";
 import { nativeApi } from "./native";
 
 const connection = { provider: "ollama" as const, endpoint: "http://localhost:11434", model: "llama3.1:8b" };
@@ -74,5 +75,59 @@ describe("polishRecap redaction", () => {
 
     await polishRecap(recapWithKey, { provider: "ollama", endpoint: "http://localhost:11434", model: "llama3.1:8b" });
     expect(sentPrompt).toContain("ABC-1");
+  });
+});
+
+const workspaceDraft = () => {
+  const input: RecapEvidenceInput = {
+    interval: recapIntervalForDate("week", new Date(2026, 5, 17)),
+    syncResults: [], reviewResults: [], activityResults: [], recurringEntries: [], reconstructDrafts: {},
+    personalNotes: [{
+      id: "fact", weekKey: "2026-06-15", dateKey: "2026-06-17", title: "Design review",
+      text: "Reviewed the flow", timeSpentSeconds: 3600, startedISO: "2026-06-17T10:00:00Z",
+      createdAt: "2026-06-17T10:00:00Z", updatedAt: "2026-06-17T10:00:00Z"
+    }]
+  };
+  return buildDeterministicRecap(input);
+};
+
+const workspaceResponse = (draft: ReturnType<typeof workspaceDraft>, sourceRef: string, themeId = draft.themes[0].id) => JSON.stringify({
+  themes: [{
+    id: themeId,
+    name: "Design review",
+    copy: Object.fromEntries((["perf", "manager", "cv", "standup", "changelog"] as const).map((format) => [format, {
+      lead: "Grounded update.",
+      version: format === "changelog" ? "Grounded release." : undefined,
+      lines: [{ id: `${format}-line`, short: "Completed grounded work.", long: "Completed grounded work from the cited evidence.", refs: [sourceRef], tag: format === "changelog" ? "Added" : undefined }]
+    }]))
+  }]
+});
+
+describe("enhanceRecapWorkspace", () => {
+  it("uses the configured cloud provider, redacts reversible source ids, and restores valid output", async () => {
+    const draft = workspaceDraft();
+    let sentPrompt = "";
+    vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
+      sentPrompt = request.prompt;
+      return { ok: true, response: workspaceResponse(draft, "ID-1", draft.themes[0].id.replace("note:fact", "ID-1")) };
+    });
+
+    const result = await enhanceRecapWorkspace(draft, {
+      provider: "claude-cli", endpoint: "", model: "sonnet", cliPath: "claude", redactLiterals: []
+    });
+
+    expect(sentPrompt).not.toContain("note:fact");
+    expect(sentPrompt).toContain("ID-1");
+    expect(result.generator).toBe("ai");
+    expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["note:fact"]);
+  });
+
+  it("keeps the deterministic draft when the provider fails or returns invalid copy", async () => {
+    const draft = workspaceDraft();
+    mockGenerate(async () => ({ ok: false, message: "offline" }));
+    expect(await enhanceRecapWorkspace(draft, connection)).toBe(draft);
+    vi.restoreAllMocks();
+    mockGenerate(async () => ({ ok: true, response: "{}" }));
+    expect(await enhanceRecapWorkspace(draft, connection)).toBe(draft);
   });
 });

@@ -60,6 +60,10 @@ vi.mock("../components/ReportsView", () => ({
   )
 }));
 
+vi.mock("../components/RecapView", () => ({
+  RecapView: () => <section data-testid="recap-view">Recap</section>
+}));
+
 vi.mock("../components/SettingsView", () => ({
   SettingsView: ({ weekRangeLabel }: { weekRangeLabel: string }) => (
     <section data-testid="settings-view">{weekRangeLabel}</section>
@@ -101,6 +105,7 @@ const noop = () => undefined;
 const baseProps = (): AppMainViewProps => ({
   view: "week",
   reportTab: "summary",
+  isDemo: false,
   isBooting: false,
   currentDate: new Date(2026, 5, 17, 12),
   ticketOptions: [],
@@ -198,7 +203,16 @@ const baseProps = (): AppMainViewProps => ({
   syncLabel: "SYNCED 6:47 PM",
   viewMode: "summary",
   onViewModeChange: noop,
-  onOpenCommandPalette: noop
+  onOpenCommandPalette: noop,
+  recapSuccess: noop,
+  recapError: noop,
+  openRecapCalendar: noop,
+  savedRecaps: [],
+  onOpenWeekRecap: noop,
+  onOpenMonthRecap: noop,
+  onOpenReportsRecap: noop,
+  onOpenSavedRecap: noop,
+  onRecapSaved: noop
 });
 
 let container: HTMLDivElement;
@@ -238,6 +252,7 @@ describe("AppMainView", () => {
     ["review", "review-view"],
     ["tickets", "tickets-view"],
     ["reports", "reports-view"],
+    ["recap", "recap-view"],
     ["settings", "settings-view"]
   ] as const)("routes the %s app view", (view, testId) => {
     renderView({ view });

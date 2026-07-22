@@ -48,13 +48,20 @@ import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWeekViewMode } from "./components/useWeekViewMode";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
+import type { RecapInterval, RecapPeriod, SavedRecap } from "../shared/types";
+import { fromLocalDateKey, toLocalDateKey } from "./utils/date";
+import { getSavedRecaps } from "./storage/db";
+import { recapIntervalForDate, recapIntervalParam } from "./domain/recapWorkspace";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
-  const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view, isDemo });
+  const hashView = typeof window !== "undefined"
+    ? window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|reports|recap|settings)/)?.[1] as AppView | undefined
+    : undefined;
+  const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view ?? hashView, isDemo });
   const { reportTab, setReportTab } = useReportTabState({ initialTab: demoConfig?.reportTab, persist: !isDemo });
   const { settings, setSettings, settingsDraft, setSettingsDraft } = useAppSettingsState({ demoScenario });
   const isSettingsDirty = useMemo(
@@ -124,6 +131,11 @@ export const App = () => {
   );
   const { reviewTargetMode, setReviewTargetMode } = useAppReviewTargetState();
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
+  const [savedRecaps, setSavedRecaps] = useState<SavedRecap[]>([]);
+  useEffect(() => {
+    if (isDemo) return;
+    void getSavedRecaps().then(setSavedRecaps).catch(() => undefined);
+  }, [isDemo, view]);
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
   const { addModalDate, setAddModalDate, addTimePrefill, setAddTimePrefill, editingWorklog, setEditingWorklog } =
     useAppTimeEntryModalState();
@@ -219,10 +231,52 @@ export const App = () => {
       if (nextView === "settings") {
         setSettingsSection("jira");
       }
+      if (!isDemo) window.location.hash = `#/${nextView}`;
       handleViewChange(nextView);
     },
-    [handleViewChange]
+    [handleViewChange, isDemo]
   );
+  useEffect(() => {
+    if (isDemo) return;
+    const onHash = () => {
+      const next = window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|reports|recap|settings)/)?.[1] as AppView | undefined;
+      const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+      if (next === "week" && /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "")) {
+        setWeekStart(fromLocalDateKey(params.get("week")!));
+      }
+      if (next === "month" && /^\d{4}-\d{2}$/.test(params.get("month") ?? "")) {
+        setMonthAnchor(fromLocalDateKey(`${params.get("month")}-01`));
+      }
+      if (next) setView(next);
+    };
+    onHash();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [isDemo, setMonthAnchor, setView, setWeekStart]);
+  const openRecap = useCallback((period: RecapPeriod, date: Date, savedId?: string) => {
+    const target = recapIntervalForDate(period, date);
+    const params = new URLSearchParams({ period, interval: recapIntervalParam(target) });
+    if (savedId) params.set("saved", savedId);
+    window.location.hash = `#/recap?${params}`;
+    setView("recap");
+  }, [setView]);
+  const openSavedRecap = useCallback((saved: SavedRecap) => {
+    window.location.hash = `#/recap?saved=${encodeURIComponent(saved.id)}`;
+    setView("recap");
+  }, [setView]);
+  const openRecapCalendar = useCallback((interval: RecapInterval) => {
+    if (interval.period === "week") {
+      setWeekStart(fromLocalDateKey(interval.startDateKey));
+      window.location.hash = `#/week?week=${interval.startDateKey}`;
+      setView("week");
+      return;
+    }
+    const end = fromLocalDateKey(interval.endDateKeyExclusive);
+    const month = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+    setMonthAnchor(month);
+    window.location.hash = `#/month?month=${toLocalDateKey(month).slice(0, 7)}`;
+    setView("month");
+  }, [setMonthAnchor, setView, setWeekStart]);
   const monthState = useMonthState({
     isMonthView: view === "month",
     isBooting,
@@ -703,6 +757,7 @@ export const App = () => {
       <AppMainView
         view={view}
         reportTab={reportTab}
+        isDemo={isDemo}
         isBooting={isBooting}
         viewMode={weekViewMode}
         onViewModeChange={selectWeekViewMode}
@@ -799,6 +854,15 @@ export const App = () => {
         settingsSection={settingsSection}
         syncState={syncState}
         syncLabel={syncLabel}
+        recapSuccess={showSuccess}
+        recapError={showError}
+        openRecapCalendar={openRecapCalendar}
+        savedRecaps={savedRecaps}
+        onOpenWeekRecap={() => openRecap("week", fromLocalDateKey(weekState.weekKey))}
+        onOpenMonthRecap={() => openRecap("month", monthAnchor)}
+        onOpenReportsRecap={() => openRecap("week", fromLocalDateKey(weekState.weekKey))}
+        onOpenSavedRecap={openSavedRecap}
+        onRecapSaved={(saved) => setSavedRecaps((current) => [saved, ...current.filter((item) => item.id !== saved.id)])}
       />
     </AppShellFrame>
   );

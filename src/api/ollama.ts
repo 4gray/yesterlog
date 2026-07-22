@@ -1,4 +1,4 @@
-import type { AiProvider, AppSettings } from "../../shared/types";
+import type { AiProvider, AppSettings, RecapDraftVersion } from "../../shared/types";
 import {
   buildEnhancePrompt,
   ENHANCE_SYSTEM_PROMPT,
@@ -8,6 +8,11 @@ import {
 } from "../domain/enhancePrompt";
 import { RECAP_POLISH_SYSTEM_PROMPT, buildRecapPolishPrompt } from "../domain/recapPolishPrompt";
 import { redactForCloud } from "../domain/redaction";
+import {
+  buildRecapWorkspacePrompt,
+  parseRecapWorkspaceDraft,
+  RECAP_WORKSPACE_SYSTEM_PROMPT
+} from "../domain/recapWorkspacePrompt";
 import type { ReconstructDay } from "../domain/reconstruct";
 import { nativeApi } from "./native";
 
@@ -232,5 +237,32 @@ export const polishRecap = async (recapText: string, connection: AiConnection): 
     return response.trim() || recapText;
   } catch {
     return recapText;
+  }
+};
+
+export const enhanceRecapWorkspace = async (
+  draft: RecapDraftVersion,
+  connection: AiConnection
+): Promise<RecapDraftVersion> => {
+  const provider = connection.provider ?? "ollama";
+  const prompt = buildRecapWorkspacePrompt(draft);
+  const redaction = isCloudProvider(provider)
+    ? redactForCloud(prompt, connection.redactLiterals, draft.sources.map((source) => source.id))
+    : undefined;
+  try {
+    const result = await nativeApi.generateWithAi({
+      provider,
+      endpoint: connection.endpoint,
+      model: connection.model,
+      cliPath: connection.cliPath,
+      system: RECAP_WORKSPACE_SYSTEM_PROMPT,
+      prompt: redaction ? redaction.text : prompt,
+      format: "json"
+    });
+    if (!result.ok || !result.response) return draft;
+    const response = redaction ? redaction.restore(result.response) : result.response;
+    return parseRecapWorkspaceDraft(response, draft) ?? draft;
+  } catch {
+    return draft;
   }
 };

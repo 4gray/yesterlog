@@ -1,7 +1,7 @@
 // @vitest-environment node
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import type { JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import type { JiraWorklog, RecapDraftRecord, SavedRecap, SyncResult, WorklogAllocationPreference } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import {
   deleteWorklogAllocationPreference,
@@ -9,6 +9,10 @@ import {
   getWorklogAllocationPreferences,
   saveSyncResult,
   saveSettings,
+  getRecapDraft,
+  getSavedRecaps,
+  saveRecapDraft,
+  saveSavedRecap,
   saveWorklogAllocationPreference
 } from "./db";
 import { mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
@@ -24,6 +28,47 @@ const source = (id: string, jiraSite: string, started: string): JiraWorklog => (
   created: started,
   updated: started,
   timeSpentSeconds: 16 * 3600
+});
+
+describe("Recap persistence", () => {
+  const version = {
+    version: 1,
+    generatedAt: "2026-06-30T12:00:00.000Z",
+    generator: "deterministic" as const,
+    interval: {
+      key: "quarter:2026-Q2",
+      period: "quarter" as const,
+      startDateKey: "2026-04-01",
+      endDateKeyExclusive: "2026-07-01",
+      label: "Q2 2026",
+      shortLabel: "Q2 2026",
+      calendarLabel: "Q2"
+    },
+    themes: [],
+    sources: [],
+    coverage: { requestedWeeks: 14, jiraWeeks: 2, bitbucketWeeks: 1, ticketCount: 0, pullRequestCount: 0, commitCount: 0 }
+  };
+
+  it("stores every draft version and the active version by interval", async () => {
+    const record: RecapDraftRecord = {
+      intervalKey: version.interval.key,
+      activeVersion: 2,
+      versions: [version, { ...version, version: 2, generatedAt: "2026-06-30T12:05:00.000Z" }]
+    };
+    await saveRecapDraft(record);
+    expect(await getRecapDraft(record.intervalKey)).toEqual(record);
+  });
+
+  it("orders saved snapshots newest-first and never overwrites an existing id", async () => {
+    const older: SavedRecap = { id: "saved-recap-older", savedAt: "2026-06-20T12:00:00.000Z", format: "perf", detail: "detailed", version };
+    const newer: SavedRecap = { id: "saved-recap-newer", savedAt: "2026-06-21T12:00:00.000Z", format: "manager", detail: "balanced", version };
+    await saveSavedRecap(older);
+    await saveSavedRecap(newer);
+    await expect(saveSavedRecap({ ...older, format: "cv" })).rejects.toBeTruthy();
+    const stored = (await getSavedRecaps()).filter((item) => item.id.startsWith("saved-recap-"));
+    expect(stored.map((item) => item.id)).toEqual([newer.id, older.id]);
+    expect(stored.find((item) => item.id === older.id)?.format).toBe("perf");
+  });
 });
 
 const syncResult = (

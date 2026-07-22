@@ -7,6 +7,7 @@ import type {
   JiraWorklog,
   PersonalNote,
   RecurringEntry,
+  SavedRecap,
   SyncResult,
   WeekState
 } from "../../shared/types";
@@ -85,6 +86,9 @@ interface WeekViewProps {
   onConfirmRecurring?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
   onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
+  savedRecaps?: SavedRecap[];
+  onOpenRecap?: () => void;
+  onOpenSavedRecap?: (saved: SavedRecap) => void;
 }
 
 interface QuickLogStartOptions {
@@ -594,7 +598,10 @@ export const WeekView = ({
   onDockLog,
   onConfirmRecurring,
   onSkipRecurring,
-  onDeleteRecurring
+  onDeleteRecurring,
+  savedRecaps = [],
+  onOpenRecap = () => undefined,
+  onOpenSavedRecap = () => undefined
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const now = currentDate ?? new Date();
@@ -605,6 +612,7 @@ export const WeekView = ({
   const relativeSyncLabel = resolveRelativeSyncLabel(syncState, now, syncResult);
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
+  const weekSavedRecaps = savedRecaps.filter((saved) => saved.version.interval.key === `week:${weekState.weekKey}`);
 
   const { open: dockOpen, shownCount: dockShown, toggleOpen: toggleDock, loadMore: loadMoreDock } = useActiveWorkDock(
     dockTickets.length
@@ -757,6 +765,9 @@ export const WeekView = ({
         onSync={onSync}
         onAddTime={onAddTime}
         onOpenCommandPalette={onOpenCommandPalette}
+        onOpenRecap={onOpenRecap}
+        savedRecapCount={weekSavedRecaps.length}
+        onOpenSavedRecap={() => weekSavedRecaps[0] && onOpenSavedRecap(weekSavedRecaps[0])}
       />
 
       <WeekViewStrip

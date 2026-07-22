@@ -8,6 +8,7 @@ import {
   History,
   LineChart,
   Settings,
+  Sparkles,
   Sun,
   Tag
 } from "lucide-react";
@@ -19,7 +20,7 @@ const SYNC_DOT_STATE: Record<AppSyncState, string> = {
   offline: "is-offline"
 };
 
-export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "settings";
+export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "recap" | "settings";
 export type ReportTab = "summary" | "composition" | "focus" | "trends";
 export type ThemeMode = "light" | "dark";
 
@@ -30,7 +31,8 @@ const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof
   { id: "recon", label: "RECONSTRUCT", Icon: History },
   { id: "review", label: "REVIEW", Icon: GitPullRequest },
   { id: "tickets", label: "TICKETS", Icon: Tag },
-  { id: "reports", label: "REPORTS", Icon: LineChart }
+  { id: "reports", label: "REPORTS", Icon: LineChart },
+  { id: "recap", label: "RECAP", Icon: Sparkles }
 ];
 
 /** Reports sub-pages, in sidebar order. Estimates is intentionally deferred. */

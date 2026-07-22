@@ -8,6 +8,7 @@ import { DayRing } from "./DayRing";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { TimeSplit } from "./TimeSplit";
 import { WeekNavigator } from "./WeekNavigator";
+import { Sparkles } from "lucide-react";
 
 interface ReportsSummaryProps {
   weekState: WeekState;
@@ -15,6 +16,7 @@ interface ReportsSummaryProps {
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
   onNextWeek: () => void;
+  onOpenRecap: () => void;
 }
 
 const clampPct = (value: number) => `${Math.min(Math.max(value, 0), 100)}%`;
@@ -130,7 +132,8 @@ export const ReportsSummary = ({
   weekStates,
   onPreviousWeek,
   onCurrentWeek,
-  onNextWeek
+  onNextWeek,
+  onOpenRecap
 }: ReportsSummaryProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
@@ -291,6 +294,10 @@ export const ReportsSummary = ({
         </div>
 
         <div className="reports-actions">
+          <button type="button" className="report-recap-link" onClick={onOpenRecap}>
+            <Sparkles size={14} />
+            WRITE THE RECAP →
+          </button>
           <WeekNavigator onPreviousWeek={onPreviousWeek} onCurrentWeek={onCurrentWeek} onNextWeek={onNextWeek} />
         </div>
       </div>

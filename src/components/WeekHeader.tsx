@@ -1,4 +1,4 @@
-import { Loader2, Plus, RotateCw } from "lucide-react";
+import { Bookmark, Loader2, Plus, RotateCw, Sparkles } from "lucide-react";
 import { formatHours, formatWeekRangeCompact, getIsoWeekNumber } from "../utils/date";
 import { formatShortcut } from "../utils/platform";
 import { CommandBar } from "./CommandBar";
@@ -20,6 +20,9 @@ export interface WeekHeaderProps {
   onSync: () => void;
   onAddTime: () => void;
   onOpenCommandPalette: () => void;
+  onOpenRecap?: () => void;
+  savedRecapCount?: number;
+  onOpenSavedRecap?: () => void;
 }
 
 export const WeekHeader = ({
@@ -33,7 +36,10 @@ export const WeekHeader = ({
   syncLabel,
   onSync,
   onAddTime,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  onOpenRecap = () => undefined,
+  savedRecapCount = 0,
+  onOpenSavedRecap = () => undefined
 }: WeekHeaderProps) => {
   const weekNumber = getIsoWeekNumber(weekStart);
   const rangeLabel = formatWeekRangeCompact(weekStart);
@@ -78,6 +84,22 @@ export const WeekHeader = ({
       </div>
 
       <div className="week-actions">
+        <button type="button" className="calendar-recap-link" onClick={onOpenRecap}>
+          <Sparkles size={14} />
+          RECAP THIS WEEK
+        </button>
+        {savedRecapCount > 0 && (
+          <button
+            type="button"
+            className="calendar-recap-marker"
+            onClick={onOpenSavedRecap}
+            aria-label={`Open latest of ${savedRecapCount} saved recaps for this week`}
+            title={`${savedRecapCount} saved ${savedRecapCount === 1 ? "recap" : "recaps"}`}
+          >
+            <Bookmark size={12} fill="currentColor" />
+            {savedRecapCount}
+          </button>
+        )}
         <CommandBar onOpen={onOpenCommandPalette} shortcutLabel={formatShortcut("K")} />
         <button
           type="button"

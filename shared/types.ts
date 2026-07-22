@@ -227,6 +227,102 @@ export interface WeekState {
   recurringTrackedHours: number;
 }
 
+export type RecapPeriod = "week" | "month" | "quarter";
+export type RecapFormat = "perf" | "manager" | "cv" | "standup" | "changelog";
+export type RecapDetail = "headline" | "balanced" | "detailed";
+export type RecapColorToken = "blue" | "purple" | "teal" | "amber" | "coral";
+export type RecapSourceKind = "ticket" | "pull-request" | "commit" | "meeting" | "local";
+export type RecapChangeTag = "Added" | "Changed" | "Fixed";
+
+export interface RecapInterval {
+  key: string;
+  period: RecapPeriod;
+  startDateKey: string;
+  endDateKeyExclusive: string;
+  label: string;
+  shortLabel: string;
+  calendarLabel: string;
+}
+
+export interface RecapSourceItem {
+  id: string;
+  kind: RecapSourceKind;
+  dateKey: string;
+  title: string;
+  timeSpentSeconds: number;
+  issueKey?: string;
+  issueUrl?: string;
+  epicKey?: string;
+  epicSummary?: string;
+  repository?: string;
+  pullRequestId?: number;
+  pullRequestUrl?: string;
+  role?: "authored" | "reviewed";
+  status?: string;
+  detail?: string;
+  clusterKey: string;
+}
+
+export interface RecapCopyLine {
+  id: string;
+  short: string;
+  long: string;
+  refs: string[];
+  tag?: RecapChangeTag;
+  emphasis?: string;
+}
+
+export interface RecapFormatCopy {
+  lead?: string;
+  version?: string;
+  lines: RecapCopyLine[];
+}
+
+export interface RecapTheme {
+  id: string;
+  name: string;
+  colorToken: RecapColorToken;
+  hours: number;
+  pullRequestCount: number;
+  ticketCount: number;
+  sourceIds: string[];
+  copy: Record<RecapFormat, RecapFormatCopy>;
+}
+
+export interface RecapCoverage {
+  requestedWeeks: number;
+  jiraWeeks: number;
+  bitbucketWeeks: number;
+  ticketCount: number;
+  pullRequestCount: number;
+  commitCount: number;
+}
+
+export interface RecapDraftVersion {
+  version: number;
+  generatedAt: string;
+  generator: "deterministic" | "ai";
+  interval: RecapInterval;
+  themes: RecapTheme[];
+  sources: RecapSourceItem[];
+  coverage: RecapCoverage;
+  editedAt?: string;
+}
+
+export interface RecapDraftRecord {
+  intervalKey: string;
+  activeVersion: number;
+  versions: RecapDraftVersion[];
+}
+
+export interface SavedRecap {
+  id: string;
+  savedAt: string;
+  format: RecapFormat;
+  detail: RecapDetail;
+  version: RecapDraftVersion;
+}
+
 export interface JiraConnectionResult {
   ok: boolean;
   message: string;

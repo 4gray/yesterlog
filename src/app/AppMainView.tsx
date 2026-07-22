@@ -1,10 +1,11 @@
 import type { ComponentProps } from "react";
-import type { WeekState } from "../../shared/types";
+import type { SavedRecap, WeekState } from "../../shared/types";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView, ReportTab } from "../components/Sidebar";
 import { TicketDetailsProvider, type OpenTicketDetails } from "../components/TicketDetailsContext";
 import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReconRoute } from "./AppReconRoute";
+import { AppRecapRoute } from "./AppRecapRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
@@ -15,6 +16,8 @@ import { AppWeekRoute } from "./AppWeekRoute";
 
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
 type AppReconRouteProps = ComponentProps<typeof AppReconRoute>;
+type AppRecapRouteProps = ComponentProps<typeof AppRecapRoute>;
+type AppReportsRouteProps = ComponentProps<typeof AppReportsRoute>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
@@ -24,6 +27,7 @@ type AppWeekRouteProps = ComponentProps<typeof AppWeekRoute>;
 export interface AppMainViewProps {
   view: AppView;
   reportTab: ReportTab;
+  isDemo: boolean;
   isBooting: boolean;
   currentDate: AppTodayRouteProps["currentDate"];
   ticketOptions: AppTodayRouteProps["ticketOptions"];
@@ -122,11 +126,21 @@ export interface AppMainViewProps {
   viewMode: AppWeekRouteProps["viewMode"];
   onViewModeChange: AppWeekRouteProps["onViewModeChange"];
   onOpenCommandPalette: AppWeekRouteProps["onOpenCommandPalette"];
+  recapSuccess: AppRecapRouteProps["onSuccess"];
+  recapError: AppRecapRouteProps["onError"];
+  openRecapCalendar: AppRecapRouteProps["onOpenCalendar"];
+  savedRecaps: SavedRecap[];
+  onOpenWeekRecap: AppWeekRouteProps["onOpenRecap"];
+  onOpenMonthRecap: AppMonthRouteProps["onOpenRecap"];
+  onOpenReportsRecap: AppReportsRouteProps["onOpenRecap"];
+  onOpenSavedRecap: (saved: SavedRecap) => void;
+  onRecapSaved: NonNullable<AppRecapRouteProps["onSavedRecap"]>;
 }
 
 export const AppMainView = ({
   view,
   reportTab,
+  isDemo,
   isBooting,
   currentDate,
   ticketOptions,
@@ -222,7 +236,16 @@ export const AppMainView = ({
   syncLabel,
   viewMode,
   onViewModeChange,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  recapSuccess,
+  recapError,
+  openRecapCalendar,
+  savedRecaps,
+  onOpenWeekRecap,
+  onOpenMonthRecap,
+  onOpenReportsRecap,
+  onOpenSavedRecap,
+  onRecapSaved
 }: AppMainViewProps) => {
   let content;
 
@@ -288,6 +311,9 @@ export const AppMainView = ({
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
+        savedRecaps={savedRecaps}
+        onOpenRecap={onOpenWeekRecap}
+        onOpenSavedRecap={onOpenSavedRecap}
       />
     );
   } else if (view === "recon") {
@@ -320,6 +346,9 @@ export const AppMainView = ({
         goToPreviousMonth={goToPreviousMonth}
         goToCurrentMonth={goToCurrentMonth}
         goToNextMonth={goToNextMonth}
+        savedRecaps={savedRecaps}
+        onOpenRecap={onOpenMonthRecap}
+        onOpenSavedRecap={onOpenSavedRecap}
       />
     );
   } else if (view === "review") {
@@ -368,6 +397,27 @@ export const AppMainView = ({
         goToPreviousWeek={goToPreviousWeek}
         goToCurrentWeek={goToCurrentWeek}
         goToNextWeek={goToNextWeek}
+        onOpenRecap={onOpenReportsRecap}
+      />
+    );
+  } else if (view === "recap") {
+    content = (
+      <AppRecapRoute
+        currentDate={currentDate}
+        settings={settings}
+        recurringEvents={recurringEvents}
+        isDemo={isDemo}
+        onSuccess={recapSuccess}
+        onError={recapError}
+        onOpenCalendar={openRecapCalendar}
+        demoEvidence={isDemo ? {
+          syncResults: syncResult ? [syncResult] : [],
+          reviewResults: visibleBitbucketReviewResult ? [visibleBitbucketReviewResult] : [],
+          activityResults: jiraActivityResult ? [jiraActivityResult] : [],
+          personalNotes
+        } : undefined}
+        seedSavedRecaps={savedRecaps}
+        onSavedRecap={onRecapSaved}
       />
     );
   } else {

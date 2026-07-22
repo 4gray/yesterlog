@@ -13,7 +13,7 @@ export interface DemoConfig {
 
 const DEFAULT_SEED = "release";
 const DEFAULT_TODAY_KEY = "2026-06-17";
-const VIEWS: AppView[] = ["today", "week", "month", "recon", "review", "tickets", "reports", "settings"];
+const VIEWS: AppView[] = ["today", "week", "month", "recon", "review", "tickets", "reports", "recap", "settings"];
 const THEMES: ThemeMode[] = ["light", "dark"];
 const REPORT_TAB_IDS: ReportTab[] = REPORT_TABS.map((tab) => tab.id);
 

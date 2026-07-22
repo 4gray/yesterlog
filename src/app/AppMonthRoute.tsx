@@ -10,6 +10,9 @@ export interface AppMonthRouteProps {
   goToPreviousMonth: MonthViewProps["onPreviousMonth"];
   goToCurrentMonth: MonthViewProps["onCurrentMonth"];
   goToNextMonth: MonthViewProps["onNextMonth"];
+  savedRecaps?: MonthViewProps["savedRecaps"];
+  onOpenRecap?: MonthViewProps["onOpenRecap"];
+  onOpenSavedRecap?: MonthViewProps["onOpenSavedRecap"];
 }
 
 export const AppMonthRoute = ({
@@ -17,7 +20,10 @@ export const AppMonthRoute = ({
   openWeekFromMonth,
   goToPreviousMonth,
   goToCurrentMonth,
-  goToNextMonth
+  goToNextMonth,
+  savedRecaps,
+  onOpenRecap,
+  onOpenSavedRecap
 }: AppMonthRouteProps) => {
   if (!monthState) {
     return <LoadingView />;
@@ -30,6 +36,9 @@ export const AppMonthRoute = ({
       onPreviousMonth={goToPreviousMonth}
       onCurrentMonth={goToCurrentMonth}
       onNextMonth={goToNextMonth}
+      savedRecaps={savedRecaps}
+      onOpenRecap={onOpenRecap}
+      onOpenSavedRecap={onOpenSavedRecap}
     />
   );
 };

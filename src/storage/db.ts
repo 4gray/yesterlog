@@ -6,6 +6,8 @@ import type {
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
+  RecapDraftRecord,
+  SavedRecap,
   SyncResult,
   WeekOverride,
   WorklogAllocationPreference
@@ -15,7 +17,7 @@ import { DEFAULT_SETTINGS } from "../domain/week";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 const SETTINGS_KEY = "default";
 const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
@@ -33,6 +35,8 @@ type StoreName =
   | "recurringOccurrences"
   | "reconstructDrafts"
   | "reconstructAiDrafts"
+  | "recapDrafts"
+  | "savedRecaps"
   | "worklogAllocationPreferences"
   | "jiraWorklogs";
 
@@ -110,6 +114,14 @@ const openDatabase = () => {
         db.createObjectStore("reconstructAiDrafts", { keyPath: "dateKey" });
       }
 
+      if (!db.objectStoreNames.contains("recapDrafts")) {
+        db.createObjectStore("recapDrafts", { keyPath: "intervalKey" });
+      }
+
+      if (!db.objectStoreNames.contains("savedRecaps")) {
+        db.createObjectStore("savedRecaps", { keyPath: "id" });
+      }
+
       // Preferences introduced on the unreleased v11 schema were keyed by Jira
       // worklog ID alone. Recreate the local-only store with site/account scope.
       if (
@@ -161,6 +173,16 @@ const writeStore = async <T>(storeName: StoreName, value: T) => {
     const transaction = db.transaction(storeName, "readwrite");
     const request = transaction.objectStore(storeName).put(value);
 
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve();
+  });
+};
+
+const addStore = async <T>(storeName: StoreName, value: T) => {
+  const db = await openDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const request = transaction.objectStore(storeName).add(value);
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => resolve();
   });
@@ -641,3 +663,13 @@ export const getReconstructAiDrafts = async (dateKey: string): Promise<StoredAiD
 export const saveReconstructAiDrafts = (dateKey: string, drafts: StoredAiDrafts) => {
   return writeStore("reconstructAiDrafts", { dateKey, drafts });
 };
+
+export const getRecapDraft = (intervalKey: string): Promise<RecapDraftRecord | undefined> =>
+  readStore<RecapDraftRecord>("recapDrafts", intervalKey);
+
+export const saveRecapDraft = (draft: RecapDraftRecord) => writeStore("recapDrafts", draft);
+
+export const getSavedRecaps = async (): Promise<SavedRecap[]> =>
+  (await readAllStore<SavedRecap>("savedRecaps")).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+
+export const saveSavedRecap = (recap: SavedRecap) => addStore("savedRecaps", recap);

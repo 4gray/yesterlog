@@ -11,6 +11,7 @@ interface ReportsCompositionProps {
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
   onNextWeek: () => void;
+  onOpenRecap: () => void;
 }
 
 const SparkleIcon = () => (
@@ -24,12 +25,19 @@ export const ReportsComposition = ({
   weekState,
   onPreviousWeek,
   onCurrentWeek,
-  onNextWeek
+  onNextWeek,
+  onOpenRecap
 }: ReportsCompositionProps) => {
   const report = useMemo(() => buildComposition(weekState), [weekState]);
   const split = weekBillableSplit(weekState);
   const navigator = (
-    <WeekNavigator onPreviousWeek={onPreviousWeek} onCurrentWeek={onCurrentWeek} onNextWeek={onNextWeek} />
+    <div className="report-recap-controls">
+      <button type="button" className="report-recap-link" onClick={onOpenRecap}>
+        <SparkleIcon />
+        WRITE THE RECAP →
+      </button>
+      <WeekNavigator onPreviousWeek={onPreviousWeek} onCurrentWeek={onCurrentWeek} onNextWeek={onNextWeek} />
+    </div>
   );
 
   const header = (

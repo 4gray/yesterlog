@@ -10,6 +10,7 @@ export interface AppReportsRouteProps {
   goToPreviousWeek: ReportsViewProps["onPreviousWeek"];
   goToCurrentWeek: ReportsViewProps["onCurrentWeek"];
   goToNextWeek: ReportsViewProps["onNextWeek"];
+  onOpenRecap?: ReportsViewProps["onOpenRecap"];
 }
 
 export const AppReportsRoute = ({
@@ -18,7 +19,8 @@ export const AppReportsRoute = ({
   weekStates,
   goToPreviousWeek,
   goToCurrentWeek,
-  goToNextWeek
+  goToNextWeek,
+  onOpenRecap
 }: AppReportsRouteProps) => (
   <ReportsView
     reportTab={reportTab}
@@ -27,5 +29,6 @@ export const AppReportsRoute = ({
     onPreviousWeek={goToPreviousWeek}
     onCurrentWeek={goToCurrentWeek}
     onNextWeek={goToNextWeek}
+    onOpenRecap={onOpenRecap}
   />
 );

@@ -249,8 +249,54 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
     await clickNav(page, "REPORTS", "reports");
     assert.ok(await page.getByText("BY TICKET").isVisible());
 
+    await clickNav(page, "RECAP", "recap");
+    await page.locator(".recap-workspace").waitFor();
+    assert.ok(await page.getByText("Turn a stretch of real work into review-ready highlights").isVisible());
+
     await clickNav(page, "SETTINGS", "settings");
     assert.ok(await page.getByRole("heading", { name: "Jira connection" }).isVisible());
+  });
+});
+
+test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "recap", viewport: { width: 1440, height: 960 } }, async (page) => {
+    await page.locator(".recap-theme").first().waitFor();
+    assert.match(await page.evaluate(() => location.hash), /^#\/recap\?/);
+
+    await page.locator(".recap-segments").getByRole("button", { name: "week" }).click();
+    await page.locator(".recap-theme").first().waitFor();
+    await page.locator(".recap-format-list").getByRole("button", { name: /Manager update/ }).click();
+    await page.locator(".recap-detail-buttons").getByRole("button", { name: "balanced" }).click();
+    await page.getByRole("button", { name: /Regenerate/ }).click();
+    await page.getByRole("option", { name: "Version 2" }).waitFor({ state: "attached" });
+
+    const firstTheme = page.locator(".recap-theme").first();
+    await firstTheme.getByRole("button", { name: /^Edit / }).click();
+    await firstTheme.locator(".recap-edit-name").fill("Platform delivery & quality");
+    await firstTheme.getByRole("button", { name: "Apply edits" }).click();
+    assert.ok(await firstTheme.getByRole("heading", { name: "Platform delivery & quality" }).isVisible());
+
+    await page.getByRole("button", { name: "Export" }).click();
+    assert.ok(await page.getByRole("button", { name: "Copy text" }).isVisible());
+    assert.ok(await page.getByRole("button", { name: "Download Markdown" }).isVisible());
+    assert.ok(await page.getByRole("button", { name: "Print / Save PDF" }).isVisible());
+    await page.getByRole("button", { name: "Export" }).click();
+
+    await page.getByRole("button", { name: "Save to brag doc" }).click();
+    await page.locator(".recap-saved-card").first().click();
+    await page.getByRole("button", { name: "Duplicate as draft" }).waitFor();
+
+    await clickNav(page, "WEEK", "week");
+    await page.locator(".calendar-recap-marker").click();
+    await waitForView(page, "recap");
+    await page.getByRole("button", { name: "Duplicate as draft" }).waitFor();
+    assert.match(await page.evaluate(() => location.hash), /saved=/);
+
+    await page.evaluate(() => { location.hash = "#/recap?period=week&interval=2026-06-15&format=cv&detail=headline"; });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForDemoReady(page, "recap", "dark");
+    await page.getByRole("heading", { name: "Selected accomplishments" }).waitFor();
+    assert.ok(await page.locator(".recap-format-list button.active", { hasText: "CV bullets" }).isVisible());
   });
 });
 

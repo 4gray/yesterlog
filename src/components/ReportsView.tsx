@@ -13,6 +13,7 @@ interface ReportsViewProps {
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
   onNextWeek: () => void;
+  onOpenRecap?: () => void;
 }
 
 /**
@@ -26,20 +27,21 @@ export const ReportsView = ({
   weekStates,
   onPreviousWeek,
   onCurrentWeek,
-  onNextWeek
+  onNextWeek,
+  onOpenRecap = () => undefined
 }: ReportsViewProps) => {
   const nav = { onPreviousWeek, onCurrentWeek, onNextWeek };
 
   return (
     <div className="view view-scroll">
       {reportTab === "composition" ? (
-        <ReportsComposition weekState={weekState} {...nav} />
+        <ReportsComposition weekState={weekState} onOpenRecap={onOpenRecap} {...nav} />
       ) : reportTab === "focus" ? (
         <ReportsFocus weekState={weekState} weekStates={weekStates} {...nav} />
       ) : reportTab === "trends" ? (
         <ReportsTrends weekState={weekState} weekStates={weekStates} {...nav} />
       ) : (
-        <ReportsSummary weekState={weekState} weekStates={weekStates} {...nav} />
+        <ReportsSummary weekState={weekState} weekStates={weekStates} onOpenRecap={onOpenRecap} {...nav} />
       )}
     </div>
   );

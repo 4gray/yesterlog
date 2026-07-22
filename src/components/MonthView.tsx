@@ -1,4 +1,5 @@
-import { Search } from "lucide-react";
+import { Bookmark, Search, Sparkles } from "lucide-react";
+import type { SavedRecap } from "../../shared/types";
 import type { MonthState } from "../domain/month";
 import { activitySegmentsFromHours } from "../domain/activity";
 import { formatDuration, formatHours, fromLocalDateKey } from "../utils/date";
@@ -12,6 +13,9 @@ interface MonthViewProps {
   onPreviousMonth: () => void;
   onCurrentMonth: () => void;
   onNextMonth: () => void;
+  savedRecaps?: SavedRecap[];
+  onOpenRecap?: () => void;
+  onOpenSavedRecap?: (saved: SavedRecap) => void;
 }
 
 export const MonthView = ({
@@ -19,7 +23,10 @@ export const MonthView = ({
   onSelectWeek,
   onPreviousMonth,
   onCurrentMonth,
-  onNextMonth
+  onNextMonth,
+  savedRecaps = [],
+  onOpenRecap = () => undefined,
+  onOpenSavedRecap = () => undefined
 }: MonthViewProps) => {
   const firstGapWeek = monthState.weeks.find((week) => week.days.some((day) => day.status === "gap"));
 
@@ -31,6 +38,7 @@ export const MonthView = ({
 
   const pct =
     monthState.targetHours > 0 ? Math.min((monthState.trackedHours / monthState.targetHours) * 100, 100) : 0;
+  const monthSavedRecaps = savedRecaps.filter((saved) => saved.version.interval.key === `month:${monthState.monthKey}`);
 
   return (
     <div className="view view-scroll month-view">
@@ -62,6 +70,21 @@ export const MonthView = ({
         </div>
 
         <div className="month-actions">
+          <button type="button" className="calendar-recap-link" onClick={onOpenRecap}>
+            <Sparkles size={14} />
+            RECAP THIS MONTH
+          </button>
+          {monthSavedRecaps.length > 0 && (
+            <button
+              type="button"
+              className="calendar-recap-marker"
+              onClick={() => onOpenSavedRecap(monthSavedRecaps[0])}
+              aria-label={`Open latest of ${monthSavedRecaps.length} saved recaps for this month`}
+            >
+              <Bookmark size={12} fill="currentColor" />
+              {monthSavedRecaps.length}
+            </button>
+          )}
           {firstGapWeek && (
             <>
               <button type="button" className="month-gap-jump" onClick={handleJumpToGap}>
@@ -127,11 +150,24 @@ export const MonthView = ({
       </div>
 
       <div className="month-weeks">
-        {monthState.weeks.map((week) => (
+        {monthState.weeks.map((week) => {
+          const weekSavedRecaps = savedRecaps.filter((saved) => saved.version.interval.key === `week:${week.weekKey}`);
+          return (
           <div key={week.weekKey} className={`month-week ${week.isCurrent ? "is-current" : ""}`}>
             <div className="month-week-label">
               <span className={`month-week-name status-${week.status}`}>{week.label}</span>
               {week.isCurrent && <span className="month-week-now">NOW</span>}
+              {weekSavedRecaps.length > 0 && (
+                <button
+                  type="button"
+                  className="month-week-recap-marker"
+                  onClick={() => onOpenSavedRecap(weekSavedRecaps[0])}
+                  aria-label={`Open latest of ${weekSavedRecaps.length} saved recaps for ${week.label}`}
+                >
+                  <Bookmark size={11} fill="currentColor" />
+                  {weekSavedRecaps.length}
+                </button>
+              )}
             </div>
 
             <div className="month-week-days">
@@ -198,7 +234,8 @@ export const MonthView = ({
               </div>
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="month-legend">
