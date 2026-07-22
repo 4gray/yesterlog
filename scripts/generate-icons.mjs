@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, rm, copyFile, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -8,25 +8,35 @@ import pngToIcoModule from "png-to-ico";
 
 const execFileAsync = promisify(execFile);
 const pngToIco = pngToIcoModule.default ?? pngToIcoModule;
-const source = new URL("../assets/app-icon.svg", import.meta.url);
+const source = new URL("../assets/app-icon.png", import.meta.url);
 const sourcePath = fileURLToPath(source);
 const buildDir = new URL("../build/", import.meta.url);
 const rendererAssetsDir = new URL("../src/assets/", import.meta.url);
+const docsAssetsDir = new URL("../docs/", import.meta.url);
 const linuxIconsDir = new URL("../build/icons/", import.meta.url);
 const iconsetDir = new URL("../build/icon.iconset/", import.meta.url);
 const icoPngDir = new URL("../build/ico-png/", import.meta.url);
 
 const renderPng = async (size, outputUrl) => {
+  const cornerRadius = Math.max(1, (size * 190) / 1254);
+  const alphaMask = Buffer.from(
+    `<svg width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${cornerRadius}" fill="#fff"/></svg>`
+  );
+
   await sharp(sourcePath)
     .resize(size, size, {
-      fit: "contain"
+      fit: "fill",
+      kernel: sharp.kernel.lanczos3
     })
-    .png()
+    .ensureAlpha()
+    .composite([{ input: alphaMask, blend: "dest-in" }])
+    .png({ compressionLevel: 9 })
     .toFile(fileURLToPath(outputUrl));
 };
 
 await mkdir(buildDir, { recursive: true });
 await mkdir(rendererAssetsDir, { recursive: true });
+await mkdir(docsAssetsDir, { recursive: true });
 await rm(linuxIconsDir, { recursive: true, force: true });
 await mkdir(linuxIconsDir, { recursive: true });
 await mkdir(iconsetDir, { recursive: true });
@@ -34,8 +44,7 @@ await mkdir(icoPngDir, { recursive: true });
 
 await renderPng(1024, new URL("../build/icon.png", import.meta.url));
 await renderPng(256, new URL("../src/assets/app-icon.png", import.meta.url));
-await copyFile(source, new URL("../src/assets/app-icon.svg", import.meta.url));
-await copyFile(source, new URL("../src/assets/favicon.svg", import.meta.url));
+await renderPng(512, new URL("../docs/app-icon.png", import.meta.url));
 
 const webIconSizes = [
   [16, "favicon-16x16.png"],
@@ -76,8 +85,8 @@ await writeFile(
           type: "image/png"
         }
       ],
-      theme_color: "#1465f2",
-      background_color: "#0736b4",
+      theme_color: "#0b8fbd",
+      background_color: "#061325",
       display: "standalone"
     },
     null,

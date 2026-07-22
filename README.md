@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./src/assets/app-icon.svg" alt="TimeBro logo" width="128" />
+  <img src="./src/assets/app-icon-512.png" alt="TimeBro logo" width="128" />
 </p>
 
 <h1 align="center">TimeBro 🐻⏱️</h1>
@@ -238,7 +238,7 @@ npm run screenshots   # capture release screenshots with demo data
 npm audit             # check dependency advisories
 ```
 
-Regenerate app icons after editing `assets/app-icon.svg`:
+Regenerate app icons after editing `assets/app-icon.png`:
 
 ```bash
 npm run assets:icons
