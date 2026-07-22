@@ -4,14 +4,14 @@ import { buildDockColorMap, DOCK_PALETTE, formatRelativeTime, getDockStatus } fr
 
 const ticket = (overrides: Partial<JiraTicket>): JiraTicket => ({
   id: "id",
-  key: "FTDM-1",
+  key: "TBRO-1",
   summary: "Summary",
-  projectKey: "FTDM",
-  projectName: "Feature Team Data Management",
+  projectKey: "TBRO",
+  projectName: "TimeBro Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
-  url: "https://example.atlassian.net/browse/FTDM-1",
+  url: "https://example.atlassian.net/browse/TBRO-1",
   ...overrides
 });
 

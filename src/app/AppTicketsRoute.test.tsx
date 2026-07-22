@@ -25,7 +25,7 @@ vi.mock("../components/TicketsView", () => ({
         data-loading={String(props.isLoading)}
         data-error={String(props.error)}
       >
-        <button type="button" onClick={() => (props.onToggleFavorite as (key: string) => void)("FTDM-101")}>
+        <button type="button" onClick={() => (props.onToggleFavorite as (key: string) => void)("TBRO-101")}>
           favorite
         </button>
         <button type="button" onClick={() => (props.onLog as (ticket: JiraTicket) => void)(inProgress[0])}>
@@ -38,26 +38,26 @@ vi.mock("../components/TicketsView", () => ({
 
 const ticket: JiraTicket = {
   id: "10001",
-  key: "FTDM-101",
+  key: "TBRO-101",
   summary: "Make route extraction boring",
-  projectKey: "FTDM",
+  projectKey: "TBRO",
   projectName: "TimeBro",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 3600,
-  url: "https://example.atlassian.net/browse/FTDM-101"
+  url: "https://example.atlassian.net/browse/TBRO-101"
 };
 
 const closedTicket: JiraTicket = {
   id: "10002",
-  key: "FTDM-102",
+  key: "TBRO-102",
   summary: "Ship the previous slice",
-  projectKey: "FTDM",
+  projectKey: "TBRO",
   projectName: "TimeBro",
   statusName: "Done",
   statusCategory: "done",
   loggedSecondsTotal: 7200,
-  url: "https://example.atlassian.net/browse/FTDM-102"
+  url: "https://example.atlassian.net/browse/TBRO-102"
 };
 
 const noop = () => undefined;
@@ -75,8 +75,8 @@ const baseProps = (): AppTicketsRouteProps => ({
   },
   ticketFilters,
   setTicketFilters: noop,
-  favoriteKeys: ["FTDM-101"],
-  hoursByKey: { "FTDM-101": 2 },
+  favoriteKeys: ["TBRO-101"],
+  hoursByKey: { "TBRO-101": 2 },
   weekHoursLogged: 12,
   isConfigured: true,
   ticketsLoading: false,
@@ -117,8 +117,8 @@ describe("AppTicketsRoute", () => {
     expect(rendered?.getAttribute("data-configured")).toBe("true");
     expect(rendered?.getAttribute("data-loading")).toBe("true");
     expect(rendered?.getAttribute("data-error")).toBe("No Jira today");
-    expect(ticketsViewProps[0]?.favoriteKeys).toEqual(["FTDM-101"]);
-    expect(ticketsViewProps[0]?.hoursByKey).toEqual({ "FTDM-101": 2 });
+    expect(ticketsViewProps[0]?.favoriteKeys).toEqual(["TBRO-101"]);
+    expect(ticketsViewProps[0]?.hoursByKey).toEqual({ "TBRO-101": 2 });
     expect(ticketsViewProps[0]?.filters).toEqual(ticketFilters);
   });
 
@@ -139,7 +139,7 @@ describe("AppTicketsRoute", () => {
       container.querySelectorAll("button")[1]?.click();
     });
 
-    expect(toggleFavorite).toHaveBeenCalledWith("FTDM-101");
+    expect(toggleFavorite).toHaveBeenCalledWith("TBRO-101");
     expect(handleLogTicket).toHaveBeenCalledWith(ticket);
   });
 });

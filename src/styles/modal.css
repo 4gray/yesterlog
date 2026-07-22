@@ -26,6 +26,7 @@
 }
 
 .add-time-modal-panel {
+  width: 920px;
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -36,6 +37,29 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.add-time-modal-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.add-time-modal-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-time-modal-content.has-side-timeline {
+  flex: 0 1 500px;
+  height: 500px;
+  max-height: 500px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 334px;
+  overflow: hidden;
 }
 
 .modal-head {
@@ -376,6 +400,377 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 10px;
+}
+
+.add-time-ticket-workspace {
+  margin-top: 20px;
+}
+
+.add-time-ticket-form {
+  min-width: 0;
+}
+
+.add-time-ticket-workspace .modal-grid {
+  margin-top: 0;
+}
+
+.add-time-modal-content.has-side-timeline .modal-day-selector {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.add-time-description-label {
+  margin-top: 22px;
+}
+
+/* Compact cut-out of Today inside Add Time. The form controls and the blue slot
+   share one state, so this remains an editor rather than a passive preview. */
+.add-time-timeline {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.add-time-modal-content.has-side-timeline > .add-time-timeline {
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 18px 24px 18px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-time-modal-content.has-side-timeline > .add-time-timeline .add-time-timeline-head {
+  min-height: 63px;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.add-time-modal-content.has-side-timeline > .add-time-timeline .add-time-timeline-viewport {
+  height: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.add-time-timeline-head {
+  min-height: 46px;
+  padding: 9px 12px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-raised) 74%, transparent);
+}
+
+.add-time-timeline-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.add-time-timeline-head strong {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.add-time-timeline-head strong > span {
+  color: var(--blue);
+}
+
+.add-time-timeline-head strong em {
+  margin-left: 2px;
+  color: var(--blue-soft);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.add-time-timeline-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.add-time-timeline-viewport {
+  height: 226px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.add-time-timeline-body {
+  position: relative;
+  display: flex;
+}
+
+.add-time-timeline-gutter {
+  position: relative;
+  width: 42px;
+  flex: none;
+  background: color-mix(in srgb, var(--bg) 44%, transparent);
+  border-right: 1px solid var(--line);
+}
+
+.add-time-timeline-gutter > span {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.add-time-timeline-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.add-time-timeline-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.add-time-timeline-existing {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--blue);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--bg-raised) 78%, transparent);
+  color: var(--muted);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.add-time-timeline-existing.is-meeting {
+  border-left-color: var(--purple);
+}
+
+.add-time-timeline-existing.is-fire {
+  border-left-color: var(--amber);
+}
+
+.add-time-timeline-existing strong,
+.add-time-timeline-existing span,
+.add-time-timeline-existing em {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-time-timeline-existing strong {
+  flex: none;
+  color: var(--text-strong);
+  font-size: 10.5px;
+}
+
+.add-time-timeline-existing span {
+  color: var(--dim);
+  font-size: 9.5px;
+}
+
+.add-time-timeline-existing em {
+  margin-left: auto;
+  flex: none;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  font-style: normal;
+}
+
+.add-time-timeline-draft {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  z-index: 3;
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+  border: 1px solid color-mix(in srgb, var(--blue) 72%, var(--border));
+  border-left: 3px solid var(--blue);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--blue) 20%, var(--bg-raised));
+  color: var(--blue-soft);
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--blue) 14%, transparent);
+  cursor: grab;
+  touch-action: none;
+}
+
+.add-time-timeline-draft:hover,
+.add-time-timeline-draft.is-dragging {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 26%, var(--bg-raised));
+}
+
+.add-time-timeline-draft.is-dragging {
+  z-index: 5;
+  cursor: grabbing;
+  box-shadow: 0 9px 24px color-mix(in srgb, var(--blue) 24%, transparent);
+}
+
+.add-time-timeline-draft.is-conflict {
+  border-color: var(--amber);
+  border-left-color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 17%, var(--bg-raised));
+  color: var(--amber-soft);
+}
+
+.add-time-timeline-draft-copy {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 7px;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.add-time-timeline-draft-copy strong,
+.add-time-timeline-draft-copy span,
+.add-time-timeline-draft-copy em {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.add-time-timeline-draft-copy strong {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.add-time-timeline-draft-copy span {
+  color: var(--text-strong);
+  font-size: 10px;
+}
+
+.add-time-timeline-draft-copy em {
+  margin-left: auto;
+  flex: none;
+  color: currentColor;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.add-time-timeline-handle {
+  position: absolute;
+  left: 50%;
+  z-index: 4;
+  width: 38px;
+  height: 15px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  border: 0;
+  background: transparent;
+  color: currentColor;
+  cursor: ns-resize;
+  opacity: 0;
+  touch-action: none;
+  transition: opacity 120ms ease;
+}
+
+.add-time-timeline-handle.is-top {
+  top: -4px;
+}
+
+.add-time-timeline-handle.is-bottom {
+  bottom: -4px;
+}
+
+.add-time-timeline-draft:hover .add-time-timeline-handle,
+.add-time-timeline-draft.is-dragging .add-time-timeline-handle,
+.add-time-timeline-handle:focus-visible {
+  opacity: 1;
+}
+
+.add-time-timeline-handle:focus-visible {
+  outline: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.add-time-timeline-conflict {
+  padding: 6px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--amber) 32%, var(--line));
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  color: var(--amber-soft);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+@media (max-width: 860px) {
+  .add-time-modal-panel {
+    width: 680px;
+  }
+
+  .add-time-modal-content.has-side-timeline {
+    height: auto;
+    max-height: none;
+    display: block;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .add-time-modal-content.has-side-timeline > .add-time-modal-main {
+    display: block;
+  }
+
+  .add-time-modal-content.has-side-timeline .modal-body {
+    overflow: visible;
+  }
+
+  .add-time-modal-content.has-side-timeline .modal-day-selector {
+    grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  }
+
+  .add-time-modal-content.has-side-timeline > .add-time-timeline {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0 24px 20px;
+  }
+
+  .add-time-modal-content.has-side-timeline > .add-time-timeline .add-time-timeline-head {
+    min-height: 46px;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .add-time-modal-content.has-side-timeline > .add-time-timeline .add-time-timeline-viewport {
+    height: 226px;
+    flex: none;
+  }
 }
 
 .modal-day-selector {

@@ -82,12 +82,12 @@ describe("Bitbucket review sync", () => {
           values: [
             {
               id: 214,
-              title: "FTDM-328 Active interrupt handling for poller",
+              title: "TBRO-328 Active interrupt handling for poller",
               description: "Review notes",
               state: "OPEN",
               updated_on: "2026-06-15T12:00:00.000Z",
               author: { uuid: "{author}", account_id: "author-account", display_name: "Feature Author" },
-              source: { branch: { name: "feature/FTDM-328-poller" } },
+              source: { branch: { name: "feature/TBRO-328-poller" } },
               destination: { branch: { name: "main" } },
               links: {
                 html: {
@@ -156,7 +156,7 @@ describe("Bitbucket review sync", () => {
       pullRequestAuthorAccountId: "author-account",
       pullRequestAuthorDisplayName: "Feature Author",
       isPullRequestAuthor: false,
-      jiraIssueKey: "FTDM-328",
+      jiraIssueKey: "TBRO-328",
       reviewStateLabel: "APPROVED",
       commentCount: 1,
       activityCount: 2,
@@ -174,7 +174,7 @@ describe("buildCommitGroupsForPullRequest", () => {
   const pullRequest = {
     id: 220,
     title: "Auth middleware",
-    source: { branch: { name: "feature/FTDM-328-auth" } },
+    source: { branch: { name: "feature/TBRO-328-auth" } },
     destination: { branch: { name: "main" } },
     author: me
   };
@@ -189,7 +189,7 @@ describe("buildCommitGroupsForPullRequest", () => {
       weekStart,
       weekEndExclusive,
       commits: [
-        { hash: "a", date: "2026-06-15T09:12:00", message: "FTDM-328 add middleware", author: { user: me } },
+        { hash: "a", date: "2026-06-15T09:12:00", message: "TBRO-328 add middleware", author: { user: me } },
         { hash: "b", date: "2026-06-15T11:05:00", message: "wip", author: { user: me } },
         // other author — excluded
         { hash: "c", date: "2026-06-15T12:00:00", message: "tweak", author: { user: { account_id: "other" } } },
@@ -201,9 +201,9 @@ describe("buildCommitGroupsForPullRequest", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({
       dateKey: "2026-06-15",
-      jiraIssueKey: "FTDM-328",
+      jiraIssueKey: "TBRO-328",
       pullRequestId: 220,
-      branch: "feature/FTDM-328-auth",
+      branch: "feature/TBRO-328-auth",
       commitCount: 2,
       primaryMessage: "add middleware",
       confidence: "high"

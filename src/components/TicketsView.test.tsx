@@ -17,10 +17,10 @@ const filters: TicketFilters = {
 
 const ticket: JiraTicket = {
   id: "133470",
-  key: "FTDM-397",
+  key: "TBRO-397",
   summary: "Restructure the access domain in nx monorepo",
-  projectKey: "FTDM",
-  projectName: "Feature Team Data Management",
+  projectKey: "TBRO",
+  projectName: "TimeBro Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
@@ -28,11 +28,11 @@ const ticket: JiraTicket = {
   issueType: { name: "Sub-task", subtask: true, hierarchyLevel: -1 },
   epic: {
     id: "10000",
-    key: "FTDM-300",
+    key: "TBRO-300",
     summary: "Explorer",
-    url: "https://elevait.atlassian.net/browse/FTDM-300"
+    url: "https://elevait.atlassian.net/browse/TBRO-300"
   },
-  url: "https://elevait.atlassian.net/browse/FTDM-397"
+  url: "https://elevait.atlassian.net/browse/TBRO-397"
 };
 
 describe("TicketsView", () => {
@@ -53,12 +53,12 @@ describe("TicketsView", () => {
       />
     );
 
-    expect(markup).toContain("FTDM-397");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
-    expect(markup).toContain("Open FTDM-397 in Jira");
+    expect(markup).toContain("TBRO-397");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/TBRO-397");
+    expect(markup).toContain("Open TBRO-397 in Jira");
     expect(markup).toContain("SUB");
     expect(markup).toContain("Epic: Explorer");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-300");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/TBRO-300");
     expect(markup).toContain("2h logged this week");
     expect(markup).not.toContain("THIS WEEK");
     expect(markup).not.toContain("⌘K SEARCH");
@@ -69,7 +69,7 @@ describe("TicketsView", () => {
     expect(markup).toContain("Jira status: In Progress");
     expect(markup).toContain("Search key, summary, status…");
     expect(markup).toContain("Recently updated");
-    expect(markup.match(/Unstar FTDM-397/g)).toHaveLength(1);
+    expect(markup.match(/Unstar TBRO-397/g)).toHaveLength(1);
   });
 
   it("shows assignee metadata only while browsing across assignees", () => {
@@ -151,10 +151,10 @@ describe("TicketsView", () => {
     const searchInput = container.querySelector<HTMLInputElement>('input[aria-label="Search tickets"]');
     act(() => {
       const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-      setValue?.call(searchInput, "FTDM-397");
+      setValue?.call(searchInput, "TBRO-397");
       searchInput?.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, query: "FTDM-397" });
+    expect(onFiltersChange).toHaveBeenCalledWith({ ...filters, query: "TBRO-397" });
 
     const sortSelect = container.querySelector<HTMLSelectElement>('select[aria-label="Sort tickets"]');
     act(() => {

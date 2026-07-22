@@ -28,7 +28,7 @@ export type ReconstructConfidence = "high" | "med" | "low";
 export interface ReconstructSignal {
   id: string;
   kind: SignalKind;
-  /** Ticket key (e.g. `FTDM-328`) or "" when none could be derived. */
+  /** Ticket key (e.g. `TBRO-328`) or "" when none could be derived. */
   key: string;
   title: string;
   /** Mono sub-line: "web-app · 5 commits · 09:12–11:05". */

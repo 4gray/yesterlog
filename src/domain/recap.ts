@@ -24,7 +24,7 @@ import { formatReconDuration } from "./reconstruct";
  */
 
 export interface RecapLine {
-  /** Ticket issue key (e.g. "FTDM-328"); absent for meetings / firefighting. */
+  /** Ticket issue key (e.g. "TBRO-328"); absent for meetings / firefighting. */
   key?: string;
   /** One-line display text. */
   summary: string;

@@ -6,8 +6,10 @@ import type {
   PersonalNote,
   PersonalNoteCategory,
   RecurringEvent,
+  RecurringEntry,
   WorklogAllocationDirection
 } from "../../shared/types";
+import { clockTimeToMinutes, minutesToClockTime, type Range } from "../domain/dayCalendar";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import {
   AddTimeDurationPicker,
@@ -16,6 +18,7 @@ import {
   type DurationUnit
 } from "./AddTimeDurationPicker";
 import { AddTimeRecurringForm, formatRecurringMinutes } from "./AddTimeRecurringForm";
+import { AddTimeTimelineEditor } from "./AddTimeTimelineEditor";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
 export interface LogRecurringPayload {
@@ -55,6 +58,9 @@ export interface AddTimeModalProps {
   prefill?: AddTimePrefill;
   editingWorklog?: JiraWorklog;
   editingPersonalNote?: PersonalNote;
+  timelineWorklogs?: JiraWorklog[];
+  timelinePersonalNotes?: PersonalNote[];
+  timelineRecurringEntries?: RecurringEntry[];
   onClose: () => void;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onDelete?: () => Promise<boolean>;
@@ -228,6 +234,9 @@ export const AddTimeModal = ({
   prefill,
   editingWorklog,
   editingPersonalNote,
+  timelineWorklogs = [],
+  timelinePersonalNotes = [],
+  timelineRecurringEntries = [],
   onClose,
   onLog,
   onDelete,
@@ -345,6 +354,12 @@ export const AddTimeModal = ({
             !isLogging
         )
       : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
+  const showTicketTimeline =
+    isTicketView &&
+    !isBulkDuration &&
+    durationSeconds > 0 &&
+    durationSeconds <= 24 * 60 * 60 &&
+    clockTimeToMinutes(timeStr) + durationSeconds / 60 <= 24 * 60;
 
   const handleSubmit = async () => {
     if (!hasWorkingDate) {
@@ -586,6 +601,17 @@ export const AddTimeModal = ({
     updateTicketDuration(customDurationToSeconds("1", ticketCustomUnit));
   };
 
+  const applyTimelineRange = (range: Range) => {
+    const seconds = Math.max(60, Math.round((range.endMin - range.startMin) * 60));
+    const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
+    setIsStartEdited(true);
+    setTimeStr(minutesToClockTime(range.startMin));
+    setDurationSeconds(seconds);
+    setTicketDurationMode(hasPreset ? "preset" : "custom");
+    setTicketCustomAmount(customHoursAmount(seconds));
+    setTicketCustomUnit("h");
+  };
+
   const applyPersonalPreset = (seconds: number) => {
     setPersonalDurationMode("preset");
     updatePersonalDuration(seconds);
@@ -642,42 +668,44 @@ export const AddTimeModal = ({
           </div>
         </div>
 
-        {!isEditing && (
-          <div className="modal-mode-tabs">
-            <button
-              type="button"
-              className={mode === "ticket" ? "active" : ""}
-              onClick={() => {
-                setMode("ticket");
-                updateTicketDuration(durationSeconds);
-              }}
-            >
-              Log to ticket
-            </button>
-            <button
-              type="button"
-              className={mode === "note" ? "active" : ""}
-              onClick={() => {
-                setMode("note");
-                updatePersonalDuration(personalNoteSeconds);
-              }}
-            >
-              Personal note
-            </button>
-            {recurringTabEnabled && (
-              <button
-                type="button"
-                className={mode === "recurring" ? "active" : ""}
-                onClick={() => setMode("recurring")}
-              >
-                Recurring
-              </button>
+        <div className={`add-time-modal-content${showTicketTimeline ? " has-side-timeline" : ""}`}>
+          <div className="add-time-modal-main">
+            {!isEditing && (
+              <div className="modal-mode-tabs">
+                <button
+                  type="button"
+                  className={mode === "ticket" ? "active" : ""}
+                  onClick={() => {
+                    setMode("ticket");
+                    updateTicketDuration(durationSeconds);
+                  }}
+                >
+                  Log to ticket
+                </button>
+                <button
+                  type="button"
+                  className={mode === "note" ? "active" : ""}
+                  onClick={() => {
+                    setMode("note");
+                    updatePersonalDuration(personalNoteSeconds);
+                  }}
+                >
+                  Personal note
+                </button>
+                {recurringTabEnabled && (
+                  <button
+                    type="button"
+                    className={mode === "recurring" ? "active" : ""}
+                    onClick={() => setMode("recurring")}
+                  >
+                    Recurring
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        <div className="modal-body">
-          {isRecurringView ? (
+            <div className="modal-body">
+              {isRecurringView ? (
             <AddTimeRecurringForm
               candidates={recurringCandidates}
               selectedEvent={recEvent}
@@ -705,93 +733,92 @@ export const AddTimeModal = ({
                 }}
               />
 
-              <div className="modal-grid">
-                <div className="modal-col">
-                  <div className="modal-label">DURATION</div>
-                  <AddTimeDurationPicker
-                    seconds={durationSeconds}
-                    presets={PRESETS}
-                    valueClassName="modal-duration"
-                    customMode={ticketDurationMode}
-                    customAmount={ticketCustomAmount}
-                    customUnit={ticketCustomUnit}
-                    customAmountLabel="Custom ticket duration amount"
-                    onPreset={applyTicketPreset}
-                    onCustomOpen={() => applyTicketCustom(ticketCustomAmount)}
-                    onCustomAmountChange={(amount) => applyTicketCustom(amount)}
-                    onCustomAmountBlur={normalizeTicketCustomAmount}
-                    onCustomUnitChange={setTicketCustomUnitAndDuration}
+              <div className="add-time-ticket-workspace">
+                <div className="add-time-ticket-form">
+                  <div className="modal-grid">
+                    <div className="modal-col">
+                      <div className="modal-label">DURATION</div>
+                      <AddTimeDurationPicker
+                        seconds={durationSeconds}
+                        presets={PRESETS}
+                        valueClassName="modal-duration"
+                        customMode={ticketDurationMode}
+                        customAmount={ticketCustomAmount}
+                        customUnit={ticketCustomUnit}
+                        customAmountLabel="Custom ticket duration amount"
+                        onPreset={applyTicketPreset}
+                        onCustomOpen={() => applyTicketCustom(ticketCustomAmount)}
+                        onCustomAmountChange={(amount) => applyTicketCustom(amount)}
+                        onCustomAmountBlur={normalizeTicketCustomAmount}
+                        onCustomUnitChange={setTicketCustomUnitAndDuration}
+                      />
+                    </div>
+                    <div className="modal-col">
+                      <div className="modal-label">STARTED</div>
+                      <div className="modal-started">
+                        <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
+                        <label className="input-chip">
+                          <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
+                          <input
+                            type="time"
+                            value={timeStr}
+                            onChange={(event) => {
+                              setIsStartEdited(true);
+                              setTimeStr(event.target.value);
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isBulkDuration && (
+                    <div className="bulk-allocation-choice">
+                      <div className="bulk-allocation-copy">
+                        <span>BULK WORKLOG</span>
+                        <strong>One Jira entry, distributed locally</strong>
+                        <small>
+                          {allocationDirection === "backward"
+                            ? "The selected day ends the period. Future days stay untouched."
+                            : "The selected day starts the period. Distribution stops at today."}
+                        </small>
+                      </div>
+                      <div className="bulk-direction-toggle" role="radiogroup" aria-label="Bulk worklog distribution">
+                        <label className={allocationDirection === "backward" ? "active" : ""}>
+                          <input
+                            type="radio"
+                            name="bulk-worklog-distribution"
+                            value="backward"
+                            checked={allocationDirection === "backward"}
+                            onChange={() => setAllocationDirection("backward")}
+                          />
+                          <span>End on date</span>
+                        </label>
+                        <label className={allocationDirection === "forward" ? "active" : ""}>
+                          <input
+                            type="radio"
+                            name="bulk-worklog-distribution"
+                            value="forward"
+                            checked={allocationDirection === "forward"}
+                            onChange={() => setAllocationDirection("forward")}
+                          />
+                          <span>Start on date</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="modal-label add-time-description-label">WORK DESCRIPTION</div>
+                  <textarea
+                    className="note-textarea"
+                    placeholder={isEditingWorklog ? "Update the Jira worklog comment" : "Add a note… syncs to the Jira worklog comment"}
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    rows={2}
                   />
                 </div>
-                <div className="modal-col">
-                  <div className="modal-label">STARTED</div>
-                  <div className="modal-started">
-                    <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
-                    <label className="input-chip">
-                      <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
-                      <input
-                        type="time"
-                        value={timeStr}
-                        onChange={(event) => {
-                          setIsStartEdited(true);
-                          setTimeStr(event.target.value);
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
 
-              {isBulkDuration && (
-                <div className="bulk-allocation-choice">
-                  <div className="bulk-allocation-copy">
-                    <span>BULK WORKLOG</span>
-                    <strong>One Jira entry, distributed locally</strong>
-                    <small>
-                      {allocationDirection === "backward"
-                        ? "The selected day ends the period. Future days stay untouched."
-                        : "The selected day starts the period. Distribution stops at today."}
-                    </small>
-                  </div>
-                  <div className="bulk-direction-toggle" role="radiogroup" aria-label="Bulk worklog distribution">
-                    <label
-                      className={allocationDirection === "backward" ? "active" : ""}
-                    >
-                      <input
-                        type="radio"
-                        name="bulk-worklog-distribution"
-                        value="backward"
-                        checked={allocationDirection === "backward"}
-                        onChange={() => setAllocationDirection("backward")}
-                      />
-                      <span>End on date</span>
-                    </label>
-                    <label
-                      className={allocationDirection === "forward" ? "active" : ""}
-                    >
-                      <input
-                        type="radio"
-                        name="bulk-worklog-distribution"
-                        value="forward"
-                        checked={allocationDirection === "forward"}
-                        onChange={() => setAllocationDirection("forward")}
-                      />
-                      <span>Start on date</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              <div className="modal-label" style={{ marginTop: 22 }}>
-                WORK DESCRIPTION
               </div>
-              <textarea
-                className="note-textarea"
-                placeholder={isEditingWorklog ? "Update the Jira worklog comment" : "Add a note… syncs to the Jira worklog comment"}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                rows={2}
-              />
             </>
           ) : (
             <div className="personal-note-form">
@@ -885,10 +912,26 @@ export const AddTimeModal = ({
             </div>
           )}
 
-          {logError && (
-            <div className="callout error" style={{ margin: "14px 0 0" }}>
-              {logError}
+              {logError && (
+                <div className="callout error" style={{ margin: "14px 0 0" }}>
+                  {logError}
+                </div>
+              )}
             </div>
+          </div>
+
+          {showTicketTimeline && (
+            <AddTimeTimelineEditor
+              dateKey={dateStr}
+              time={timeStr}
+              durationSeconds={durationSeconds}
+              ticket={activeTicket}
+              worklogs={timelineWorklogs}
+              personalNotes={timelinePersonalNotes}
+              recurringEntries={timelineRecurringEntries}
+              editingWorklogId={editingWorklog?.id}
+              onChange={applyTimelineRange}
+            />
           )}
         </div>
 

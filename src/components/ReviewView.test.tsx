@@ -41,7 +41,7 @@ const buildSession = (
   pullRequestAuthorAccountId: "author-account",
   pullRequestAuthorDisplayName: "Feature Author",
   isPullRequestAuthor: false,
-  jiraIssueKey: `FTDM-${pullRequestId}`,
+  jiraIssueKey: `TBRO-${pullRequestId}`,
   dateKey: "2026-06-15",
   startedISO: "2026-06-15T09:40:00.000Z",
   endedISO: "2026-06-15T10:25:00.000Z",
@@ -75,7 +75,7 @@ const reviewResult: BitbucketReviewSyncResult = {
   sessions: [
     buildSession(214, {
       pullRequestTitle: "Active interrupt handling for poller",
-      jiraIssueKey: "FTDM-328"
+      jiraIssueKey: "TBRO-328"
     })
   ]
 };
@@ -87,7 +87,7 @@ const baseProps = (): ReviewViewProps => ({
   weekStartISO: "2026-06-15T00:00:00.000Z",
   settings,
   result: reviewResult,
-  issueUrlsByKey: { "FTDM-328": "https://example.atlassian.net/browse/FTDM-328" },
+  issueUrlsByKey: { "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" },
   issueTypesByKey: {},
   isConfigured: true,
   isSyncing: false,
@@ -151,7 +151,7 @@ describe("ReviewView", () => {
         weekStartISO="2026-06-15T00:00:00.000Z"
         settings={settings}
         result={reviewResult}
-        issueUrlsByKey={{ "FTDM-328": "https://example.atlassian.net/browse/FTDM-328" }}
+        issueUrlsByKey={{ "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" }}
         issueTypesByKey={{}}
         isConfigured={true}
         isSyncing={false}
@@ -174,7 +174,7 @@ describe("ReviewView", () => {
     expect(markup).toContain("APPROVED");
     expect(markup).toContain("Active interrupt handling for poller");
     expect(markup).toContain("author: Feature Author");
-    expect(markup).toContain("FTDM-328");
+    expect(markup).toContain("TBRO-328");
     expect(markup).toContain("LOG 1 SESSION");
   });
 
@@ -184,10 +184,10 @@ describe("ReviewView", () => {
       sessions: [
         buildSession(214, {
           pullRequestTitle: "Active interrupt handling for poller",
-          jiraIssueKey: "FTDM-328",
+          jiraIssueKey: "TBRO-328",
           status: "logged",
           logged: {
-            issueKey: "FTDM-328",
+            issueKey: "TBRO-328",
             worklogId: "wl-214",
             loggedAt: "2026-06-15T12:30:00.000Z",
             targetMode: "reviewed-ticket",
@@ -202,7 +202,7 @@ describe("ReviewView", () => {
       <ReviewView
         {...baseProps()}
         result={loggedResult}
-        issueUrlsByKey={{ "FTDM-328": "https://example.atlassian.net/browse/FTDM-328" }}
+        issueUrlsByKey={{ "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" }}
       />
     );
 
@@ -211,7 +211,7 @@ describe("ReviewView", () => {
     expect(markup).toContain("1h 00m");
     expect(markup).toContain("suggested 45m");
     expect(markup).toContain("+15m");
-    expect(markup).toContain("FTDM-328");
+    expect(markup).toContain("TBRO-328");
     expect(markup).toContain("LOG 0 SESSIONS");
   });
 
@@ -223,11 +223,11 @@ describe("ReviewView", () => {
       sessions: [
         buildSession(214, {
           pullRequestTitle: "Active interrupt handling for poller",
-          jiraIssueKey: "FTDM-328"
+          jiraIssueKey: "TBRO-328"
         }),
         buildSession(215, {
           pullRequestTitle: "Refresh account picker",
-          jiraIssueKey: "FTDM-329"
+          jiraIssueKey: "TBRO-329"
         })
       ]
     };
@@ -235,8 +235,8 @@ describe("ReviewView", () => {
     renderView({
       result,
       issueUrlsByKey: {
-        "FTDM-328": "https://example.atlassian.net/browse/FTDM-328",
-        "FTDM-329": "https://example.atlassian.net/browse/FTDM-329"
+        "TBRO-328": "https://example.atlassian.net/browse/TBRO-328",
+        "TBRO-329": "https://example.atlassian.net/browse/TBRO-329"
       },
       onLogSessions
     });

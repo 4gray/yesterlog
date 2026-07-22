@@ -718,7 +718,7 @@ export const SettingsView = ({
     const coreItems = [
       "Collects commits, PRs, reviews, CI runs & Jira changelog",
       "Estimates duration from commit & PR timestamps",
-      "Maps branch → ticket via FTDM-xxx keys",
+      "Maps branch → ticket via TBRO-xxx keys",
       "Places blocks on the timeline & flags gaps",
       "Rule-based auto-distribute & confidence scoring"
     ];

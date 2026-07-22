@@ -8,6 +8,9 @@ interface TimeEntryModalLayerProps {
   editingPersonalNote?: PersonalNote;
   dateOptions: AddTimeModalProps["dateOptions"];
   ticketOptions: AddTimeModalProps["ticketOptions"];
+  timelineWorklogs?: AddTimeModalProps["timelineWorklogs"];
+  timelinePersonalNotes?: AddTimeModalProps["timelinePersonalNotes"];
+  timelineRecurringEntries?: AddTimeModalProps["timelineRecurringEntries"];
   isConfigured: boolean;
   isLogging: boolean;
   isDeletingWorklog: boolean;
@@ -34,6 +37,9 @@ export const TimeEntryModalLayer = ({
   editingPersonalNote,
   dateOptions,
   ticketOptions,
+  timelineWorklogs,
+  timelinePersonalNotes,
+  timelineRecurringEntries,
   isConfigured,
   isLogging,
   isDeletingWorklog,
@@ -58,6 +64,9 @@ export const TimeEntryModalLayer = ({
         date={addModalDate}
         dateOptions={dateOptions}
         ticketOptions={ticketOptions}
+        timelineWorklogs={timelineWorklogs}
+        timelinePersonalNotes={timelinePersonalNotes}
+        timelineRecurringEntries={timelineRecurringEntries}
         isConfigured={isConfigured}
         isLogging={isLogging}
         dailyTargetHours={dailyTargetHours}
@@ -77,6 +86,9 @@ export const TimeEntryModalLayer = ({
         date={new Date(editingWorklog.started)}
         dateOptions={dateOptions}
         ticketOptions={ticketOptions}
+        timelineWorklogs={timelineWorklogs}
+        timelinePersonalNotes={timelinePersonalNotes}
+        timelineRecurringEntries={timelineRecurringEntries}
         isConfigured={isConfigured}
         isLogging={isLogging}
         isDeleting={isDeletingWorklog}
@@ -96,6 +108,9 @@ export const TimeEntryModalLayer = ({
         date={new Date(editingPersonalNote.startedISO)}
         dateOptions={dateOptions}
         ticketOptions={ticketOptions}
+        timelineWorklogs={timelineWorklogs}
+        timelinePersonalNotes={timelinePersonalNotes}
+        timelineRecurringEntries={timelineRecurringEntries}
         isConfigured={isConfigured}
         isLogging={isLogging}
         dailyTargetHours={dailyTargetHours}

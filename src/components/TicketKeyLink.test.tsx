@@ -32,7 +32,7 @@ describe("TicketKeyLink", () => {
       root.render(
         <TicketDetailsProvider value={openTicketDetails}>
           <div onClick={parentClick} onMouseDown={parentMouseDown} onKeyDown={parentKeyDown}>
-            <TicketKeyLink issueKey="FTDM-397" url="https://example.atlassian.net/browse/FTDM-397" />
+            <TicketKeyLink issueKey="TBRO-397" url="https://example.atlassian.net/browse/TBRO-397" />
           </div>
         </TicketDetailsProvider>
       );
@@ -45,7 +45,7 @@ describe("TicketKeyLink", () => {
       key?.click();
     });
 
-    expect(openTicketDetails).toHaveBeenCalledWith("FTDM-397");
+    expect(openTicketDetails).toHaveBeenCalledWith("TBRO-397");
     expect(parentClick).not.toHaveBeenCalled();
     expect(parentMouseDown).not.toHaveBeenCalled();
     expect(parentKeyDown).not.toHaveBeenCalled();
@@ -58,7 +58,7 @@ describe("TicketKeyLink", () => {
     });
 
     expect(container.querySelector<HTMLAnchorElement>(".ticket-jira-link")?.href).toBe(
-      "https://example.atlassian.net/browse/FTDM-397"
+      "https://example.atlassian.net/browse/TBRO-397"
     );
     expect(parentClick).not.toHaveBeenCalled();
     expect(parentMouseDown).not.toHaveBeenCalled();

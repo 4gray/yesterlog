@@ -538,7 +538,7 @@ export const App = () => {
   });
 
   // TODO(nl-parsing): the brief's headline command is free-text ("Log 2h on
-  // FTDM-352", "go to week 28"). Until the parser lands these are the static
+  // TBRO-352", "go to week 28"). Until the parser lands these are the static
   // fallbacks the palette offers.
   const commands = useMemo<CommandPaletteCommand[]>(
     () => [
@@ -650,6 +650,9 @@ export const App = () => {
           editingPersonalNote={editingPersonalNote}
           dateOptions={addTimeDateOptions}
           ticketOptions={ticketOptions}
+          timelineWorklogs={Object.values(visibleSyncResult?.daySummaries ?? {}).flatMap((bucket) => bucket.worklogs)}
+          timelinePersonalNotes={personalNotes}
+          timelineRecurringEntries={weekState.days.flatMap((day) => day.recurringEntries)}
           isConfigured={isConfigured}
           isLogging={isLogging}
           isDeletingWorklog={isDeletingWorklog}

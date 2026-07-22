@@ -7,14 +7,14 @@ import { TodayView } from "./TodayView";
 const ghostSignal: ReconstructSignal = {
   id: "sig-1",
   kind: "commit",
-  key: "FTDM-500",
+  key: "TBRO-500",
   title: "Detected coding session",
   sub: "web-app · 5 commits · 14:00–15:30",
   durationMinutes: 90,
   isMarker: false,
   confidence: "med",
   startHour: 14,
-  naiveDescription: "Worked on FTDM-500"
+  naiveDescription: "Worked on TBRO-500"
 };
 
 const settings = {
@@ -27,34 +27,34 @@ const settings = {
 
 const ticket: JiraTicket = {
   id: "133470",
-  key: "FTDM-397",
+  key: "TBRO-397",
   summary: "Restructure the access domain in nx monorepo",
-  projectKey: "FTDM",
-  projectName: "Feature Team Data Management",
+  projectKey: "TBRO",
+  projectName: "TimeBro Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   issueType: { name: "Epic", hierarchyLevel: 1 },
-  url: "https://elevait.atlassian.net/browse/FTDM-397"
+  url: "https://elevait.atlassian.net/browse/TBRO-397"
 };
 
 const touchedTicket: JiraTicket = {
   id: "133471",
-  key: "FTDM-401",
+  key: "TBRO-401",
   summary: "Review current-work tracking",
-  projectKey: "FTDM",
-  projectName: "Feature Team Data Management",
+  projectKey: "TBRO",
+  projectName: "TimeBro Product",
   statusName: "Selected for Development",
   statusCategory: "new",
   loggedSecondsTotal: 0,
   issueType: { name: "Sub-task", subtask: true, hierarchyLevel: -1 },
-  url: "https://elevait.atlassian.net/browse/FTDM-401"
+  url: "https://elevait.atlassian.net/browse/TBRO-401"
 };
 
 const worklog: JiraWorklog = {
   id: "2001",
   issueId: "133470",
-  issueKey: "FTDM-397",
+  issueKey: "TBRO-397",
   issueSummary: "Restructure the access domain in nx monorepo",
   authorAccountId: "account-1",
   started: "2026-06-18T08:00:00.000Z",
@@ -131,7 +131,7 @@ describe("TodayView calendar", () => {
     expect(markup).toContain("cal-track");
     expect(markup).toContain("height:1440px");
     // Worklog block — key title + summary detail.
-    expect(markup).toContain("FTDM-397");
+    expect(markup).toContain("TBRO-397");
     expect(markup).toContain("Restructure the access domain in nx monorepo");
     // Personal note block — falls back to its text as the title.
     expect(markup).toContain("Mentoring and planning");
@@ -144,8 +144,8 @@ describe("TodayView calendar", () => {
     const markup = renderToday();
 
     expect(markup).toContain("TOUCHED TODAY");
-    expect(markup).toContain("Open FTDM-401 in Jira");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-401");
+    expect(markup).toContain("Open TBRO-401 in Jira");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/TBRO-401");
   });
 
   it("keeps the header figure and daily target", () => {
@@ -159,20 +159,20 @@ describe("TodayView calendar", () => {
 
     expect(markup).toContain("MY ACTIVE WORK");
     expect(markup).toContain("select a card to log time today");
-    expect(markup).toContain("Log time for FTDM-401 today");
+    expect(markup).toContain("Log time for TBRO-401 today");
   });
 
   it("renders detected-but-unlogged activity as a ghost block", () => {
     const markup = renderToday([ghostSignal]);
 
     expect(markup).toContain("cal-block--ghost");
-    expect(markup).toContain("FTDM-500");
+    expect(markup).toContain("TBRO-500");
     expect(markup).toContain("Detected coding session");
   });
 
   it("does not ghost activity for a ticket already logged today", () => {
-    // The worklog fixture logs FTDM-397, so a signal for it must be suppressed.
-    const loggedSignal: ReconstructSignal = { ...ghostSignal, id: "sig-2", key: "FTDM-397" };
+    // The worklog fixture logs TBRO-397, so a signal for it must be suppressed.
+    const loggedSignal: ReconstructSignal = { ...ghostSignal, id: "sig-2", key: "TBRO-397" };
     const markup = renderToday([loggedSignal]);
 
     expect(markup).not.toContain("cal-block--ghost");

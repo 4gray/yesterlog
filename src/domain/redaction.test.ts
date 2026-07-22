@@ -13,17 +13,17 @@ describe("redactForCloud", () => {
   });
 
   it("maps ticket keys to stable placeholders and restores them in a response", () => {
-    const { text, restore } = redactForCloud("Reviewed FTDM-395 and FTDM-395, then OPS-77.");
-    expect(text).not.toContain("FTDM-395");
+    const { text, restore } = redactForCloud("Reviewed TBRO-395 and TBRO-395, then OPS-77.");
+    expect(text).not.toContain("TBRO-395");
     expect(text).not.toContain("OPS-77");
     // same key → same placeholder (dedup)
     expect(text).toBe("Reviewed TICKET-1 and TICKET-1, then TICKET-2.");
-    expect(restore("Worked on TICKET-1 and TICKET-2.")).toBe("Worked on FTDM-395 and OPS-77.");
+    expect(restore("Worked on TICKET-1 and TICKET-2.")).toBe("Worked on TBRO-395 and OPS-77.");
   });
 
   it("restores placeholders case-insensitively (models sometimes lower-case them)", () => {
-    const { restore } = redactForCloud("FTDM-42");
-    expect(restore("finished ticket-1 today")).toBe("finished FTDM-42 today");
+    const { restore } = redactForCloud("TBRO-42");
+    expect(restore("finished ticket-1 today")).toBe("finished TBRO-42 today");
   });
 
   it("leaves common technical tokens that look like keys untouched", () => {
@@ -35,7 +35,7 @@ describe("redactForCloud", () => {
 
   it("replaces reversible tokens (signal ids) with ID-n and restores them", () => {
     const ids = ["acme/checkout-svc#812:2026-06-15", "beta/api#3:2026-06-15"];
-    const prompt = `[{"id":"${ids[0]}","key":"FTDM-1"},{"id":"${ids[1]}","key":"OPS-2"}]`;
+    const prompt = `[{"id":"${ids[0]}","key":"TBRO-1"},{"id":"${ids[1]}","key":"OPS-2"}]`;
     const { text, restore } = redactForCloud(prompt, [], ids);
 
     expect(text).not.toContain("acme/checkout-svc");
@@ -47,7 +47,7 @@ describe("redactForCloud", () => {
     // the ID placeholder must not be re-eaten by the ticket regex
     expect(text).not.toContain("acme");
 
-    expect(restore('{"id":"ID-1","key":"TICKET-1"}')).toBe(`{"id":"${ids[0]}","key":"FTDM-1"}`);
+    expect(restore('{"id":"ID-1","key":"TICKET-1"}')).toBe(`{"id":"${ids[0]}","key":"TBRO-1"}`);
   });
 
   it("scrubs caller-supplied literals (repo slugs, workspace), longest match first", () => {
@@ -72,7 +72,7 @@ describe("redactForCloud", () => {
     expect(clean.text).toBe("Refactored the scheduler for clarity.");
     expect(clean.restore("nothing to restore")).toBe("nothing to restore");
 
-    const dirty = redactForCloud("FTDM-1 https://x.y jane@z.io");
+    const dirty = redactForCloud("TBRO-1 https://x.y jane@z.io");
     expect(dirty.redactedCount).toBe(3);
   });
 });

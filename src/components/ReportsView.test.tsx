@@ -30,9 +30,9 @@ const weekState: WeekState = {
       issues: [
         {
           id: "133470",
-          key: "FTDM-397",
+          key: "TBRO-397",
           summary: "Restructure the access domain in nx monorepo",
-          url: "https://elevait.atlassian.net/browse/FTDM-397",
+          url: "https://elevait.atlassian.net/browse/TBRO-397",
           issueType: { name: "Epic", hierarchyLevel: 1 },
           loggedSeconds: 5 * 3600
         }
@@ -80,10 +80,10 @@ describe("ReportsView", () => {
       />
     );
 
-    expect(markup).toContain("FTDM-397");
+    expect(markup).toContain("TBRO-397");
     expect(markup).toContain("Restructure the access domain in nx monorepo");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
-    expect(markup).toContain("Open FTDM-397 in Jira");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/TBRO-397");
+    expect(markup).toContain("Open TBRO-397 in Jira");
     expect(markup).toContain("EPIC");
     // Personal notes appear as separate rows keyed by their title, not lumped
     // into one aggregated "Personal notes" entry.

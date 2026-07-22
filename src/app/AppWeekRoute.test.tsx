@@ -44,7 +44,7 @@ vi.mock("../components/WeekView", () => ({
         </button>
         <button
           type="button"
-          onClick={() => (props.onDockLog as (payload: Record<string, unknown>) => void)({ issueKey: "FTDM-101" })}
+          onClick={() => (props.onDockLog as (payload: Record<string, unknown>) => void)({ issueKey: "TBRO-101" })}
         >
           dock
         </button>
@@ -64,7 +64,7 @@ vi.mock("../components/WeekView", () => ({
           type="button"
           onClick={() =>
             (props.onMoveWorklog as (worklog: Record<string, unknown>, patch: Record<string, unknown>) => void)(
-              { id: "wl-1", issueKey: "FTDM-101" },
+              { id: "wl-1", issueKey: "TBRO-101" },
               { startedISO: "2026-06-17T09:00:00.000Z", timeSpentSeconds: 3600 }
             )
           }
@@ -230,14 +230,14 @@ describe("AppWeekRoute", () => {
     expect(goToNextWeek).toHaveBeenCalledTimes(1);
     expect(openAddTime).toHaveBeenCalledWith(new Date(2026, 5, 17));
     expect(handleToggleSkipped).toHaveBeenCalledWith("2026-06-17");
-    expect(handleAddWorklog).toHaveBeenCalledWith({ issueKey: "FTDM-101" });
+    expect(handleAddWorklog).toHaveBeenCalledWith({ issueKey: "TBRO-101" });
     expect(handleConfirmRecurring).toHaveBeenCalledWith({
       eventId: "standup",
       dateKey: "2026-06-17",
       timeSpentSeconds: 900
     });
     expect(handleMoveWorklog).toHaveBeenCalledWith(
-      { id: "wl-1", issueKey: "FTDM-101" },
+      { id: "wl-1", issueKey: "TBRO-101" },
       { startedISO: "2026-06-17T09:00:00.000Z", timeSpentSeconds: 3600 }
     );
     expect(handleMoveRecurring).toHaveBeenCalledWith(

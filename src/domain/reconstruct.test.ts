@@ -17,9 +17,9 @@ import {
 
 const commit = (overrides: Partial<ReconstructCommitGroup> = {}): ReconstructCommitGroup => ({
   id: "team/web#220:commits:2026-06-15",
-  jiraIssueKey: "FTDM-328",
+  jiraIssueKey: "TBRO-328",
   pullRequestId: 220,
-  branch: "feature/FTDM-328-auth",
+  branch: "feature/TBRO-328-auth",
   repositoryName: "web-app",
   primaryMessage: "Add auth middleware",
   commitCount: 5,
@@ -32,7 +32,7 @@ const commit = (overrides: Partial<ReconstructCommitGroup> = {}): ReconstructCom
 
 const review = (overrides: Partial<ReconstructReviewSession> = {}): ReconstructReviewSession => ({
   id: "team/web#511:2026-06-15",
-  jiraIssueKey: "ftdm-395",
+  jiraIssueKey: "tbro-395",
   pullRequestId: 511,
   pullRequestTitle: "schema migration",
   repositoryName: "web-app",
@@ -45,7 +45,7 @@ const review = (overrides: Partial<ReconstructReviewSession> = {}): ReconstructR
 });
 
 const worklog = (overrides: Partial<ReconstructWorklog> = {}): ReconstructWorklog => ({
-  issueKey: "FTDM-100",
+  issueKey: "TBRO-100",
   issueSummary: "Daily standup",
   startedISO: "2026-06-15T13:00:00",
   timeSpentSeconds: 75 * 60,
@@ -107,7 +107,7 @@ describe("buildSignals", () => {
     ]);
 
     expect(signals.map((s) => s.id)).toEqual(["a", "b"]);
-    expect(signals[0]).toMatchObject({ kind: "pr", key: "FTDM-395", confidence: "high", startHour: 9 });
+    expect(signals[0]).toMatchObject({ kind: "pr", key: "TBRO-395", confidence: "high", startHour: 9 });
     expect(signals[1].confidence).toBe("med");
     expect(signals[0].title).toBe("Review: schema migration");
   });
@@ -120,12 +120,12 @@ describe("buildSignals", () => {
   it("maps commit runs to blue 'commit' work signals attributed to the ticket", () => {
     const [sig] = buildCommitSignals([commit()]);
     expect(sig.kind).toBe("commit");
-    expect(sig.key).toBe("FTDM-328");
+    expect(sig.key).toBe("TBRO-328");
     expect(sig.title).toBe("Add auth middleware");
     expect(sig.durationMinutes).toBe(110);
     expect(sig.sub).toContain("5 commits");
     expect(sig.naiveDescription).toContain("Add auth middleware");
-    expect(sig.naiveDescription).toContain("on feature/FTDM-328-auth");
+    expect(sig.naiveDescription).toContain("on feature/TBRO-328-auth");
   });
 
   it("reclassifies activity on your own PR as low-confidence work, not a review", () => {
@@ -133,7 +133,7 @@ describe("buildSignals", () => {
     expect(own.title).toBe("On your PR: schema migration");
     expect(own.title).not.toContain("Review");
     expect(own.confidence).toBe("low"); // own-PR comments are a weak signal of work time
-    expect(own.key).toBe("FTDM-395"); // still attributed to the PR's ticket
+    expect(own.key).toBe("TBRO-395"); // still attributed to the PR's ticket
   });
 
   it("keeps a real review of someone else's PR as a review", () => {
@@ -237,7 +237,7 @@ describe("buildReconstructDay", () => {
     expect(day.kind).toBe("past");
     expect(day.signals.map((s) => s.kind)).toContain("commit");
     const row = day.rows.find((r) => r.kind === "filled" && r.signalKind === "commit");
-    expect(row?.key).toBe("FTDM-328");
+    expect(row?.key).toBe("TBRO-328");
     expect(row?.naiveDescription).toContain("Add auth middleware");
     expect(day.reconstructedMinutes).toBe(95);
   });

@@ -10,7 +10,7 @@
  *    corrupt an unrelated substring.
  *  - Caller-supplied reversible tokens (opaque signal ids, which embed workspace/repo/PR
  *    identifiers) → stable `ID-1`, `ID-2`, … restored in the model's response.
- *  - Jira-style ticket keys (`FTDM-395`) → stable placeholders `TICKET-1`, `TICKET-2`, … and
+ *  - Jira-style ticket keys (`TBRO-395`) → stable placeholders `TICKET-1`, `TICKET-2`, … and
  *    a `restore()` maps them back in the model's response, so the user still sees real keys.
  *
  * This reduces identifiability; it is NOT a guarantee. A person's name typed into a commit

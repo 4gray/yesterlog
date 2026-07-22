@@ -5,27 +5,27 @@ import { AddTimeModal } from "./AddTimeModal";
 
 const ticket: JiraTicket = {
   id: "133470",
-  key: "FTDM-397",
+  key: "TBRO-397",
   summary: "Restructure the access domain in nx monorepo",
-  projectKey: "FTDM",
-  projectName: "Feature Team Data Management",
+  projectKey: "TBRO",
+  projectName: "TimeBro Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   issueType: { name: "Task", hierarchyLevel: 0 },
-  url: "https://elevait.atlassian.net/browse/FTDM-397"
+  url: "https://elevait.atlassian.net/browse/TBRO-397"
 };
 
 const reconstructTicket: JiraTicket = {
-  id: "FTDM-426",
-  key: "FTDM-426",
+  id: "TBRO-426",
+  key: "TBRO-426",
   summary: "Create mongo mock data for documents and folders",
-  projectKey: "FTDM",
-  projectName: "FTDM",
+  projectKey: "TBRO",
+  projectName: "TBRO",
   statusName: "Unknown",
   statusCategory: "unknown",
   loggedSecondsTotal: 0,
-  url: "https://elevait.atlassian.net/browse/FTDM-426"
+  url: "https://elevait.atlassian.net/browse/TBRO-426"
 };
 
 describe("AddTimeModal", () => {
@@ -49,10 +49,10 @@ describe("AddTimeModal", () => {
       />
     );
 
-    expect(markup).toContain("FTDM-426");
+    expect(markup).toContain("TBRO-426");
     expect(markup).toContain("Create mongo mock data for documents and folders");
     expect(markup).toContain("40m");
-    expect(markup).toContain("Log 40m to FTDM-426");
+    expect(markup).toContain("Log 40m to TBRO-426");
     expect(markup).not.toContain("2h 00m");
   });
 
@@ -239,7 +239,7 @@ describe("AddTimeModal", () => {
         editingWorklog={{
           id: "wl-1",
           issueId: "133470",
-          issueKey: "FTDM-397",
+          issueKey: "TBRO-397",
           issueSummary: "Restructure the access domain in nx monorepo",
           authorAccountId: "account-1",
           started: "2026-06-18T08:00:00.000Z",

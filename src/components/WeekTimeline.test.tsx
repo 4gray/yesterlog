@@ -41,7 +41,7 @@ const weekState: WeekState = {
       issues: [
         {
           id: "1",
-          key: "FTDM-401",
+          key: "TBRO-401",
           summary: "Build shared week timeline",
           loggedSeconds: 7200
         }
@@ -83,7 +83,7 @@ const syncResult: SyncResult = {
         {
           id: "wl-1",
           issueId: "1",
-          issueKey: "FTDM-401",
+          issueKey: "TBRO-401",
           issueSummary: "Build shared week timeline",
           authorAccountId: "account-1",
           started: "2026-06-16T07:00:00.000Z",
@@ -116,7 +116,7 @@ describe("WeekTimeline", () => {
     expect(markup.match(/cal--embedded/g)).toHaveLength(2);
     expect(markup.match(/data-timeline-start=/g)).toHaveLength(2);
     expect(markup.match(/data-drop-day=/g)).toHaveLength(3);
-    expect(markup).toContain("FTDM-401");
+    expect(markup).toContain("TBRO-401");
     expect(markup).toContain("is-draggable");
     expect(markup).toContain("Future day");
     expect(markup).toContain("Read-only until this day begins");

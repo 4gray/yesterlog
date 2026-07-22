@@ -70,8 +70,8 @@ describe("AppReconRoute", () => {
         reviewSessions: [],
         commits: [
           {
-            id: "commit-ftdm-426",
-            jiraIssueKey: "FTDM-426",
+            id: "commit-tbro-426",
+            jiraIssueKey: "TBRO-426",
             repositoryName: "web-app",
             primaryMessage: "Create mongo mock data for documents and folders",
             commitCount: 1,
@@ -82,15 +82,15 @@ describe("AppReconRoute", () => {
           }
         ]
       },
-      { "commit-ftdm-426": 10 },
-      { "commit-ftdm-426": 40 }
+      { "commit-tbro-426": 10 },
+      { "commit-tbro-426": 40 }
     );
 
     const prefill = buildReconstructAddTimePrefill(day, settings.jiraBaseUrl);
 
-    expect(prefill?.ticket?.key).toBe("FTDM-426");
+    expect(prefill?.ticket?.key).toBe("TBRO-426");
     expect(prefill?.ticket?.summary).toBe("Create mongo mock data for documents and folders");
-    expect(prefill?.ticket?.url).toBe("https://example.atlassian.net/browse/FTDM-426");
+    expect(prefill?.ticket?.url).toBe("https://example.atlassian.net/browse/TBRO-426");
     expect(prefill?.timeSpentSeconds).toBe(40 * 60);
     expect(new Date(prefill?.startedISO ?? "").getHours()).toBe(10);
     expect(prefill?.comment).toContain("Create mongo mock data for documents and folders");

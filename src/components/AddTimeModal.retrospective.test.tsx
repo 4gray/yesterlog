@@ -112,6 +112,55 @@ describe("AddTimeModal retrospective start", () => {
     expect(timeInput?.value).toBe("09:15");
   });
 
+  it("keeps the duration controls synchronized with a visual timeline resize", () => {
+    act(() => {
+      root.render(
+        <AddTimeModal
+          date={new Date(2026, 5, 17, 10)}
+          dateOptions={["2026-06-17"]}
+          ticketOptions={[ticket]}
+          isConfigured={true}
+          isLogging={false}
+          prefill={{ startedISO: new Date(2026, 5, 17, 10).toISOString(), timeSpentSeconds: 2 * 60 * 60 }}
+          onClose={() => undefined}
+          onLog={async () => true}
+        />
+      );
+    });
+
+    const track = container.querySelector<HTMLElement>(".add-time-timeline-track");
+    const handle = container.querySelector<HTMLElement>('.add-time-timeline-handle[aria-label="Resize until end"]');
+    expect(track).not.toBeNull();
+    expect(handle).not.toBeNull();
+    Object.defineProperty(track, "getBoundingClientRect", {
+      value: () => ({
+        x: 0,
+        y: 0,
+        top: 0,
+        right: 300,
+        bottom: 1248,
+        left: 0,
+        width: 300,
+        height: 1248,
+        toJSON: () => undefined
+      })
+    });
+
+    act(() => {
+      handle?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientY: 624 }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, button: 0, clientY: 702 }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0, clientY: 702 }));
+    });
+
+    expect(container.querySelector(".modal-duration")?.textContent).toBe("3h 30m");
+    expect(container.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe("10:00");
+    expect(container.querySelector(".add-time-timeline-head strong")?.textContent).toContain("10:00 → 13:30");
+  });
+
   it("preserves a bulk duration instead of clamping it to the current day", () => {
     act(() => {
       root.render(

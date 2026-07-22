@@ -16,12 +16,12 @@ const baseInput = (overrides: Partial<ReconstructInput> = {}): ReconstructInput 
   workingDays: [1, 2, 3, 4, 5],
   targetMinutes: 480,
   worklogs: [
-    { issueKey: "FTDM-100", issueSummary: "Daily standup", startedISO: "2026-06-17T13:00:00", timeSpentSeconds: 75 * 60 }
+    { issueKey: "TBRO-100", issueSummary: "Daily standup", startedISO: "2026-06-17T13:00:00", timeSpentSeconds: 75 * 60 }
   ],
   reviewSessions: [
     {
       id: "s1",
-      jiraIssueKey: "FTDM-395",
+      jiraIssueKey: "TBRO-395",
       pullRequestId: 511,
       pullRequestTitle: "schema migration",
       repositoryName: "web-app",
@@ -76,7 +76,7 @@ describe("ReconstructView", () => {
     const markup = render();
     expect(markup).toContain("RECONSTRUCT — WEDNESDAY 17 JUNE");
     expect(markup).toContain("WED 17 JUN");
-    expect(markup).toContain("FTDM-395");
+    expect(markup).toContain("TBRO-395");
     expect(markup).toContain("WORKING DAY");
   });
 

@@ -30,9 +30,9 @@ const weekState: WeekState = {
       issues: [
         {
           id: "133470",
-          key: "FTDM-397",
+          key: "TBRO-397",
           summary: "Restructure the access domain in nx monorepo",
-          url: "https://elevait.atlassian.net/browse/FTDM-397",
+          url: "https://elevait.atlassian.net/browse/TBRO-397",
           issueType: { name: "Epic", hierarchyLevel: 1 },
           loggedSeconds: 2 * 3600,
           comments: ["Follow-up on access package structure"]
@@ -74,9 +74,9 @@ const syncResult: SyncResult = {
         {
           id: "2001",
           issueId: "133470",
-          issueKey: "FTDM-397",
+          issueKey: "TBRO-397",
           issueSummary: "Restructure the access domain in nx monorepo",
-          issueUrl: "https://elevait.atlassian.net/browse/FTDM-397",
+          issueUrl: "https://elevait.atlassian.net/browse/TBRO-397",
           issueType: { name: "Epic", hierarchyLevel: 1 },
           authorAccountId: "account-1",
           started: "2026-06-18T08:00:00.000Z",
@@ -181,14 +181,14 @@ describe("WeekView", () => {
       />
     );
 
-    expect(markup).toContain("FTDM-397");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
-    expect(markup).toContain("Open FTDM-397 in Jira");
-    expect(markup.match(/href="https:\/\/elevait\.atlassian\.net\/browse\/FTDM-397"/g)).toHaveLength(1);
-    expect(markup.match(/Open FTDM-397 in Jira/g)).toHaveLength(2);
+    expect(markup).toContain("TBRO-397");
+    expect(markup).toContain("https://elevait.atlassian.net/browse/TBRO-397");
+    expect(markup).toContain("Open TBRO-397 in Jira");
+    expect(markup.match(/href="https:\/\/elevait\.atlassian\.net\/browse\/TBRO-397"/g)).toHaveLength(1);
+    expect(markup.match(/Open TBRO-397 in Jira/g)).toHaveLength(2);
     expect(markup).toContain("EPIC");
-    expect(markup).toContain("Edit worklog for FTDM-397");
-    expect(markup.match(/Edit worklog for FTDM-397/g)).toHaveLength(1);
+    expect(markup).toContain("Edit worklog for TBRO-397");
+    expect(markup.match(/Edit worklog for TBRO-397/g)).toHaveLength(1);
     expect(markup).toContain("Mentored a teammate on release planning");
     expect(markup).toContain("NOTE");
     expect(markup).toContain("Edit personal note");

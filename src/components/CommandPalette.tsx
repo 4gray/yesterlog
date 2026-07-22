@@ -16,7 +16,7 @@ export interface CommandPaletteProps {
   onClose: () => void;
 }
 
-export const COMMAND_PALETTE_PLACEHOLDER = "Log 2h on FTDM-352, go to week 28…";
+export const COMMAND_PALETTE_PLACEHOLDER = "Log 2h on TBRO-352, go to week 28…";
 
 const matches = (command: CommandPaletteCommand, query: string) => {
   const trimmed = query.trim().toLowerCase();
@@ -27,10 +27,10 @@ const matches = (command: CommandPaletteCommand, query: string) => {
  * Command palette (⌘K).
  *
  * Stub: filters the given commands by plain substring and runs the highlighted
- * one. The design brief calls for natural-language input — "Log 2h on FTDM-352",
+ * one. The design brief calls for natural-language input — "Log 2h on TBRO-352",
  * "go to week 28" — which is not implemented yet.
  *
- * TODO(nl-parsing): parse free-text time logging ("Log 2h on FTDM-352") into an
+ * TODO(nl-parsing): parse free-text time logging ("Log 2h on TBRO-352") into an
  * add-time prefill and open the existing modal with it pre-filled.
  * TODO(nl-parsing): parse relative/absolute week jumps ("go to week 28", "last
  * week") into a `goToWeek(date)` call.

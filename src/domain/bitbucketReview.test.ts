@@ -37,9 +37,9 @@ const session = (overrides: Partial<BitbucketReviewSession> = {}): BitbucketRevi
   pullRequestTitle: "Active interrupt handling for poller",
   pullRequestUrl: "https://bitbucket.org/team/explorer-web/pull-requests/214",
   pullRequestState: "OPEN",
-  sourceBranch: "feature/FTDM-328-poller",
+  sourceBranch: "feature/TBRO-328-poller",
   destinationBranch: "main",
-  jiraIssueKey: "FTDM-328",
+  jiraIssueKey: "TBRO-328",
   dateKey: "2026-06-15",
   startedISO: "2026-06-15T07:40:00.000Z",
   endedISO: "2026-06-15T08:25:00.000Z",
@@ -80,7 +80,7 @@ describe("bitbucket review helpers", () => {
   });
 
   it("resolves reviewed-ticket and bucket targets", () => {
-    expect(getReviewTargetIssueKey(session(), settings, "reviewed-ticket")).toBe("FTDM-328");
+    expect(getReviewTargetIssueKey(session(), settings, "reviewed-ticket")).toBe("TBRO-328");
     expect(getReviewTargetIssueKey(session(), settings, "review-bucket")).toBe("TEAM-77");
     expect(getReviewTargetIssueKey(session({ jiraIssueKey: undefined }), settings, "reviewed-ticket")).toBeUndefined();
   });
@@ -98,7 +98,7 @@ describe("bitbucket review helpers", () => {
       {
         sessionId: session().id,
         logged: {
-          issueKey: "FTDM-328",
+          issueKey: "TBRO-328",
           worklogId: "10001",
           loggedAt: "2026-06-15T12:30:00.000Z",
           targetMode: "reviewed-ticket"
@@ -111,7 +111,7 @@ describe("bitbucket review helpers", () => {
     expect(merged.sessions[0]).toMatchObject({
       status: "logged",
       logged: {
-        issueKey: "FTDM-328",
+        issueKey: "TBRO-328",
         worklogId: "10001"
       }
     });

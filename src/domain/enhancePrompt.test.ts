@@ -5,7 +5,7 @@ import type { ReconstructDay, ReconstructSignal, TimelineRow } from "./reconstru
 const signal = (overrides: Partial<ReconstructSignal>): ReconstructSignal => ({
   id: "sig-1",
   kind: "commit",
-  key: "FTDM-328",
+  key: "TBRO-328",
   title: "Auth middleware",
   sub: "web-app · 5 commits",
   durationMinutes: 60,
@@ -31,9 +31,9 @@ const day = (): ReconstructDay => ({
   isToday: false,
   signals: [signal({ id: "sig-1" })],
   rows: [
-    row({ hour: "09:00", kind: "filled", signalId: "sig-1", key: "FTDM-328", title: "Auth middleware", durationMinutes: 60 }),
+    row({ hour: "09:00", kind: "filled", signalId: "sig-1", key: "TBRO-328", title: "Auth middleware", durationMinutes: 60 }),
     row({ hour: "10:00", kind: "empty", gapText: "Gap.", gapCta: "Add" }),
-    row({ hour: "11:00", kind: "locked", key: "FTDM-9", title: "Standup", durationMinutes: 30 })
+    row({ hour: "11:00", kind: "locked", key: "TBRO-9", title: "Standup", durationMinutes: 30 })
   ],
   targetMinutes: 480,
   accountableMinutes: 480,
@@ -92,11 +92,11 @@ describe("parseAiDrafts", () => {
     const drafts = parseAiDrafts(
       JSON.stringify({
         entries: [{ id: "sig-1", draft: "Implemented auth middleware." }],
-        gaps: [{ hour: "10:00", text: "Likely continued FTDM-328." }]
+        gaps: [{ hour: "10:00", text: "Likely continued TBRO-328." }]
       })
     );
     expect(drafts.entries["sig-1"]).toBe("Implemented auth middleware.");
-    expect(drafts.gaps["10:00"]).toBe("Likely continued FTDM-328.");
+    expect(drafts.gaps["10:00"]).toBe("Likely continued TBRO-328.");
   });
 
   it("tolerates code fences / surrounding prose", () => {
@@ -115,10 +115,10 @@ describe("applyAiDrafts", () => {
     const base = day();
     const enhanced = applyAiDrafts(base, {
       entries: { "sig-1": "Implemented auth middleware." },
-      gaps: { "10:00": "Likely continued FTDM-328." }
+      gaps: { "10:00": "Likely continued TBRO-328." }
     });
     expect(enhanced.rows[0].aiDraft).toBe("Implemented auth middleware.");
-    expect(enhanced.rows[1].gapText).toBe("Likely continued FTDM-328.");
+    expect(enhanced.rows[1].gapText).toBe("Likely continued TBRO-328.");
     expect(enhanced.rows[2].aiDraft).toBeUndefined(); // locked rows untouched
   });
 

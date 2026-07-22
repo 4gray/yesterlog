@@ -223,6 +223,7 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
   await withDemoPage({ view: "week" }, async (page) => {
     await page.locator(".week-header").waitFor();
     assert.ok(await page.getByText(/WEEK \d+/).first().isVisible());
+    assert.doesNotMatch(await page.locator("body").innerText(), /\bFTDM-\d+\b/);
     // The week header carries the same billable / "to log" split as the Today hero.
     assert.ok(await page.locator(".week-header .week-split .ts-billable").isVisible());
 
@@ -274,6 +275,17 @@ test("week Add Time modal creates, edits, and deletes a local note", { timeout: 
   await withDemoPage({ view: "week" }, async (page) => {
     await page.getByRole("button", { name: /Log time for Wednesday/i }).click();
     await page.getByRole("dialog", { name: "Log time" }).waitFor();
+    await page.getByRole("region", { name: "Visual time range editor" }).waitFor();
+    assert.ok(await page.locator(".add-time-modal-content.has-side-timeline").isVisible());
+
+    const modeTabsBox = await page.locator(".modal-mode-tabs button").first().boundingBox();
+    const timelineBox = await page.locator(".add-time-timeline").boundingBox();
+    assert.ok(modeTabsBox && timelineBox);
+    assert.ok(
+      Math.abs(modeTabsBox.y - timelineBox.y) <= 1,
+      "timeline should begin alongside the modal mode tabs",
+    );
+
     await page.getByRole("button", { name: "Personal note", exact: true }).click();
 
     await page.getByLabel("Personal note title").fill("E2E planning");
