@@ -73,7 +73,7 @@ the final Snap on Ubuntu before submitting the stable listing.
 - [x] Configure restricted GitHub Actions Store credentials.
 - [ ] Paste the title, summary, categories, description, and links.
 - [ ] Upload the icon and up to five final Linux screenshots.
-- [ ] Upload the first revision to `edge`.
+- [x] Upload the first revision to `edge` (version 2.7.2, revision 1).
 - [ ] Install the Store revision on a clean Ubuntu system.
 - [ ] Complete the Wayland and X11 smoke-test checklist in the README.
 - [ ] Promote the tested revision to `candidate`, then `stable`.
