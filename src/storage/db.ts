@@ -479,9 +479,12 @@ export const getSyncResult = async (weekKey: string) => {
     return stored;
   }
 
-  // All week loaders share one in-memory IndexedDB read. Reconciliation
-  // invalidates it, so already-cached weeks still see newly synced bulk logs.
-  const cachedEntries = await readJiraWorklogCache();
+  // All week loaders share one in-memory ledger read. Persisted sync results
+  // remain the source of truth for which dates Jira was actually scanned.
+  const [cachedEntries, persistedResults] = await Promise.all([
+    readJiraWorklogCache(),
+    readAllStore<SyncResult>("syncResults")
+  ]);
   const ledgerWorklogs = cachedEntries
     .filter((entry) => entry.jiraSite === jiraSite && entry.authorAccountId === accountId)
     .map((entry) => entry.worklog);
@@ -497,12 +500,27 @@ export const getSyncResult = async (weekKey: string) => {
       [...legacyStoredWorklogs, ...ledgerWorklogs].map((worklog) => [worklog.id, worklog])
     ).values()
   ];
-  if (!stored && sourceWorklogs.length === 0) {
-    return undefined;
-  }
 
   const weekStart = fromLocalDateKey(weekKey);
   const weekEndExclusive = addDays(weekStart, 7);
+  const coveringScan = persistedResults
+    .filter((result) => result.accountId === accountId && jiraSiteForResult(result) === jiraSite)
+    .flatMap((result) => {
+      if (!result.scanStartISO || !result.scanEndExclusiveISO) return [];
+      const start = new Date(result.scanStartISO);
+      const end = new Date(result.scanEndExclusiveISO);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= weekEndExclusive || end <= weekStart) return [];
+      const overlapStart = start > weekStart ? start : weekStart;
+      const overlapEnd = end < weekEndExclusive ? end : weekEndExclusive;
+      return [{ result, overlapMs: overlapEnd.getTime() - overlapStart.getTime() }];
+    })
+    .sort((left, right) =>
+      right.overlapMs - left.overlapMs || right.result.syncedAt.localeCompare(left.result.syncedAt)
+    )[0]?.result;
+  if (!stored && sourceWorklogs.length === 0 && !coveringScan) {
+    return undefined;
+  }
+
   const summary = summarizeWorklogsForWeek(sourceWorklogs, weekStart, weekEndExclusive);
 
   if (stored) {
@@ -521,11 +539,15 @@ export const getSyncResult = async (weekKey: string) => {
       issueCount: summary.issueCount,
       worklogCount: summary.worklogCount,
       daySummaries: summary.daySummaries,
-      sourceWorklogs
+      sourceWorklogs,
+      ...(coveringScan ? {
+        scanStartISO: coveringScan.scanStartISO,
+        scanEndExclusiveISO: coveringScan.scanEndExclusiveISO
+      } : {})
     };
   }
 
-  const syncedAt = sourceWorklogs.reduce(
+  const sourceSyncedAt = sourceWorklogs.reduce(
     (latest, worklog) => {
       const candidate = worklog.updated ?? worklog.created;
       const candidateTime = candidate ? new Date(candidate).getTime() : Number.NaN;
@@ -535,6 +557,7 @@ export const getSyncResult = async (weekKey: string) => {
     },
     { time: 0, value: new Date(0).toISOString() }
   ).value;
+  const syncedAt = sourceWorklogs.length ? sourceSyncedAt : coveringScan?.syncedAt ?? sourceSyncedAt;
 
   return {
     weekKey,
@@ -547,7 +570,11 @@ export const getSyncResult = async (weekKey: string) => {
     issueCount: summary.issueCount,
     worklogCount: summary.worklogCount,
     daySummaries: summary.daySummaries,
-    sourceWorklogs
+    sourceWorklogs,
+    ...(coveringScan ? {
+      scanStartISO: coveringScan.scanStartISO,
+      scanEndExclusiveISO: coveringScan.scanEndExclusiveISO
+    } : {})
   } satisfies SyncResult;
 };
 

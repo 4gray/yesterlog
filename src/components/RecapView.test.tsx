@@ -22,20 +22,20 @@ const draft = buildDeterministicRecap({
 } satisfies RecapEvidenceInput, 1, new Date("2026-06-18T12:00:00Z"));
 
 const methods = () => ({
-  setPeriod: vi.fn(), setFormat: vi.fn(), setDetail: vi.fn(), stepInterval: vi.fn(), regenerate: vi.fn(),
+  setPeriod: vi.fn(), setFormat: vi.fn(), setDetail: vi.fn(), stepInterval: vi.fn(), refreshActivity: vi.fn(), rewriteWithAi: vi.fn(),
   updateTheme: vi.fn(), setActiveVersion: vi.fn(), saveCurrent: vi.fn(), duplicateSaved: vi.fn(),
   selectSaved: vi.fn(), closeSaved: vi.fn()
 });
 
-const workspace = (savedSnapshot?: SavedRecap) => {
+const workspace = (savedSnapshot?: SavedRecap, liveFormat: Workspace["format"] = "perf") => {
   const actions = methods();
   const record: RecapDraftRecord = { intervalKey: draft.interval.key, activeVersion: 1, versions: [draft] };
   return {
     ...actions,
-    period: "week", format: savedSnapshot?.format ?? "perf", detail: savedSnapshot?.detail ?? "detailed",
+    period: "week", format: savedSnapshot?.format ?? liveFormat, detail: savedSnapshot?.detail ?? "detailed",
     interval: draft.interval, record, activeDraft: draft, displayedDraft: savedSnapshot?.version ?? draft,
     selectedSaved: savedSnapshot, saved: savedSnapshot ? [savedSnapshot] : [], isLoading: false, isGenerating: false,
-    canStepNext: false
+    isRefreshing: false, isRewriting: false, newEvidenceCount: 0, canEnhanceWithAi: true, canStepNext: false
   } as unknown as Workspace;
 };
 
@@ -64,7 +64,8 @@ describe("RecapView", () => {
 
     const range = container.querySelector<HTMLInputElement>('input[type="range"]')!;
     expect(range.value).toBe("2");
-    click(button("balanced"));
+    expect(container.querySelectorAll(".recap-narrative p").length).toBeGreaterThan(0);
+    click(button("Standard"));
     expect(ws.setDetail).toHaveBeenCalledWith("balanced");
     click(button("Sources"));
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
@@ -89,5 +90,60 @@ describe("RecapView", () => {
     expect(container.querySelector('button[aria-label^="Edit"]')).toBeNull();
     click(button("Duplicate as draft"));
     expect(readOnly.duplicateSaved).toHaveBeenCalledOnce();
+  });
+
+  it("keeps refresh and AI rewrite as separate actions", () => {
+    const ws = workspace();
+    render(ws);
+
+    click(button("Refresh activity"));
+    click(button("Rewrite with AI"));
+
+    expect(ws.refreshActivity).toHaveBeenCalledOnce();
+    expect(ws.rewriteWithAi).toHaveBeenCalledOnce();
+  });
+
+  it("collects a user-provided CV outcome through the guided editor", () => {
+    const ws = workspace(undefined, "cv");
+    render(ws);
+    click(button("Add outcome"));
+
+    const editor = container.querySelector<HTMLTextAreaElement>(".recap-impact-editor textarea")!;
+    expect(container.querySelector(".recap-impact-editor label")?.textContent).toContain("What changed");
+    act(() => {
+      const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      valueSetter?.call(editor, "Unblocked the release review for the platform team");
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    click(button("Save outcome"));
+
+    expect(ws.updateTheme).toHaveBeenCalledOnce();
+    const updated = vi.mocked(ws.updateTheme).mock.calls[0][1](draft.themes[0]);
+    expect(updated.copy.cv.lines[0]).toMatchObject({
+      needsImpact: false,
+      userImpact: "Unblocked the release review for the platform team"
+    });
+  });
+
+  it("removes a saved CV outcome and marks the candidate as needing impact again", () => {
+    const withImpact = structuredClone(draft);
+    withImpact.themes[0].copy.cv.lines[0] = {
+      ...withImpact.themes[0].copy.cv.lines[0],
+      needsImpact: false,
+      userImpact: "Reduced the weekly release review by one hour"
+    };
+    const ws = workspace(undefined, "cv");
+    ws.record = { intervalKey: withImpact.interval.key, activeVersion: 1, versions: [withImpact] };
+    ws.activeDraft = withImpact;
+    ws.displayedDraft = withImpact;
+    render(ws);
+
+    click(button("Edit outcome"));
+    click(button("Remove outcome"));
+
+    expect(ws.updateTheme).toHaveBeenCalledOnce();
+    const updated = vi.mocked(ws.updateTheme).mock.calls[0][1](withImpact.themes[0]);
+    expect(updated.copy.cv.lines[0]).toMatchObject({ needsImpact: true });
+    expect(updated.copy.cv.lines[0].userImpact).toBeUndefined();
   });
 });

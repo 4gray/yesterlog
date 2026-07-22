@@ -150,6 +150,9 @@ const worklog = ({
   issueKey: sourceTicket.key,
   issueSummary: sourceTicket.summary,
   issueType: sourceTicket.issueType,
+  projectKey: sourceTicket.projectKey,
+  projectName: sourceTicket.projectName,
+  epic: sourceTicket.epic,
   authorAccountId: ACCOUNT_ID,
   started: localStartISO(dateKey, time),
   timeSpentSeconds: duration,
@@ -358,7 +361,9 @@ const buildSyncResult = ({
     trackedSeconds,
     issueCount: issueKeys.size,
     worklogCount: logs.length,
-    daySummaries
+    daySummaries,
+    scanStartISO: weekStart.toISOString(),
+    scanEndExclusiveISO: addDays(today, 1).toISOString()
   };
 };
 

@@ -112,6 +112,9 @@ export interface JiraWorklog {
   issueUrl?: string;
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
+  projectKey?: string;
+  projectName?: string;
+  components?: string[];
   authorAccountId: string;
   started: string;
   timeSpentSeconds: number;
@@ -159,6 +162,9 @@ export interface JiraActivity {
   issueUrl?: string;
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
+  projectKey?: string;
+  projectName?: string;
+  components?: string[];
   actorAccountId: string;
   actorDisplayName?: string;
   dateKey: string;
@@ -254,13 +260,24 @@ export interface RecapSourceItem {
   issueUrl?: string;
   epicKey?: string;
   epicSummary?: string;
+  projectKey?: string;
+  projectName?: string;
+  components?: string[];
   repository?: string;
   pullRequestId?: number;
   pullRequestUrl?: string;
   role?: "authored" | "reviewed";
   status?: string;
   detail?: string;
+  details?: string[];
+  dateKeys?: string[];
   clusterKey: string;
+}
+
+export interface RecapCopyParagraph {
+  id: string;
+  text: string;
+  refs: string[];
 }
 
 export interface RecapCopyLine {
@@ -270,11 +287,15 @@ export interface RecapCopyLine {
   refs: string[];
   tag?: RecapChangeTag;
   emphasis?: string;
+  needsImpact?: boolean;
+  /** Outcome supplied by the user. Trusted personal evidence, never model-inferred. */
+  userImpact?: string;
 }
 
 export interface RecapFormatCopy {
   lead?: string;
   version?: string;
+  paragraphs?: RecapCopyParagraph[];
   lines: RecapCopyLine[];
 }
 
@@ -291,14 +312,19 @@ export interface RecapTheme {
 
 export interface RecapCoverage {
   requestedWeeks: number;
+  elapsedWeeks?: number;
   jiraWeeks: number;
   bitbucketWeeks: number;
+  ratio?: number;
+  status?: "complete" | "partial" | "sparse";
   ticketCount: number;
   pullRequestCount: number;
   commitCount: number;
 }
 
 export interface RecapDraftVersion {
+  schemaVersion?: number;
+  aiFormats?: RecapFormat[];
   version: number;
   generatedAt: string;
   generator: "deterministic" | "ai";

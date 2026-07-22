@@ -42,6 +42,8 @@ interface JiraSearchIssue {
     summary?: string;
     issuetype?: JiraIssueTypeResponse;
     parent?: JiraParentResponse;
+    project?: { key?: string; name?: string };
+    components?: Array<{ name?: string }>;
   };
 }
 
@@ -82,6 +84,8 @@ interface JiraActivityIssue {
     summary?: string;
     issuetype?: JiraIssueTypeResponse;
     parent?: JiraParentResponse;
+    project?: { key?: string; name?: string };
+    components?: Array<{ name?: string }>;
     created?: string;
     creator?: JiraUserResponse;
   };
@@ -342,6 +346,12 @@ const issueSummary = (issue: JiraActivityIssue) => issue.fields?.summary ?? "Unt
 
 const activityIssueUrl = (settings: AppSettings, issueKey: string) => `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issueKey}`;
 
+const issueProductContext = (issue: { fields?: JiraSearchIssue["fields"] | JiraActivityIssue["fields"] }) => ({
+  projectKey: issue.fields?.project?.key,
+  projectName: issue.fields?.project?.name,
+  components: issue.fields?.components?.map((component) => component.name?.trim()).filter(Boolean) as string[] | undefined
+});
+
 const formatChangedValue = (value: string | null | undefined) => {
   const trimmed = value?.trim();
   return trimmed ? `"${trimmed}"` : "empty";
@@ -403,6 +413,7 @@ const buildIssueCreatedActivity = (
     issueUrl: activityIssueUrl(settings, issue.key),
     issueType: normalizeIssueType(issue.fields?.issuetype),
     epic: normalizeEpic(settings, issue.fields?.parent),
+    ...issueProductContext(issue),
     actorAccountId: currentUser.accountId,
     actorDisplayName: actor.displayName ?? currentUser.displayName,
     dateKey: toDateKey(createdDate),
@@ -431,6 +442,7 @@ const buildCommentActivities = (
     issueUrl: activityIssueUrl(settings, issue.key),
     issueType: normalizeIssueType(issue.fields?.issuetype),
     epic: normalizeEpic(settings, issue.fields?.parent),
+    ...issueProductContext(issue),
     actorAccountId: currentUser.accountId
   };
 
@@ -500,6 +512,7 @@ const buildChangelogActivities = (
     issueUrl: activityIssueUrl(settings, issue.key),
     issueType: normalizeIssueType(issue.fields?.issuetype),
     epic: normalizeEpic(settings, issue.fields?.parent),
+    ...issueProductContext(issue),
     actorAccountId: currentUser.accountId
   };
 
@@ -595,7 +608,7 @@ const searchCandidateIssues = async (settings: AppSettings, weekStart: Date, wee
     const params = new URLSearchParams({
       jql,
       maxResults: "100",
-      fields: "summary,issuetype,parent"
+      fields: "summary,issuetype,parent,project,components"
     });
 
     if (nextPageToken) {
@@ -711,6 +724,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
         issueUrl,
         issueType,
         epic,
+        ...issueProductContext(issue),
         authorAccountId,
         started: worklog.started,
         timeSpentSeconds: worklog.timeSpentSeconds,
@@ -772,7 +786,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
   };
 };
 
-const ACTIVITY_ISSUE_FIELDS = "summary,issuetype,parent,created,creator";
+const ACTIVITY_ISSUE_FIELDS = "summary,issuetype,parent,project,components,created,creator";
 const ACTIVITY_ISSUE_LIMIT = 50;
 const ACTIVITY_DETAIL_PAGE_LIMIT = 3;
 const ACTIVITY_DETAIL_CONCURRENCY = 4;

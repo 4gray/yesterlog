@@ -266,8 +266,8 @@ test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout
     await page.locator(".recap-segments").getByRole("button", { name: "week" }).click();
     await page.locator(".recap-theme").first().waitFor();
     await page.locator(".recap-format-list").getByRole("button", { name: /Manager update/ }).click();
-    await page.locator(".recap-detail-buttons").getByRole("button", { name: "balanced" }).click();
-    await page.getByRole("button", { name: /Regenerate/ }).click();
+    await page.locator(".recap-detail-buttons").getByRole("button", { name: "Standard" }).click();
+    await page.getByRole("button", { name: "Refresh activity" }).click();
     await page.getByRole("option", { name: "Version 2" }).waitFor({ state: "attached" });
 
     const firstTheme = page.locator(".recap-theme").first();
@@ -275,6 +275,13 @@ test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout
     await firstTheme.locator(".recap-edit-name").fill("Platform delivery & quality");
     await firstTheme.getByRole("button", { name: "Apply edits" }).click();
     assert.ok(await firstTheme.getByRole("heading", { name: "Platform delivery & quality" }).isVisible());
+
+    await page.locator(".recap-format-list").getByRole("button", { name: /CV bullets/ }).click();
+    await page.locator(".recap-detail-buttons").getByRole("button", { name: "Detailed" }).click();
+    await firstTheme.getByRole("button", { name: "Add outcome" }).click();
+    await firstTheme.getByLabel("What changed because of this work?").fill("Unblocked the release review for the platform team");
+    await firstTheme.getByRole("button", { name: "Save outcome" }).click();
+    assert.ok(await firstTheme.getByText("Unblocked the release review for the platform team.").isVisible());
 
     await page.getByRole("button", { name: "Export" }).click();
     assert.ok(await page.getByRole("button", { name: "Copy text" }).isVisible());
@@ -295,7 +302,7 @@ test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout
     await page.evaluate(() => { location.hash = "#/recap?period=week&interval=2026-06-15&format=cv&detail=headline"; });
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitForDemoReady(page, "recap", "dark");
-    await page.getByRole("heading", { name: "Selected accomplishments" }).waitFor();
+    await page.getByRole("heading", { name: "Selected accomplishment candidates" }).waitFor();
     assert.ok(await page.locator(".recap-format-list button.active", { hasText: "CV bullets" }).isVisible());
   });
 });

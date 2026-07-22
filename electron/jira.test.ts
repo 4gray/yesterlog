@@ -465,7 +465,7 @@ describe("syncJiraActivity", () => {
     expect(searchRequest?.searchParams.get("jql")).toBe(
       'issuekey in updatedBy("me", "2026-06-15", "2026-06-21") ORDER BY updated DESC'
     );
-    expect(searchRequest?.searchParams.get("fields")).toBe("summary,issuetype,parent,created,creator");
+    expect(searchRequest?.searchParams.get("fields")).toBe("summary,issuetype,parent,project,components,created,creator");
     expect(result.issueCount).toBe(1);
     expect(result.activityCount).toBe(4);
     expect(result.isPartial).toBeUndefined();
