@@ -176,7 +176,7 @@ const parseLines = (
   existingLines: RecapCopyLine[]
 ): RecapCopyLine[] => {
   if (!Array.isArray(value)) throw new Error("missing lines");
-  return value.map((lineValue, index) => {
+  const parsedLines = value.map((lineValue, index): RecapCopyLine => {
     const line = lineValue as Record<string, unknown>;
     const tag = line.tag ? String(line.tag) : undefined;
     if (tag && !TAGS.has(tag)) throw new Error("invalid tag");
@@ -187,13 +187,6 @@ const parseLines = (
     const emphasis = line.emphasis ? String(line.emphasis) : undefined;
     validateNumbers([short, long, emphasis], allowedNumbers);
     const refs = validatedRefs(line.refs, allowed);
-    const existingImpact = format === "cv"
-      ? existingLines
-        .filter((candidate) => candidate.userImpact?.trim())
-        .map((candidate) => ({ candidate, overlap: candidate.refs.filter((ref) => refs.includes(ref)).length }))
-        .filter(({ overlap }) => overlap > 0)
-        .sort((a, b) => b.overlap - a.overlap)[0]?.candidate.userImpact
-      : undefined;
     return {
       id: String(line.id ?? `${themeId}:${format}:line:${index}`),
       short,
@@ -201,9 +194,32 @@ const parseLines = (
       refs,
       tag: tag as RecapCopyLine["tag"],
       emphasis,
-      needsImpact: format === "cv" ? !existingImpact && line.needsImpact !== false : undefined,
-      userImpact: existingImpact
+      needsImpact: format === "cv" ? line.needsImpact !== false : undefined
     };
+  });
+  if (format !== "cv") return parsedLines;
+
+  const existingImpacts = existingLines.filter((line) => line.userImpact?.trim());
+  const matches = existingImpacts.flatMap((existing, existingIndex) => parsedLines.flatMap((incoming, incomingIndex) => {
+    const overlap = existing.refs.filter((ref) => incoming.refs.includes(ref)).length;
+    if (!overlap) return [];
+    const exactRefs = existing.refs.length === incoming.refs.length
+      && existing.refs.every((ref) => incoming.refs.includes(ref));
+    const score = (existing.id === incoming.id ? 1_000_000 : 0) + (exactRefs ? 10_000 : 0) + overlap;
+    return [{ existingIndex, incomingIndex, score }];
+  })).sort((a, b) => b.score - a.score || a.incomingIndex - b.incomingIndex || a.existingIndex - b.existingIndex);
+  const assignedExisting = new Set<number>();
+  const assignedIncoming = new Set<number>();
+  const impactByIncoming = new Map<number, string>();
+  for (const match of matches) {
+    if (assignedExisting.has(match.existingIndex) || assignedIncoming.has(match.incomingIndex)) continue;
+    assignedExisting.add(match.existingIndex);
+    assignedIncoming.add(match.incomingIndex);
+    impactByIncoming.set(match.incomingIndex, existingImpacts[match.existingIndex].userImpact!);
+  }
+  return parsedLines.map((line, index) => {
+    const userImpact = impactByIncoming.get(index);
+    return { ...line, needsImpact: userImpact ? false : line.needsImpact, userImpact };
   });
 };
 

@@ -88,4 +88,28 @@ describe("Recap AI grounding", () => {
       userImpact: "Unblocked the release review for the platform team"
     });
   });
+
+  it("assigns one user outcome to only one line when AI splits a CV candidate", () => {
+    const draft = fallback();
+    const theme = draft.themes[0];
+    draft.sources.push({ ...draft.sources[0], id: "note:other", title: "Second grounded task" });
+    theme.sourceIds.push("note:other");
+    theme.copy.cv.lines[0].refs = ["note:fact", "note:other"];
+    theme.copy.cv.lines[0].userImpact = "Unblocked the release review for the platform team";
+    theme.copy.cv.lines[0].needsImpact = false;
+
+    const parsed = parseRecapWorkspaceDraft(responseFor(draft, "cv", (copy) => {
+      copy.lines = [
+        { id: "split-a", short: "Reviewed the first grounded task.", long: "Reviewed the first grounded task.", refs: ["note:fact"], needsImpact: true },
+        { id: "split-b", short: "Reviewed the second grounded task.", long: "Reviewed the second grounded task.", refs: ["note:other"], needsImpact: true }
+      ];
+    }), draft, "cv", "detailed");
+    const lines = parsed!.themes[0].copy.cv.lines;
+
+    expect(lines.filter((line) => line.userImpact)).toHaveLength(1);
+    expect(lines.filter((line) => line.needsImpact)).toHaveLength(1);
+    expect(lines.find((line) => line.userImpact)?.userImpact).toBe(
+      "Unblocked the release review for the platform team"
+    );
+  });
 });
