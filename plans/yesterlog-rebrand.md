@@ -24,7 +24,7 @@ Snap Store package to Yesterlog, then prepare the major `v3.0.0` release.
 - [x] Implement code, packaging, content, docs, workflow, and migration changes.
 - [x] Add automated brand-audit coverage.
 - [x] Verify tests, builds, migration, screenshots, rendered UI, and package metadata.
-- [ ] Rename the GitHub repository and Pages site; refresh Snap credentials.
+- [x] Rename the GitHub repository and Pages site; refresh Snap credentials.
 - [ ] Run the canonical major-release procedure and verify the draft and Snap.
 
 ## Verification
@@ -44,5 +44,8 @@ Snap Store package to Yesterlog, then prepare the major `v3.0.0` release.
   desktop entry, Snap name/title, and Pages URL were inspected.
 - `npm audit --omit=dev` still reports the existing transitive `js-yaml`
   high-severity advisory; no dependencies changed for this rebrand.
-- `npm run release:dry-run` remains pending until the exact release commit is on
-  `main`, as required by the release skill.
+- Rebrand commit `4e2d7ef` is on `main`; exact-main CI run `29989331891`
+  passed, and the renamed Pages site plus `v3.0.0` screenshot URLs return 200.
+- The Snap Store credential is restricted to `yesterlog`/`edge` and stored as
+  the `SNAPCRAFT_STORE_CREDENTIALS` GitHub secret.
+- The canonical `major` release dry-run and tag remain pending.

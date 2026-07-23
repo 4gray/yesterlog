@@ -76,7 +76,7 @@ them from the final Snap on Ubuntu before promoting the snap to stable.
 
 - [x] Register `yesterlog` with the intended publisher account.
 - [ ] Add the MIT license.
-- [ ] Configure restricted GitHub Actions Store credentials for `yesterlog`/`edge`.
+- [x] Configure restricted GitHub Actions Store credentials for `yesterlog`/`edge`.
 - [ ] Paste the title, summary, primary category, description, and links.
 - [ ] Upload the icon and five Linux screenshots.
 - [ ] Upload the featured banner to the Snap Store.

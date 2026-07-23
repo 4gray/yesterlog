@@ -1,0 +1,73 @@
+name: Snap Store Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_revision:
+        description: Exact edge revision produced by the release workflow
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Verify edge revision
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Confirm a clean Snap profile
+        run: test ! -e "$HOME/snap/yesterlog"
+
+      - name: Install Yesterlog from edge
+        run: sudo snap install yesterlog --edge
+
+      - name: Verify revision, metadata, and interfaces
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+        run: |
+          set -euo pipefail
+          installed_revision="$(snap list yesterlog | awk 'NR == 2 { print $3 }')"
+          test "$installed_revision" = "$EXPECTED_REVISION"
+
+          snap info yesterlog
+          snap connections yesterlog
+
+          test -f /snap/yesterlog/current/meta/gui/yesterlog.desktop
+          test -f /snap/yesterlog/current/meta/gui/yesterlog.png
+          grep -F "Name=Yesterlog" /snap/yesterlog/current/meta/gui/yesterlog.desktop
+          grep -F "Exec=yesterlog" /snap/yesterlog/current/meta/gui/yesterlog.desktop
+
+          for plug in network home browser-support; do
+            snap connections yesterlog | awk -v expected="yesterlog:$plug" '
+              $1 == expected && $2 != "-" { connected = 1 }
+              END { exit connected ? 0 : 1 }
+            '
+          done
+
+      - name: Install virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Launch the confined app
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+        run: |
+          set -euo pipefail
+          set +e
+          timeout --signal=TERM 20s xvfb-run -a snap run yesterlog >snap-launch.log 2>&1
+          launch_status=$?
+          set -e
+
+          cat snap-launch.log
+
+          if [ "$launch_status" -ne 0 ] && [ "$launch_status" -ne 124 ]; then
+            echo "Yesterlog exited unexpectedly with status $launch_status."
+            exit "$launch_status"
+          fi
+
+          if grep -Eiq "segmentation fault|trace/breakpoint trap|fatal error" snap-launch.log; then
+            echo "Yesterlog emitted a fatal launch error."
+            exit 1
+          fi
+
+          test -d "$HOME/snap/yesterlog/$EXPECTED_REVISION"
