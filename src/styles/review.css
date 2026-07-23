@@ -586,6 +586,84 @@
   font-weight: 800;
 }
 
+.review-dialog-schedule {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 5px;
+  align-items: center;
+  min-width: 0;
+  margin-top: 3px;
+  padding-top: 7px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.review-dialog-schedule-label {
+  grid-row: 1 / 3;
+  align-self: start;
+  padding-top: 2px;
+  color: var(--blue-soft);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.review-dialog-schedule-date {
+  min-width: 0;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
+}
+
+.review-dialog-schedule-times {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.review-dialog-schedule-times input {
+  width: 88px;
+  min-height: 27px;
+  padding: 0 6px;
+  border: 1px solid rgba(79, 124, 255, 0.38);
+  border-radius: 6px;
+  outline: none;
+  background: rgba(79, 124, 255, 0.07);
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.review-dialog-schedule-times input:hover {
+  border-color: rgba(79, 124, 255, 0.58);
+  background: rgba(79, 124, 255, 0.11);
+}
+
+.review-dialog-schedule-times input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.14);
+}
+
+.review-dialog-schedule-arrow {
+  color: var(--dim);
+}
+
+.review-dialog-schedule-end {
+  min-width: 0;
+  color: var(--text-bright);
+  white-space: normal;
+}
+
 .review-dialog-item-meta {
   display: grid;
   justify-items: end;

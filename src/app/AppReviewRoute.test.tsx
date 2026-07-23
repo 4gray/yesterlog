@@ -35,8 +35,14 @@ vi.mock("../components/ReviewView", () => ({
             (props.onLogSessions as (
               sessionIds: string[],
               targetMode: string,
-              durationOverrides: Record<string, number>
-            ) => void)(["session-1"], "review-bucket", { "session-1": 1800 })
+              durationOverrides: Record<string, number>,
+              startedISOOverrides: Record<string, string>
+            ) => void)(
+              ["session-1"],
+              "review-bucket",
+              { "session-1": 1800 },
+              { "session-1": "2026-06-18T09:30:00.000Z" }
+            )
           }
         >
           log
@@ -147,6 +153,11 @@ describe("AppReviewRoute", () => {
 
     expect(handleReviewSync).toHaveBeenCalledTimes(1);
     expect(setReviewTargetMode).toHaveBeenCalledWith("review-bucket");
-    expect(handleLogReviewSessions).toHaveBeenCalledWith(["session-1"], "review-bucket", { "session-1": 1800 });
+    expect(handleLogReviewSessions).toHaveBeenCalledWith(
+      ["session-1"],
+      "review-bucket",
+      { "session-1": 1800 },
+      { "session-1": "2026-06-18T09:30:00.000Z" }
+    );
   });
 });

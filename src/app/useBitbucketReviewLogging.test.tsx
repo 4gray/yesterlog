@@ -228,14 +228,21 @@ describe("useBitbucketReviewLogging", () => {
     renderHarness({ sourceResult: buildResult(sessions) });
 
     await act(async () => {
-      await expect(getApi().handleLogReviewSessions(["s1", "s2"], "reviewed-ticket", { s1: 900 })).resolves.toBe(true);
+      await expect(
+        getApi().handleLogReviewSessions(
+          ["s1", "s2"],
+          "reviewed-ticket",
+          { s1: 900 },
+          { s1: "2026-06-18T08:30:00.000Z" }
+        )
+      ).resolves.toBe(true);
     });
 
     expect(addWorklog).toHaveBeenNthCalledWith(1, {
       settings,
       issueKey: "TB-22",
       timeSpentSeconds: 900,
-      startedISO: "2026-06-18T10:00:00.000Z",
+      startedISO: "2026-06-18T08:30:00.000Z",
       comment: expect.stringContaining("Reviewed Bitbucket PR #1: s1 review")
     });
     expect(addWorklog).toHaveBeenNthCalledWith(2, {

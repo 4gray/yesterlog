@@ -35,7 +35,8 @@ interface ReviewViewProps {
   onLogSessions: (
     sessionIds: string[],
     targetMode: BitbucketReviewTargetMode,
-    durationOverrides: Record<string, number>
+    durationOverrides: Record<string, number>,
+    startedISOOverrides: Record<string, string>
   ) => Promise<boolean>;
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
@@ -125,18 +126,28 @@ const buildFilteredResult = (
       }
     : undefined;
 
-const applyReviewDurationOverrides = (
+const applyReviewSessionOverrides = (
   sessions: BitbucketReviewSession[],
-  durationOverrides: Record<string, number>
+  durationOverrides: Record<string, number>,
+  startedISOOverrides: Record<string, string>
 ) =>
   sessions.map((session) => {
     const overrideSeconds = durationOverrides[session.id];
-    return overrideSeconds && overrideSeconds > 0
-      ? {
-          ...session,
-          estimatedSeconds: overrideSeconds
-        }
-      : session;
+    const overrideStartedISO = startedISOOverrides[session.id];
+    const hasDurationOverride = Boolean(overrideSeconds && overrideSeconds > 0);
+    const hasStartedISOOverride = Boolean(
+      overrideStartedISO && !Number.isNaN(new Date(overrideStartedISO).getTime())
+    );
+
+    if (!hasDurationOverride && !hasStartedISOOverride) {
+      return session;
+    }
+
+    return {
+      ...session,
+      ...(hasDurationOverride ? { estimatedSeconds: overrideSeconds } : {}),
+      ...(hasStartedISOOverride ? { startedISO: overrideStartedISO } : {})
+    };
   });
 
 const reviewCustomDurationToSeconds = (amountText: string, unit: ReviewDurationUnit) => {
@@ -162,6 +173,52 @@ const buildTargetPreview = (
     session,
     targetIssueKey: getReviewTargetIssueKey(session, settings, mode)
   }));
+
+const formatReviewWorklogDay = (date: Date) =>
+  new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  })
+    .format(date)
+    .toUpperCase();
+
+const getReviewWorklogEnd = (session: BitbucketReviewSession) =>
+  new Date(new Date(session.startedISO).getTime() + session.estimatedSeconds * 1000);
+
+const areSameLocalDay = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate();
+
+const formatReviewTimeInput = (date: Date) =>
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+const reviewStartedISOAtTime = (session: BitbucketReviewSession, timeValue: string) => {
+  const match = /^(\d{2}):(\d{2})$/.exec(timeValue);
+  if (!match) {
+    return undefined;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) {
+    return undefined;
+  }
+
+  const started = new Date(session.startedISO);
+  started.setHours(hours, minutes, 0, 0);
+  return started.toISOString();
+};
+
+const formatReviewWorklogSchedule = (session: BitbucketReviewSession) => {
+  const start = new Date(session.startedISO);
+  const end = getReviewWorklogEnd(session);
+
+  return areSameLocalDay(start, end)
+    ? `${formatReviewWorklogDay(start)} · ${formatHm24(start)}–${formatHm24(end)}`
+    : `${formatReviewWorklogDay(start)} · ${formatHm24(start)} → ${formatReviewWorklogDay(end)} · ${formatHm24(end)}`;
+};
 
 const getLoggedDurationDeltaClass = (deltaSeconds: number) => {
   if (deltaSeconds > 0) {
@@ -221,6 +278,7 @@ interface ReviewPreviewListProps {
   issueTypesByKey: Record<string, JiraIssueTypeInfo>;
   emptyText: string;
   onApplySessionSeconds: (sessionId: string, seconds: number) => void;
+  onApplySessionStartedISO?: (sessionId: string, startedISO: string) => void;
 }
 
 interface ReviewSessionDurationEditorProps {
@@ -292,12 +350,55 @@ const ReviewSessionDurationEditor = ({ sessionId, seconds, onApplySeconds }: Rev
   );
 };
 
+interface ReviewWorklogScheduleEditorProps {
+  session: BitbucketReviewSession;
+  onApplyStartedISO?: (sessionId: string, startedISO: string) => void;
+}
+
+const ReviewWorklogScheduleEditor = ({ session, onApplyStartedISO }: ReviewWorklogScheduleEditorProps) => {
+  const start = new Date(session.startedISO);
+  const end = getReviewWorklogEnd(session);
+  const endLabel = areSameLocalDay(start, end)
+    ? formatHm24(end)
+    : `${formatReviewWorklogDay(end)} · ${formatHm24(end)}`;
+
+  return (
+    <div className="review-dialog-schedule" aria-label={`Worklog schedule: ${formatReviewWorklogSchedule(session)}`}>
+      <span className="review-dialog-schedule-label">WHEN</span>
+      <span className="review-dialog-schedule-date">{formatReviewWorklogDay(start)}</span>
+      <div className="review-dialog-schedule-times">
+        {onApplyStartedISO ? (
+          <input
+            type="time"
+            step={60}
+            value={formatReviewTimeInput(start)}
+            aria-label={`Start time for PR ${session.pullRequestId}`}
+            onChange={(event) => {
+              const startedISO = reviewStartedISOAtTime(session, event.target.value);
+              if (startedISO) {
+                onApplyStartedISO(session.id, startedISO);
+              }
+            }}
+          />
+        ) : (
+          <span>{formatHm24(start)}</span>
+        )}
+        <span className="review-dialog-schedule-arrow" aria-hidden="true">
+          →
+        </span>
+        <span className="review-dialog-schedule-end">{endLabel}</span>
+      </div>
+    </div>
+  );
+};
+
 const ReviewPreviewList = ({
   items,
   issueUrlsByKey,
   issueTypesByKey,
   emptyText,
-  onApplySessionSeconds
+  onApplySessionSeconds,
+  onApplySessionStartedISO
 }: ReviewPreviewListProps) => {
   if (items.length === 0) {
     return <div className="review-dialog-empty">{emptyText}</div>;
@@ -313,6 +414,9 @@ const ReviewPreviewList = ({
             <span>
               {session.repositoryName} · {getSessionAuthorLabel(session)}
             </span>
+            {onApplySessionStartedISO ? (
+              <ReviewWorklogScheduleEditor session={session} onApplyStartedISO={onApplySessionStartedISO} />
+            ) : null}
           </div>
           <div className="review-dialog-item-meta">
             <strong>{formatClock(session.estimatedSeconds)}</strong>
@@ -360,9 +464,10 @@ export const ReviewView = ({
   const [ownershipFilter, setOwnershipFilter] = useState<ReviewOwnershipFilter>("reviewed-by-me");
   const [dialog, setDialog] = useState<ReviewDialogState>();
   const [durationOverrides, setDurationOverrides] = useState<Record<string, number>>({});
+  const [startedISOOverrides, setStartedISOOverrides] = useState<Record<string, string>>({});
   const effectiveSessions = useMemo(
-    () => applyReviewDurationOverrides(sessions, durationOverrides),
-    [durationOverrides, sessions]
+    () => applyReviewSessionOverrides(sessions, durationOverrides, startedISOOverrides),
+    [durationOverrides, sessions, startedISOOverrides]
   );
   const visibleSessions = useMemo(() => filterReviewSessions(effectiveSessions, ownershipFilter), [effectiveSessions, ownershipFilter]);
   const visibleResult = useMemo(() => buildFilteredResult(result, visibleSessions), [result, visibleSessions]);
@@ -414,6 +519,10 @@ export const ReviewView = ({
       const nextEntries = Object.entries(current).filter(([sessionId]) => knownSessionIds.has(sessionId));
       return nextEntries.length === Object.keys(current).length ? current : Object.fromEntries(nextEntries);
     });
+    setStartedISOOverrides((current) => {
+      const nextEntries = Object.entries(current).filter(([sessionId]) => knownSessionIds.has(sessionId));
+      return nextEntries.length === Object.keys(current).length ? current : Object.fromEntries(nextEntries);
+    });
   }, [sessions]);
 
   const toggleSession = (sessionId: string) => {
@@ -435,6 +544,13 @@ export const ReviewView = ({
     });
   };
 
+  const applySessionStartedISO = (sessionId: string, startedISO: string) => {
+    setStartedISOOverrides((current) => ({
+      ...current,
+      [sessionId]: startedISO
+    }));
+  };
+
   const openLogDialog = () => {
     if (selectedIds.length === 0) {
       return;
@@ -449,10 +565,17 @@ export const ReviewView = ({
     }
 
     const loggedIds = selectedIds;
-    const ok = await onLogSessions(loggedIds, targetMode, durationOverrides);
+    const ok = await onLogSessions(loggedIds, targetMode, durationOverrides, startedISOOverrides);
     if (ok) {
       setSelectedIds([]);
       setDurationOverrides((current) => {
+        const next = { ...current };
+        for (const sessionId of loggedIds) {
+          delete next[sessionId];
+        }
+        return next;
+      });
+      setStartedISOOverrides((current) => {
         const next = { ...current };
         for (const sessionId of loggedIds) {
           delete next[sessionId];
@@ -623,7 +746,7 @@ export const ReviewView = ({
                   const displayIssueKey = isLogged ? session.logged?.issueKey ?? targetIssueKey : targetIssueKey;
                   const isSelectable = Boolean(targetIssueKey && !isLogged);
                   const start = new Date(session.startedISO);
-                  const end = new Date(session.endedISO);
+                  const end = getReviewWorklogEnd(session);
                   const authorLabel = getSessionAuthorLabel(session);
                   const loggedSeconds = session.logged?.timeSpentSeconds;
                   const suggestedSeconds = session.logged?.estimatedSecondsAtLog ?? session.estimatedSeconds;
@@ -731,7 +854,8 @@ export const ReviewView = ({
         >
           <p className="review-dialog-copy">
             Yesterlog will create Jira worklogs for the selected Bitbucket review sessions using the current target mode:
-            <strong> {targetModeCopy[targetMode]}</strong>.
+            <strong> {targetModeCopy[targetMode]}</strong>. Edit a start time or duration below to change the exact local
+            time range that will appear in Jira.
           </p>
           <ReviewPreviewList
             items={logPreview}
@@ -739,6 +863,7 @@ export const ReviewView = ({
             issueTypesByKey={issueTypesByKey}
             emptyText="No selected review sessions."
             onApplySessionSeconds={applySessionDuration}
+            onApplySessionStartedISO={applySessionStartedISO}
           />
         </ReviewDialogFrame>
       ) : null}

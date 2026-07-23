@@ -59,7 +59,8 @@ export const useBitbucketReviewLogging = ({
     async (
       sessionIds: string[],
       targetMode: BitbucketReviewTargetMode,
-      durationOverrides: Record<string, number> = {}
+      durationOverrides: Record<string, number> = {},
+      startedISOOverrides: Record<string, string> = {}
     ): Promise<boolean> => {
       if (!sourceResult || sessionIds.length === 0) {
         showInfo("No review sessions selected.");
@@ -118,6 +119,11 @@ export const useBitbucketReviewLogging = ({
             durationOverrides[session.id] && durationOverrides[session.id] > 0
               ? durationOverrides[session.id]
               : session.estimatedSeconds;
+          const overrideStartedISO = startedISOOverrides[session.id];
+          const startedISO =
+            overrideStartedISO && !Number.isNaN(new Date(overrideStartedISO).getTime())
+              ? overrideStartedISO
+              : session.startedISO;
 
           if (!issueKey) {
             continue;
@@ -128,7 +134,7 @@ export const useBitbucketReviewLogging = ({
               settings,
               issueKey,
               timeSpentSeconds,
-              startedISO: session.startedISO,
+              startedISO,
               comment: buildReviewWorklogComment(session)
             });
             loggedSessions.push({
