@@ -23,7 +23,8 @@ import {
   buildCommittedItems,
   minuteToLabel,
   overlapsCommitted,
-  type CalendarItem
+  type CalendarItem,
+  type Range
 } from "../domain/dayCalendar";
 import { getWorklogDisplaySeconds, getWorklogDisplayStarted } from "../domain/worklogAllocation";
 import { ActiveWorkDock } from "./ActiveWorkDock";
@@ -141,6 +142,18 @@ export const isQuickLogIntervalAvailable = ({
   }
 
   return !overlapsCommitted(startMinutes, startMinutes + durationMinutes, committedItems);
+};
+
+export const quickLogContextForRange = (context: QuickLogContext, range: Range): QuickLogContext => {
+  if (range.endMin <= range.startMin) {
+    return context;
+  }
+  return {
+    ...context,
+    startedMinutes: range.startMin,
+    timelineEndMinutes: undefined,
+    hours: (range.endMin - range.startMin) / 60
+  };
 };
 
 const PALETTE = [
@@ -673,7 +686,7 @@ export const WeekView = ({
         ticketKey: ticket.key,
         ticketSummary: ticket.summary,
         dateKey,
-        dayLabel: `${meta?.label ?? dateKey}${startedMinutes == null ? "" : ` · ${minuteToLabel(startedMinutes)}`}`,
+        dayLabel: meta?.label ?? dateKey,
         hours: hours || 1,
         startedMinutes,
         timelineEndMinutes,
@@ -702,12 +715,43 @@ export const WeekView = ({
   const quickLogColor = quickLog
     ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
     : DOCK_PALETTE[0];
+  const quickLogDurationSeconds = quickLog ? Math.round(quickLog.hours * 3600) : 0;
+  const quickLogStarted = quickLog
+    ? quickLogStartedAt({
+        dateKey: quickLog.dateKey,
+        currentDate: now,
+        timeSpentSeconds: quickLogDurationSeconds,
+        startedMinutes: quickLog.startedMinutes
+      })
+    : undefined;
+  const quickLogStartMinutes = quickLogStarted
+    ? quickLogStarted.getHours() * 60 + quickLogStarted.getMinutes()
+    : undefined;
+  const quickLogDay = quickLog ? weekState.days.find((day) => day.dateKey === quickLog.dateKey) : undefined;
+  const quickLogTimeline =
+    quickLog &&
+    quickLogTicket &&
+    quickLogStarted &&
+    quickLogStartMinutes != null &&
+    quickLogDurationSeconds > 0 &&
+    quickLogDurationSeconds <= 24 * 60 * 60 &&
+    toLocalDateKey(quickLogStarted) === quickLog.dateKey &&
+    quickLogStartMinutes + quickLogDurationSeconds / 60 <= 24 * 60
+      ? {
+          dateKey: quickLog.dateKey,
+          time: hm(quickLogStarted),
+          ticket: quickLogTicket,
+          worklogs: syncResult?.daySummaries[quickLog.dateKey]?.worklogs ?? [],
+          personalNotes: quickLogDay?.personalNotes ?? [],
+          recurringEntries: quickLogDay?.recurringEntries ?? []
+        }
+      : undefined;
   const quickLogIntervalAvailable = quickLog
     ? Boolean(dropDayMeta.get(quickLog.dateKey)?.droppable) &&
       isQuickLogIntervalAvailable({
         dateKey: quickLog.dateKey,
         currentDate: now,
-        timeSpentSeconds: Math.round(quickLog.hours * 3600),
+        timeSpentSeconds: quickLogDurationSeconds,
         startedMinutes: quickLog.startedMinutes,
         committedItems: committedByDay.get(quickLog.dateKey) ?? [],
         timelineEndMinutes: quickLog.timelineEndMinutes
@@ -921,10 +965,16 @@ export const WeekView = ({
       {quickLog && (
         <QuickLogSheet
           context={quickLog}
+          timeline={quickLogTimeline}
           color={quickLogColor}
           isLogging={isLogging}
           validationMessage={quickLogValidationMessage}
           onChangeHours={(hours) => setQuickLog((current) => (current ? { ...current, hours } : current))}
+          onChangeRange={(range) =>
+            setQuickLog((current) =>
+              current ? quickLogContextForRange(current, range) : current
+            )
+          }
           onChangeComment={(comment) => setQuickLog((current) => (current ? { ...current, comment } : current))}
           onCancel={() => setQuickLog(null)}
           onConfirm={confirmQuickLog}

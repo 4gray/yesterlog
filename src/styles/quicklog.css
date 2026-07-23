@@ -24,6 +24,13 @@
   overflow: hidden;
 }
 
+.quicklog-sheet.has-side-timeline {
+  width: 920px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
 .quicklog-head {
   display: flex;
   align-items: center;
@@ -64,6 +71,46 @@
   color: var(--muted);
   cursor: pointer;
   transition: color 150ms ease, border-color 150ms ease;
+}
+
+.quicklog-content {
+  min-height: 0;
+}
+
+.quicklog-sheet.has-side-timeline .quicklog-content {
+  flex: 0 1 440px;
+  height: 440px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 334px;
+  overflow: hidden;
+}
+
+.quicklog-sheet.has-side-timeline .quicklog-body {
+  overflow-y: auto;
+}
+
+.quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline {
+  align-self: stretch;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 18px 24px 18px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline .add-time-timeline-head {
+  min-height: 63px;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline .add-time-timeline-viewport {
+  height: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .quicklog-close:hover {
@@ -263,4 +310,40 @@
 .quicklog-confirm:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+@media (max-width: 860px) {
+  .quicklog-sheet.has-side-timeline {
+    width: 680px;
+  }
+
+  .quicklog-sheet.has-side-timeline .quicklog-content {
+    height: auto;
+    display: block;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .quicklog-sheet.has-side-timeline .quicklog-body {
+    overflow: visible;
+  }
+
+  .quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    margin: 0 22px 20px;
+  }
+
+  .quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline .add-time-timeline-head {
+    min-height: 46px;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .quicklog-sheet.has-side-timeline .quicklog-content > .add-time-timeline .add-time-timeline-viewport {
+    height: 226px;
+    flex: none;
+  }
 }

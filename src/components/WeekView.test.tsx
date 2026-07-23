@@ -1,7 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { SyncResult, WeekState } from "../../shared/types";
-import { isQuickLogIntervalAvailable, quickLogStartedAt, WeekView } from "./WeekView";
+import {
+  isQuickLogIntervalAvailable,
+  quickLogContextForRange,
+  quickLogStartedAt,
+  WeekView
+} from "./WeekView";
 
 const weekState: WeekState = {
   weekKey: "2026-06-15",
@@ -115,6 +120,26 @@ describe("WeekView", () => {
 
     expect(started.getHours()).toBe(9);
     expect(started.getMinutes()).toBe(15);
+  });
+
+  it("synchronizes timeline edits without accepting a collapsed range", () => {
+    const context = {
+      ticketKey: "YLOG-204",
+      ticketSummary: "Rework weekly progress model",
+      dateKey: "2026-06-18",
+      dayLabel: "THU · 18 JUN",
+      hours: 1,
+      startedMinutes: 9 * 60,
+      timelineEndMinutes: 20 * 60,
+      comment: ""
+    };
+
+    expect(quickLogContextForRange(context, { startMin: 10 * 60 + 15, endMin: 11 * 60 + 45 })).toMatchObject({
+      hours: 1.5,
+      startedMinutes: 10 * 60 + 15,
+      timelineEndMinutes: undefined
+    });
+    expect(quickLogContextForRange(context, { startMin: 10 * 60, endMin: 10 * 60 })).toBe(context);
   });
 
   it("blocks a retrospective summary quick log that overlaps committed work", () => {

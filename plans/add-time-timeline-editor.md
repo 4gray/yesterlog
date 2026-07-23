@@ -31,3 +31,39 @@ Add a compact day-timeline editor to the Add Time dialog so the selected start, 
 - `npm run build` — passed (existing Vite chunk-size warning only).
 - Prefix regression — demo E2E asserts that no `FTDM-*` ticket appears; demo fixtures and example copy now use `YLOG-*` / `Yesterlog Product`.
 - Browser preview — inspected the two-column dark-theme dialog at desktop and narrow widths; confirmed the timeline begins level with the mode buttons, opens around the selected slot, keeps nearby entries visible, does not clip the footer, and stacks below the form without horizontal overflow.
+
+## Follow-up: dock drag quick log
+
+### Goal
+
+Bring the same editable day map into the quick-log dialog opened by dragging an
+Active Work item from the dock onto Week.
+
+### Decisions
+
+- Reuse `AddTimeTimelineEditor` instead of introducing a second timeline implementation.
+- Seed the draft from the exact Timeline drop time or the existing retrospective
+  Summary-drop calculation.
+- Keep the quick-log duration chips and timeline range synchronized; moving or
+  resizing the timeline turns the draft into an explicit start time.
+- Show the selected day's Jira worklogs, personal notes, and recurring entries as context.
+- Preserve the compact one-column fallback when a custom duration cannot fit in
+  one calendar day, and stack the editor below the form on narrow windows.
+
+### Work
+
+- [x] Thread the dropped ticket and selected-day context into `QuickLogSheet`.
+- [x] Add the synchronized timeline and responsive two-column layout.
+- [x] Add regression coverage and verify tests, build, and the rendered dialog.
+
+### Verification
+
+- `npm run test` — 126 files / 834 tests passed.
+- `npm run e2e:renderer` — 8 renderer flows passed.
+- `npm run build` — passed (existing Vite chunk-size warning only).
+- Browser demo — dragged an Active Work card into Week and confirmed the day
+  map, contextual worklogs/notes/events, conflict state, move/resize
+  synchronization, and enabled submit after moving into a free slot.
+- Responsive browser check at 760×850 — the timeline stacked below the form,
+  footer remained reachable, and document/content horizontal overflow stayed at 0.
+- Browser console — no runtime errors.
