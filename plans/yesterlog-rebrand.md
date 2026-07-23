@@ -25,7 +25,7 @@ Snap Store package to Yesterlog, then prepare the major `v3.0.0` release.
 - [x] Add automated brand-audit coverage.
 - [x] Verify tests, builds, migration, screenshots, rendered UI, and package metadata.
 - [x] Rename the GitHub repository and Pages site; refresh Snap credentials.
-- [ ] Run the canonical major-release procedure and verify the draft and Snap.
+- [x] Run the canonical major-release procedure and verify the draft and Snap.
 
 ## Verification
 
@@ -48,4 +48,16 @@ Snap Store package to Yesterlog, then prepare the major `v3.0.0` release.
   passed, and the renamed Pages site plus `v3.0.0` screenshot URLs return 200.
 - The Snap Store credential is restricted to `yesterlog`/`edge` and stored as
   the `SNAPCRAFT_STORE_CREDENTIALS` GitHub secret.
-- The canonical `major` release dry-run and tag remain pending.
+- Canonical release preconditions passed on exact `main` commit `badd2a2`:
+  clean tree, green CI run `29991242912`, and the complete
+  `npm run release:dry-run` suite.
+- The release skill created commit `9f6dfee` and tag `v3.0.0`; release workflow
+  `29991396971` built all 14 macOS, Windows, Linux, update-manifest, and Snap
+  assets successfully.
+- GitHub Release `v3.0.0` has curated Yesterlog notes and remains a draft,
+  pending explicit publication approval.
+- Snap Store revision `1` passed clean-Ubuntu install, metadata/interface, X11
+  launch, and clean-profile checks in smoke run `29996242873`.
+- The same Snap revision `1` is published as version `3.0.0` in `edge`,
+  `candidate`, and `stable`; final package metadata and the icon were synced to
+  the public Store listing. The legacy Snap remains private.
