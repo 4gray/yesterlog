@@ -34,6 +34,10 @@ workflow, and prepare controlled publication through the Snap Store.
   failure by using Canonical's supported GitHub build action.
 - [x] Verify the repaired tagged release uploads `timebro` to the Store's
   `edge` channel.
+- [x] Generate and validate a Snap Store featured banner and GitHub repository
+  social-preview image from the established TimeBro brand and real UI.
+- [x] Publish the featured banner to the Store listing.
+- [ ] Configure the repository social preview.
 
 ## External actions
 
@@ -68,6 +72,8 @@ workflow, and prepare controlled publication through the Snap Store.
 - The public listing shows the full description, Productivity category, MIT
   license, icon, and five screenshots for Today, Week, Month, Reports, and
   Settings.
+- The Store listing retains the 2160x720 featured banner after a full reload.
+  The generated asset is 562 KB, within the Store's 3:1 and 2 MB limits.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.

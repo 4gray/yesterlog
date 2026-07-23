@@ -19,6 +19,7 @@
     "dev": "concurrently -k -n VITE,ELECTRON_TS,ELECTRON -c green,blue,magenta \"vite --host 127.0.0.1\" \"tsc -p tsconfig.electron.json --watch --preserveWatchOutput\" \"wait-on tcp:5173 dist-electron/electron/main.js && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main.js\"",
     "dev:renderer": "vite --host 127.0.0.1",
     "assets:icons": "node scripts/generate-icons.mjs",
+    "media:banners": "node scripts/generate-marketing-banners.mjs",
     "build": "tsc --noEmit && vite build && tsc -p tsconfig.electron.json",
     "dist": "npm run build && electron-builder",
     "dist:all": "npm run build && electron-builder --mac dmg zip --win nsis zip --linux AppImage deb tar.gz --publish never",

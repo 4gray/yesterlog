@@ -55,6 +55,10 @@ by Atlassian.
 ## Media
 
 - Store icon: `build/icons/512x512.png`
+- Featured banner: `docs/media/timebro-snap-featured-banner.png`
+  - 2160×720 (3:1), 562 KB; Store limit: 720×240-4320×1440, 2 MB.
+- GitHub social preview: `docs/media/timebro-github-social-preview.png`
+  - 1280×640 (2:1), 253 KB; GitHub limit: below 1 MB.
 - Uploaded screenshots:
   - `docs/screenshots/v2.4.0/dark-today.png`
   - `docs/screenshots/v2.4.0/dark-week.png`
@@ -74,6 +78,8 @@ them from the final Snap on Ubuntu before promoting the snap to stable.
 - [x] Configure restricted GitHub Actions Store credentials.
 - [x] Paste the title, summary, primary category, description, and links.
 - [x] Upload the icon and five Linux screenshots.
+- [x] Upload the featured banner to the Snap Store.
+- [ ] Configure the GitHub repository social preview.
 - [x] Upload the first revision to `edge` (version 2.7.2, revision 1).
 - [ ] Install the Store revision on a clean Ubuntu system.
 - [ ] Complete the Wayland and X11 smoke-test checklist in the README.

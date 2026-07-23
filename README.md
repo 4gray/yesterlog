@@ -468,6 +468,16 @@ npm run screenshots -- --seed blog-1 --today 2026-06-17 --viewport 1600x1000
 npm run screenshots -- --views week,reports --themes dark --out screenshots/blog-1
 ```
 
+Generate the Snap Store featured banner and GitHub repository social preview:
+
+```bash
+npm run media:banners
+```
+
+The command composites the exact TimeBro icon and real Week-view screenshot
+over the art-directed source plates in `assets/marketing/`, validates platform
+dimensions and file-size limits, and writes the final PNGs to `docs/media/`.
+
 </details>
 
 <details>
