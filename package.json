@@ -1,6 +1,6 @@
 {
   "name": "yesterlog",
-  "version": "2.7.2",
+  "version": "3.0.0",
   "private": true,
   "description": "Yesterlog is local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.",
   "license": "MIT",
