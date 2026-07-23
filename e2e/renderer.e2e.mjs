@@ -291,14 +291,25 @@ test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout
     await page.getByRole("button", { name: "Export" }).click();
 
     await page.getByRole("button", { name: "Save to brag doc" }).click();
-    await page.locator(".recap-saved-card").first().click();
+    await page.locator(".recap-saved-card").filter({ hasText: "Q1 2026" }).click();
     await page.getByRole("button", { name: "Duplicate as draft" }).waitFor();
+    assert.match(await page.evaluate(() => location.hash), /saved=/);
+    assert.equal(await page.locator(".recap-format-list").getByRole("button", { name: /Manager update/ }).isDisabled(), true);
+    await page.getByRole("button", { name: "Back to draft" }).click();
+    await page.getByRole("button", { name: "Refresh activity" }).waitFor();
+    assert.doesNotMatch(await page.evaluate(() => location.hash), /saved=/);
+    assert.ok(await page.locator(".recap-format-list button.active", { hasText: "CV bullets" }).isVisible());
+    assert.ok(await page.locator(".recap-segments button.active", { hasText: "week" }).isVisible());
+    assert.ok(await page.locator(".recap-detail-buttons button.active", { hasText: "Detailed" }).isVisible());
 
     await clickNav(page, "WEEK", "week");
     await page.locator(".calendar-recap-marker").click();
     await waitForView(page, "recap");
     await page.getByRole("button", { name: "Duplicate as draft" }).waitFor();
     assert.match(await page.evaluate(() => location.hash), /saved=/);
+    await page.getByRole("button", { name: "Back to draft" }).click();
+    await page.getByRole("button", { name: "Refresh activity" }).waitFor();
+    assert.doesNotMatch(await page.evaluate(() => location.hash), /saved=/);
 
     await page.evaluate(() => { location.hash = "#/recap?period=week&interval=2026-06-15&format=cv&detail=headline"; });
     await page.reload({ waitUntil: "domcontentloaded" });
