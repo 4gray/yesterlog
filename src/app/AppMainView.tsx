@@ -27,6 +27,7 @@ type AppWeekRouteProps = ComponentProps<typeof AppWeekRoute>;
 export interface AppMainViewProps {
   view: AppView;
   reportTab: ReportTab;
+  onReportTabChange: AppReportsRouteProps["onReportTabChange"];
   isDemo: boolean;
   isBooting: boolean;
   currentDate: AppTodayRouteProps["currentDate"];
@@ -140,6 +141,7 @@ export interface AppMainViewProps {
 export const AppMainView = ({
   view,
   reportTab,
+  onReportTabChange,
   isDemo,
   isBooting,
   currentDate,
@@ -394,6 +396,11 @@ export const AppMainView = ({
         reportTab={reportTab}
         weekState={weekState}
         weekStates={reportsWeekStates}
+        reviewResult={visibleBitbucketReviewResult}
+        isBitbucketReady={isBitbucketReady}
+        issueUrlsByKey={issueUrlsByKey}
+        issueTypesByKey={issueTypesByKey}
+        onReportTabChange={onReportTabChange}
         goToPreviousWeek={goToPreviousWeek}
         goToCurrentWeek={goToCurrentWeek}
         goToNextWeek={goToNextWeek}

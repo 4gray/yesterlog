@@ -21,7 +21,7 @@ const SYNC_DOT_STATE: Record<AppSyncState, string> = {
 };
 
 export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "recap" | "settings";
-export type ReportTab = "summary" | "composition" | "focus" | "trends";
+export type ReportTab = "summary" | "composition" | "focus" | "trends" | "reviews";
 export type ThemeMode = "light" | "dark";
 
 const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
@@ -40,7 +40,8 @@ export const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
   { id: "summary", label: "Summary" },
   { id: "composition", label: "Composition" },
   { id: "focus", label: "Focus" },
-  { id: "trends", label: "Trends" }
+  { id: "trends", label: "Trends" },
+  { id: "reviews", label: "Code review" }
 ];
 
 interface SidebarProps {
@@ -90,7 +91,7 @@ export const Sidebar = ({
             </button>
             {id === "reports" && showReportSub ? (
               <div className="report-subnav" role="tablist" aria-label="Reports pages">
-                {REPORT_TABS.map((tab) => (
+                {REPORT_TABS.filter((tab) => tab.id !== "reviews" || showReview).map((tab) => (
                   <button
                     key={tab.id}
                     type="button"

@@ -201,6 +201,11 @@ export const App = () => {
   });
 
   const { isConfigured, isBitbucketReady } = useAppConnectionState(settings);
+  useEffect(() => {
+    if (!isBitbucketReady && reportTab === "reviews") {
+      setReportTab("summary");
+    }
+  }, [isBitbucketReady, reportTab, setReportTab]);
   const welcomeFlow = useWelcomeFlow({ isDemo, isBooting, isConfigured, setView });
   const {
     goToPreviousWeek,
@@ -757,6 +762,7 @@ export const App = () => {
       <AppMainView
         view={view}
         reportTab={reportTab}
+        onReportTabChange={setReportTab}
         isDemo={isDemo}
         isBooting={isBooting}
         viewMode={weekViewMode}

@@ -56,6 +56,10 @@ const noop = () => undefined;
 const baseProps = (): AppReportsRouteProps => ({
   reportTab: "summary",
   weekState,
+  isBitbucketReady: false,
+  issueUrlsByKey: {},
+  issueTypesByKey: {},
+  onReportTabChange: noop,
   goToPreviousWeek: noop,
   goToCurrentWeek: noop,
   goToNextWeek: noop
@@ -84,12 +88,25 @@ afterEach(() => {
 
 describe("AppReportsRoute", () => {
   it("maps app-level reports state to ReportsView props", () => {
-    renderRoute();
+    const onReportTabChange = vi.fn();
+    const reviewResult = { weekKey: "2026-06-15", sessions: [] } as unknown as NonNullable<
+      AppReportsRouteProps["reviewResult"]
+    >;
+    renderRoute({
+      reviewResult,
+      isBitbucketReady: true,
+      issueUrlsByKey: { "YLOG-410": "https://example.atlassian.net/browse/YLOG-410" },
+      issueTypesByKey: { "YLOG-410": { name: "Task", hierarchyLevel: 0 } },
+      onReportTabChange
+    });
 
     const rendered = container.querySelector("[data-testid='reports-view']");
     expect(rendered?.getAttribute("data-week")).toBe("Jun 15-21");
     expect(rendered?.getAttribute("data-tracked")).toBe("12");
     expect(reportsViewProps[0]?.weekState).toBe(weekState);
+    expect(reportsViewProps[0]?.reviewResult).toBe(reviewResult);
+    expect(reportsViewProps[0]?.isBitbucketReady).toBe(true);
+    expect(reportsViewProps[0]?.onReportTabChange).toBe(onReportTabChange);
   });
 
   it("passes ReportsView navigation actions through unchanged", () => {
