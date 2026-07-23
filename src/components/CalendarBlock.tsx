@@ -14,6 +14,8 @@ interface CalendarBlockProps {
   labelStartMin: number;
   labelEndMin: number;
   dragging?: boolean;
+  relocating?: boolean;
+  preview?: boolean;
   draggable?: boolean;
   /** Week's narrow overlap columns show only the strongest identifier. */
   minimal?: boolean;
@@ -69,6 +71,8 @@ const CalendarBlockImpl = ({
   labelStartMin,
   labelEndMin,
   dragging,
+  relocating,
+  preview,
   draggable,
   minimal,
   onSelect,
@@ -84,8 +88,9 @@ const CalendarBlockImpl = ({
   return (
     <div
       role="button"
-      tabIndex={0}
-      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}`}
+      tabIndex={preview ? -1 : 0}
+      aria-hidden={preview || undefined}
+      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}${relocating ? " is-relocating" : ""}${preview ? " is-cross-day-preview" : ""}`}
       style={{ top: `${top}px`, height: `${Math.max(height, 1)}px`, left, width }}
       title={
         allocation

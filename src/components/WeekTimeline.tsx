@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LockKeyhole, Palmtree, Plus, Undo2 } from "lucide-react";
 import type {
   DayTrackingSummary,
@@ -22,6 +22,7 @@ import {
 import { formatHours, fromLocalDateKey } from "../utils/date";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { DayCalendar } from "./DayCalendar";
+import type { CalendarMovePreview, CalendarMoveTarget } from "./useDayCalendarInteraction";
 import type { RecurringConfirmPayload } from "./WeekRecurringRows";
 import type { RecurringMovePatch } from "../app/useRecurringActions";
 
@@ -149,6 +150,38 @@ export const WeekTimeline = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const containsToday = weekState.days.some((day) => day.dateKey === todayKey);
+  const [movePreview, setMovePreview] = useState<CalendarMovePreview>();
+  const moveTargets = useMemo(() => {
+    const targets = new Map<string, Omit<CalendarMoveTarget, "track">>();
+    for (const { day, items } of dayData) {
+      const isEditable =
+        day.dateKey <= todayKey &&
+        day.isConfiguredWorkingDay &&
+        !day.isSkipped;
+      if (isEditable) {
+        targets.set(day.dateKey, {
+          id: day.dateKey,
+          date: fromLocalDateKey(day.dateKey),
+          layout,
+          items
+        });
+      }
+    }
+    return targets;
+  }, [dayData, layout, todayKey]);
+  const resolveMoveTarget = useCallback(
+    (clientX: number, clientY: number): CalendarMoveTarget | undefined => {
+      if (typeof document.elementFromPoint !== "function") {
+        return undefined;
+      }
+      const element = document.elementFromPoint(clientX, clientY);
+      const track = element?.closest<HTMLElement>("[data-worklog-move-day]");
+      const dateKey = track?.dataset.worklogMoveDay;
+      const target = dateKey ? moveTargets.get(dateKey) : undefined;
+      return track && target ? { ...target, track } : undefined;
+    },
+    [moveTargets]
+  );
 
   useEffect(() => {
     if (!scrollRef.current) {
@@ -228,6 +261,19 @@ export const WeekTimeline = ({
                       embedded
                       readOnly={readOnly}
                       dropDateKey={day.dateKey}
+                      moveTargetId={readOnly ? undefined : day.dateKey}
+                      resolveMoveTarget={readOnly ? undefined : resolveMoveTarget}
+                      onMovePreview={readOnly ? undefined : setMovePreview}
+                      externalMovePreview={
+                        movePreview?.targetId === day.dateKey && movePreview.sourceId !== day.dateKey
+                          ? movePreview
+                          : undefined
+                      }
+                      relocatingItemId={
+                        movePreview?.sourceId === day.dateKey && movePreview.targetId !== day.dateKey
+                          ? movePreview.item.id
+                          : undefined
+                      }
                       onCreateAt={(prefill) => onAddTime(date, prefill)}
                       onMoveWorklog={onMoveWorklog}
                       onMoveRecurring={onMoveRecurring}

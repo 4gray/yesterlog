@@ -122,4 +122,26 @@ describe("WeekTimeline", () => {
     expect(markup).toContain("Read-only until this day begins");
     expect(markup).toContain("OFF · VACATION");
   });
+
+  it("offers cross-day worklog targets only on editable day columns", () => {
+    const markup = renderToStaticMarkup(
+      <WeekTimeline
+        weekState={weekState}
+        syncResult={syncResult}
+        currentDate={new Date("2026-06-17T10:00:00.000Z")}
+        todayKey="2026-06-17"
+        onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
+        onMoveRecurring={async () => true}
+        onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
+        onToggleSkipped={() => undefined}
+      />
+    );
+
+    expect(markup.match(/data-worklog-move-day=/g)).toHaveLength(2);
+    expect(markup).toContain('data-worklog-move-day="2026-06-16"');
+    expect(markup).toContain('data-worklog-move-day="2026-06-17"');
+    expect(markup).not.toContain('data-worklog-move-day="2026-06-18"');
+  });
 });

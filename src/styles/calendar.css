@@ -345,6 +345,23 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
 }
 
+.cal-block.is-relocating {
+  opacity: 0.22;
+  box-shadow: none;
+}
+
+.cal-block.is-cross-day-preview {
+  pointer-events: none;
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 14%, var(--bg-raised));
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--blue) 22%, transparent);
+}
+
+.cal-track.is-worklog-move-target {
+  background: color-mix(in srgb, var(--blue) 5%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 42%, transparent);
+}
+
 /* Edge grips for resize — invisible until the block is hovered. */
 .cal-resize {
   position: absolute;

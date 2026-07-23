@@ -27,15 +27,32 @@ export interface DragDraft {
   range: Range;
 }
 
+export interface CalendarMoveTarget {
+  id: string;
+  date: Date;
+  track: HTMLElement;
+  layout: DayLayout;
+  items: CalendarItem[];
+}
+
+export interface CalendarMovePreview {
+  sourceId: string;
+  targetId: string;
+  item: CalendarItem;
+  range: Range;
+}
+
 interface InternalDrag {
   kind: DragKind;
   item?: CalendarItem;
   durationMin: number;
   grabOffsetMin: number;
   anchorMin: number;
+  startClientX: number;
   startClientY: number;
   moved: boolean;
   range: Range;
+  moveTarget?: CalendarMoveTarget;
 }
 
 interface UseDayCalendarInteractionArgs {
@@ -44,8 +61,12 @@ interface UseDayCalendarInteractionArgs {
   trackRef: RefObject<HTMLDivElement | null>;
   snap?: number;
   onCreate: (range: Range) => void;
-  onCommitMove: (item: CalendarItem, range: Range) => void;
+  onCommitMove: (item: CalendarItem, range: Range, target?: CalendarMoveTarget) => void;
   onSelect: (item: CalendarItem) => void;
+  sourceMoveTargetId?: string;
+  resolveMoveTarget?: (clientX: number, clientY: number) => CalendarMoveTarget | undefined;
+  canMoveAcrossTargets?: (item: CalendarItem) => boolean;
+  onMovePreview?: (preview?: CalendarMovePreview) => void;
 }
 
 const MOVE_THRESHOLD_PX = 4;
@@ -64,18 +85,47 @@ export const useDayCalendarInteraction = ({
   snap = DEFAULT_SNAP_MINUTES,
   onCreate,
   onCommitMove,
-  onSelect
+  onSelect,
+  sourceMoveTargetId,
+  resolveMoveTarget,
+  canMoveAcrossTargets,
+  onMovePreview
 }: UseDayCalendarInteractionArgs) => {
   const [draft, setDraft] = useState<DragDraft | null>(null);
   const dragRef = useRef<InternalDrag | null>(null);
 
   // Keep the latest inputs in a ref so the stable window listeners never go stale.
-  const ctxRef = useRef({ layout, items, snap, onCreate, onCommitMove, onSelect, trackRef });
-  ctxRef.current = { layout, items, snap, onCreate, onCommitMove, onSelect, trackRef };
+  const ctxRef = useRef({
+    layout,
+    items,
+    snap,
+    onCreate,
+    onCommitMove,
+    onSelect,
+    trackRef,
+    sourceMoveTargetId,
+    resolveMoveTarget,
+    canMoveAcrossTargets,
+    onMovePreview
+  });
+  ctxRef.current = {
+    layout,
+    items,
+    snap,
+    onCreate,
+    onCommitMove,
+    onSelect,
+    trackRef,
+    sourceMoveTargetId,
+    resolveMoveTarget,
+    canMoveAcrossTargets,
+    onMovePreview
+  };
 
-  const readMinute = useCallback((clientY: number) => {
-    const { trackRef: ref, layout: current } = ctxRef.current;
-    const rect = ref.current?.getBoundingClientRect();
+  const readMinute = useCallback((clientY: number, target?: CalendarMoveTarget) => {
+    const { trackRef: ref, layout: sourceLayout } = ctxRef.current;
+    const current = target?.layout ?? sourceLayout;
+    const rect = (target?.track ?? ref.current)?.getBoundingClientRect();
     if (!rect) {
       return current.startMin;
     }
@@ -88,32 +138,73 @@ export const useDayCalendarInteraction = ({
       if (!drag) {
         return;
       }
-      const { items: currentItems, snap: currentSnap, layout: currentLayout } = ctxRef.current;
-      const pointer = readMinute(event.clientY);
-      if (Math.abs(event.clientY - drag.startClientY) > MOVE_THRESHOLD_PX) {
+      const {
+        items: sourceItems,
+        snap: currentSnap,
+        layout: sourceLayout,
+        sourceMoveTargetId: sourceId,
+        resolveMoveTarget: resolveTarget,
+        canMoveAcrossTargets: canMoveAcross,
+        onMovePreview: previewMove
+      } = ctxRef.current;
+      if (Math.hypot(event.clientX - drag.startClientX, event.clientY - drag.startClientY) > MOVE_THRESHOLD_PX) {
         drag.moved = true;
       }
 
       if (drag.kind === "create") {
+        const pointer = readMinute(event.clientY);
         if (pointer >= drag.anchorMin) {
-          const ceiling = ceilingForStart(drag.anchorMin, currentItems, undefined, currentLayout.endMin);
+          const ceiling = ceilingForStart(drag.anchorMin, sourceItems, undefined, sourceLayout.endMin);
           const endMin = clampMinute(snapMinute(pointer, currentSnap), drag.anchorMin + MIN_ITEM_MINUTES, ceiling);
           drag.range = { startMin: drag.anchorMin, endMin };
         } else {
-          const floor = floorForEnd(drag.anchorMin, currentItems, undefined, currentLayout.startMin);
+          const floor = floorForEnd(drag.anchorMin, sourceItems, undefined, sourceLayout.startMin);
           const startMin = clampMinute(snapMinute(pointer, currentSnap), floor, drag.anchorMin - MIN_ITEM_MINUTES);
           drag.range = { startMin, endMin: drag.anchorMin };
         }
       } else if (drag.kind === "move" && drag.item) {
+        const usesCrossDayTargets = Boolean(resolveTarget && (canMoveAcross?.(drag.item) ?? true));
+        const target = usesCrossDayTargets ? resolveTarget?.(event.clientX, event.clientY) : undefined;
+        drag.moveTarget = target;
+        if (usesCrossDayTargets && !target) {
+          previewMove?.();
+          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range });
+          return;
+        }
+        const pointer = readMinute(event.clientY, target);
+        const targetItems = target?.items ?? sourceItems;
+        const targetLayout = target?.layout ?? sourceLayout;
         const desiredStart = snapMinute(pointer - drag.grabOffsetMin, currentSnap);
-        const fit = fitMove(desiredStart, drag.durationMin, currentItems, drag.item.id, currentLayout.startMin, currentLayout.endMin);
+        const fit = fitMove(
+          desiredStart,
+          drag.durationMin,
+          targetItems,
+          drag.item.id,
+          targetLayout.startMin,
+          targetLayout.endMin
+        );
         if (fit) {
           drag.range = fit;
+        } else if (usesCrossDayTargets) {
+          drag.moveTarget = undefined;
+          previewMove?.();
+          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range });
+          return;
+        }
+        if (usesCrossDayTargets && drag.moved && sourceId && target) {
+          previewMove?.({
+            sourceId,
+            targetId: target.id,
+            item: drag.item,
+            range: drag.range
+          });
         }
       } else if (drag.kind === "resize-end" && drag.item) {
-        drag.range = fitResizeEnd(drag.item.startMin, pointer, currentItems, drag.item.id, currentSnap, currentLayout.endMin);
+        const pointer = readMinute(event.clientY);
+        drag.range = fitResizeEnd(drag.item.startMin, pointer, sourceItems, drag.item.id, currentSnap, sourceLayout.endMin);
       } else if (drag.kind === "resize-start" && drag.item) {
-        drag.range = fitResizeStart(pointer, drag.item.endMin, currentItems, drag.item.id, currentSnap, currentLayout.startMin);
+        const pointer = readMinute(event.clientY);
+        drag.range = fitResizeStart(pointer, drag.item.endMin, sourceItems, drag.item.id, currentSnap, sourceLayout.startMin);
       }
 
       setDraft({ kind: drag.kind, itemId: drag.item?.id, range: drag.range });
@@ -129,10 +220,19 @@ export const useDayCalendarInteraction = ({
     const drag = dragRef.current;
     dragRef.current = null;
     setDraft(null);
+    ctxRef.current.onMovePreview?.();
     if (!drag) {
       return;
     }
-    const { items: currentItems, layout: currentLayout, onCreate: create, onCommitMove: commit, onSelect: select } = ctxRef.current;
+    const {
+      items: currentItems,
+      layout: currentLayout,
+      onCreate: create,
+      onCommitMove: commit,
+      onSelect: select,
+      resolveMoveTarget: resolveTarget,
+      canMoveAcrossTargets: canMoveAcross
+    } = ctxRef.current;
 
     if (drag.kind === "create") {
       let range = drag.range;
@@ -145,7 +245,12 @@ export const useDayCalendarInteraction = ({
       }
     } else if (drag.item) {
       if (drag.moved) {
-        commit(drag.item, drag.range);
+        const requiresTarget =
+          drag.kind === "move" &&
+          Boolean(resolveTarget && (canMoveAcross?.(drag.item) ?? true));
+        if (!requiresTarget || drag.moveTarget) {
+          commit(drag.item, drag.range, drag.moveTarget);
+        }
       } else {
         select(drag.item);
       }
@@ -168,6 +273,7 @@ export const useDayCalendarInteraction = ({
       window.removeEventListener("pointermove", onWindowMove);
       window.removeEventListener("pointerup", onWindowUp);
       document.body.classList.remove("cal-dragging");
+      ctxRef.current.onMovePreview?.();
     },
     [onWindowMove, onWindowUp]
   );
@@ -188,6 +294,7 @@ export const useDayCalendarInteraction = ({
         durationMin: DEFAULT_DRAFT_MINUTES,
         grabOffsetMin: 0,
         anchorMin: anchor,
+        startClientX: event.clientX,
         startClientY: event.clientY,
         moved: false,
         range: { startMin: anchor, endMin: anchor + DEFAULT_DRAFT_MINUTES }
@@ -208,6 +315,7 @@ export const useDayCalendarInteraction = ({
         durationMin: item.endMin - item.startMin,
         grabOffsetMin: readMinute(event.clientY) - item.startMin,
         anchorMin: item.startMin,
+        startClientX: event.clientX,
         startClientY: event.clientY,
         moved: false,
         range: { startMin: item.startMin, endMin: item.endMin }

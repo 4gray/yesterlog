@@ -27,7 +27,11 @@ import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import type { RecurringMovePatch } from "../app/useRecurringActions";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { CalendarBlock } from "./CalendarBlock";
-import { useDayCalendarInteraction } from "./useDayCalendarInteraction";
+import {
+  useDayCalendarInteraction,
+  type CalendarMovePreview,
+  type CalendarMoveTarget
+} from "./useDayCalendarInteraction";
 
 interface DayCalendarProps {
   date: Date;
@@ -54,6 +58,12 @@ interface DayCalendarProps {
   readOnly?: boolean;
   /** Enables exact-time drops from Week's active-work dock. */
   dropDateKey?: string;
+  /** Enables whole-worklog moves between coordinated Week timeline columns. */
+  moveTargetId?: string;
+  resolveMoveTarget?: (clientX: number, clientY: number) => CalendarMoveTarget | undefined;
+  onMovePreview?: (preview?: CalendarMovePreview) => void;
+  externalMovePreview?: CalendarMovePreview;
+  relocatingItemId?: string;
   /** Open the Add-Time popup for a new entry (empty-slot drag/click, or a rail ticket). */
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a drag move/resize of an existing worklog (optimistic). */
@@ -80,6 +90,7 @@ const rangeToSeconds = (range: Range) => Math.round((range.endMin - range.startM
 
 /** Only surface gaps at least this long as "log this gap" affordances. */
 const GAP_MIN_MINUTES = 30;
+const canMoveAcrossDays = (item: CalendarItem) => Boolean(item.worklog);
 
 /**
  * Google-Calendar-style single-day timeline. Worklogs and notes render as proportional,
@@ -101,6 +112,11 @@ export const DayCalendar = ({
   embedded = false,
   readOnly = false,
   dropDateKey,
+  moveTargetId,
+  resolveMoveTarget,
+  onMovePreview,
+  externalMovePreview,
+  relocatingItemId,
   onCreateAt,
   onMoveWorklog,
   onMoveRecurring,
@@ -223,7 +239,7 @@ export const DayCalendar = ({
     trackRef,
     onCreate: (range) =>
       onCreateAt({ startedISO: startedISOForMinute(date, range.startMin), timeSpentSeconds: rangeToSeconds(range) }),
-    onCommitMove: (item, range) => {
+    onCommitMove: (item, range, target) => {
       if (item.recurring) {
         void onMoveRecurring(item.recurring, {
           localTime: minutesToClockTime(range.startMin),
@@ -238,12 +254,20 @@ export const DayCalendar = ({
       // Preserve the untouched edge: when the start didn't move (resize-end), keep the
       // original started (seconds and all) so only the duration changes.
       const startUnchanged = range.startMin === item.startMin;
-      const startedISO = startUnchanged ? worklog.started : startedISOForMinute(date, range.startMin);
+      const movedToAnotherDay = Boolean(target && target.id !== moveTargetId);
+      const startedISO =
+        startUnchanged && !movedToAnotherDay
+          ? worklog.started
+          : startedISOForMinute(target?.date ?? date, range.startMin);
       const baseStartMin = startUnchanged ? item.startMin : range.startMin;
       const timeSpentSeconds = Math.max(60, Math.round((range.endMin - baseStartMin) * 60));
       void onMoveWorklog(worklog, { startedISO, timeSpentSeconds });
     },
-    onSelect: selectItem
+    onSelect: selectItem,
+    sourceMoveTargetId: moveTargetId,
+    resolveMoveTarget,
+    canMoveAcrossTargets: canMoveAcrossDays,
+    onMovePreview
   });
 
   const nowY = minuteToY(nowMin, layout);
@@ -264,7 +288,7 @@ export const DayCalendar = ({
             </div>
           )}
           <div
-            className="cal-track"
+            className={`cal-track${externalMovePreview ? " is-worklog-move-target" : ""}`}
             ref={trackRef}
             onPointerDown={readOnly ? undefined : startCreate}
             role="presentation"
@@ -273,6 +297,7 @@ export const DayCalendar = ({
             data-drop-timeline={dropDateKey ? "true" : undefined}
             data-timeline-start={dropDateKey ? layout.startMin : undefined}
             data-timeline-end={dropDateKey ? layout.endMin : undefined}
+            data-worklog-move-day={moveTargetId}
           >
             {marks.map((mark) => (
               <div className="cal-line" key={mark.min} style={{ top: `${minuteToY(mark.min, layout)}px` }} />
@@ -306,7 +331,11 @@ export const DayCalendar = ({
             {positioned.map(({ item, column, columns }) => {
               const widthPct = 100 / columns;
               const isDragging = draft?.itemId === item.id;
-              const range = isDragging ? draft!.range : { startMin: item.startMin, endMin: item.endMin };
+              const isRelocating = relocatingItemId === item.id;
+              const range =
+                isDragging && !isRelocating
+                  ? draft!.range
+                  : { startMin: item.startMin, endMin: item.endMin };
               const rect = rectForRange(range.startMin, range.endMin, layout);
               const capBottom = minuteToY(capMinById.get(item.id) ?? layout.endMin, layout);
               const blockHeight = isDragging
@@ -323,6 +352,7 @@ export const DayCalendar = ({
                   labelStartMin={range.startMin}
                   labelEndMin={range.endMin}
                   dragging={isDragging}
+                  relocating={isRelocating}
                   draggable={
                     !readOnly &&
                     ((item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)) ||
@@ -340,6 +370,28 @@ export const DayCalendar = ({
                 />
               );
             })}
+            {externalMovePreview && (() => {
+              const previewRect = rectForRange(
+                externalMovePreview.range.startMin,
+                externalMovePreview.range.endMin,
+                layout
+              );
+              return (
+                <CalendarBlock
+                  item={externalMovePreview.item}
+                  top={previewRect.top}
+                  height={Math.max(previewRect.height, MIN_BLOCK_PX)}
+                  left="4px"
+                  width="calc(100% - 14px)"
+                  labelStartMin={externalMovePreview.range.startMin}
+                  labelEndMin={externalMovePreview.range.endMin}
+                  dragging
+                  preview
+                  minimal={embedded}
+                  onSelect={selectItem}
+                />
+              );
+            })()}
             {/* Pending rituals overlay the committed lane (translucent + dashed) so a
                 scheduled-but-unconfirmed standup stays visible even when a worklog overlaps
                 its slot — matching how the Week view always lists it. Click confirms with
