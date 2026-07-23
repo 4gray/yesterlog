@@ -2,9 +2,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, RecapDraftVersion } from "../../shared/types";
+import type { AppSettings, RecapDraftVersion, SavedRecap } from "../../shared/types";
 import * as aiApi from "../api/ollama";
-import type { RecapEvidenceInput } from "../domain/recapWorkspace";
+import { buildDeterministicRecap, recapIntervalForDate, type RecapEvidenceInput } from "../domain/recapWorkspace";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import { useRecapWorkspace } from "./useRecapWorkspace";
 
@@ -50,7 +50,7 @@ const flush = async () => {
   });
 };
 
-function Harness() {
+function Harness({ seedSavedRecaps }: { seedSavedRecaps?: SavedRecap[] }) {
   workspace = useRecapWorkspace({
     currentDate,
     settings,
@@ -58,10 +58,35 @@ function Harness() {
     isDemo: true,
     onSuccess,
     onError,
-    demoEvidence
+    demoEvidence,
+    seedSavedRecaps
   });
   return null;
 }
+
+const savedRecapFor = (id: string, date: Date): SavedRecap => {
+  const interval = recapIntervalForDate("quarter", date);
+  const dateKey = interval.startDateKey;
+  const version = buildDeterministicRecap({
+    interval,
+    ...demoEvidence,
+    personalNotes: demoEvidence.personalNotes.map((note) => ({
+      ...note,
+      weekKey: dateKey,
+      dateKey,
+      startedISO: `${dateKey}T10:00:00.000Z`
+    })),
+    recurringEntries: [],
+    reconstructDrafts: {}
+  }, 1, currentDate);
+  return {
+    id,
+    savedAt: `${dateKey}T17:00:00.000Z`,
+    format: "manager",
+    detail: "balanced",
+    version
+  };
+};
 
 const getWorkspace = () => {
   if (!workspace) throw new Error("Recap workspace was not rendered.");
@@ -135,6 +160,61 @@ describe("useRecapWorkspace generation", () => {
     ]);
     expect(getWorkspace().record?.versions[0].themes[0].name).toBe("Hand-edited focus");
     expect(getWorkspace().record?.versions[0].editedAt).toBeTruthy();
+  });
+
+  it("returns from a saved snapshot to the period and interval of the originating draft", async () => {
+    const saved = savedRecapFor("saved-q1", new Date(2026, 0, 15));
+    act(() => root.render(<Harness seedSavedRecaps={[saved]} />));
+    await flush();
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q2");
+
+    act(() => getWorkspace().selectSaved(saved.id));
+    await flush();
+    expect(getWorkspace().selectedSaved?.id).toBe(saved.id);
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q1");
+    expect(window.location.hash).toContain(`saved=${saved.id}`);
+
+    act(() => getWorkspace().closeSaved());
+    await flush();
+    expect(getWorkspace().selectedSaved).toBeUndefined();
+    expect(getWorkspace().period).toBe("quarter");
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q2");
+    expect(window.location.hash).not.toContain("saved=");
+  });
+
+  it("leaves a deep-linked saved snapshot on an editable draft for that saved interval", async () => {
+    const saved = savedRecapFor("saved-q1", new Date(2026, 0, 15));
+    window.location.hash = `#/recap?period=quarter&interval=2026-Q1&format=manager&detail=balanced&saved=${saved.id}`;
+    act(() => root.render(<Harness seedSavedRecaps={[saved]} />));
+    await flush();
+
+    expect(getWorkspace().selectedSaved?.id).toBe(saved.id);
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q1");
+
+    act(() => getWorkspace().closeSaved());
+    await flush();
+    expect(getWorkspace().selectedSaved).toBeUndefined();
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q1");
+    expect(window.location.hash).not.toContain("saved=");
+  });
+
+  it("duplicates a saved snapshot on its own interval without restoring the earlier draft", async () => {
+    const saved = savedRecapFor("saved-q1", new Date(2026, 0, 15));
+    act(() => root.render(<Harness seedSavedRecaps={[saved]} />));
+    await flush();
+    act(() => getWorkspace().selectSaved(saved.id));
+    await flush();
+
+    act(() => getWorkspace().duplicateSaved());
+    await flush();
+    expect(getWorkspace().selectedSaved).toBeUndefined();
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q1");
+    expect(getWorkspace().record?.intervalKey).toBe("quarter:2026-Q1");
+    expect(getWorkspace().activeDraft?.version).toBe(2);
+
+    act(() => getWorkspace().closeSaved());
+    await flush();
+    expect(getWorkspace().interval.key).toBe("quarter:2026-Q1");
   });
 
   it("keeps the current interval when a stale AI response returns", async () => {

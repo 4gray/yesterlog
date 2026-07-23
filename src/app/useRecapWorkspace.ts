@@ -49,6 +49,10 @@ const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "changelog"];
 const DETAILS: RecapDetail[] = ["headline", "balanced", "detailed"];
 const PERIODS: RecapPeriod[] = ["week", "month", "quarter"];
 type RecapOperation = "refreshing" | "rewriting";
+interface SavedRecapReturnState {
+  period: RecapPeriod;
+  interval: RecapInterval;
+}
 const isRecapFormat = (value: unknown): value is RecapFormat =>
   typeof value === "string" && FORMATS.includes(value as RecapFormat);
 
@@ -151,6 +155,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   const [operation, setOperation] = useState<RecapOperation>();
   const [newEvidenceCount, setNewEvidenceCount] = useState(0);
   const requestRef = useRef(0);
+  const savedReturnRef = useRef<SavedRecapReturnState>();
   const demoHistorySeededRef = useRef(false);
   const aiConnection = useAiConnection(settings);
 
@@ -418,14 +423,33 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     const version = Math.max(0, ...record.versions.map((item) => item.version)) + 1;
     const clone = { ...structuredClone(selectedSaved.version), version, generatedAt: new Date().toISOString(), editedAt: undefined };
     persistRecord({ ...record, activeVersion: version, versions: [...record.versions, clone] });
+    savedReturnRef.current = undefined;
     setSelectedSavedId(undefined);
   }, [persistRecord, record, selectedSaved]);
 
-  const setFormat = (value: RecapFormat) => { setSelectedSavedId(undefined); setFormatState(value); };
-  const setDetail = (value: RecapDetail) => { setSelectedSavedId(undefined); setDetailState(value); };
-  const setPeriod = (value: RecapPeriod) => { setPeriodState(value); setSelectedSavedId(undefined); };
-  const stepInterval = (amount: number) => {
+  const selectSaved = useCallback((id: string) => {
+    if (!selectedSavedId && !savedReturnRef.current) savedReturnRef.current = { period, interval };
+    setSelectedSavedId(id);
+  }, [interval, period, selectedSavedId]);
+
+  const closeSaved = useCallback(() => {
+    const returnState = savedReturnRef.current;
+    savedReturnRef.current = undefined;
     setSelectedSavedId(undefined);
+    if (!returnState) return;
+    setPeriodState(returnState.period);
+    setIntervals((current) => ({ ...current, [returnState.period]: returnState.interval }));
+  }, []);
+
+  const clearSaved = () => {
+    savedReturnRef.current = undefined;
+    setSelectedSavedId(undefined);
+  };
+  const setFormat = (value: RecapFormat) => { clearSaved(); setFormatState(value); };
+  const setDetail = (value: RecapDetail) => { clearSaved(); setDetailState(value); };
+  const setPeriod = (value: RecapPeriod) => { setPeriodState(value); clearSaved(); };
+  const stepInterval = (amount: number) => {
+    clearSaved();
     setIntervals((current) => ({ ...current, [period]: shiftRecapInterval(current[period], amount) }));
   };
   const canStepNext = shiftRecapInterval(interval, 1).startDateKey <= toLocalDateKey(currentDate);
@@ -436,6 +460,6 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     isRefreshing: operation === "refreshing", isRewriting: operation === "rewriting", newEvidenceCount, canStepNext,
     canEnhanceWithAi: settings.aiEnabled,
     setPeriod, setFormat, setDetail, stepInterval, refreshActivity, rewriteWithAi, updateTheme, updateNarrative, setActiveVersion,
-    saveCurrent, duplicateSaved, selectSaved: setSelectedSavedId, closeSaved: () => setSelectedSavedId(undefined)
+    saveCurrent, duplicateSaved, selectSaved, closeSaved
   };
 };

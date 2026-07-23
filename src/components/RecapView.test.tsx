@@ -81,7 +81,7 @@ describe("RecapView", () => {
     expect(ws.updateNarrative).toHaveBeenCalledOnce();
   });
 
-  it("saves live drafts and keeps saved snapshots read-only with duplication", () => {
+  it("saves live drafts and gives read-only snapshots explicit return and duplication actions", () => {
     const live = workspace();
     render(live);
     click(button("Save to brag doc"));
@@ -91,6 +91,11 @@ describe("RecapView", () => {
     const readOnly = workspace(snapshot);
     render(readOnly);
     expect(container.querySelector('button[aria-label^="Edit"]')).toBeNull();
+    expect(container.querySelectorAll(".recap-controls button:disabled").length).toBeGreaterThan(0);
+    click(button("Back to draft"));
+    expect(readOnly.closeSaved).toHaveBeenCalledOnce();
+    click(button("Current draft"));
+    expect(readOnly.closeSaved).toHaveBeenCalledTimes(2);
     click(button("Duplicate as draft"));
     expect(readOnly.duplicateSaved).toHaveBeenCalledOnce();
   });
