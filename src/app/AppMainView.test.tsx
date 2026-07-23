@@ -103,8 +103,9 @@ const asyncFalse = async () => false;
 const noop = () => undefined;
 
 const baseProps = (): AppMainViewProps => ({
-  view: "week",
-  reportTab: "summary",
+    view: "week",
+    reportTab: "summary",
+    onReportTabChange: () => undefined,
   isDemo: false,
   isBooting: false,
   currentDate: new Date(2026, 5, 17, 12),

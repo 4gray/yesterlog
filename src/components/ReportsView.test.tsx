@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { WeekState } from "../../shared/types";
+import type { BitbucketReviewSyncResult, WeekState } from "../../shared/types";
 import { ReportsView } from "./ReportsView";
 
 const weekState: WeekState = {
@@ -66,6 +66,97 @@ const weekState: WeekState = {
     }
   ],
   recurringTrackedHours: 0
+};
+
+const reviewResult: BitbucketReviewSyncResult = {
+  weekKey: "2026-06-15",
+  weekStartISO: "2026-06-15T00:00:00.000Z",
+  weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+  syncedAt: "2026-06-18T18:00:00.000Z",
+  accountId: "reviewer",
+  workspace: "team",
+  repositoryCount: 2,
+  pullRequestCount: 2,
+  sessionCount: 3,
+  sessions: [
+    {
+      id: "team/explorer-core#226:2026-06-17",
+      workspace: "team",
+      repositorySlug: "explorer-core",
+      repositoryName: "explorer-core",
+      pullRequestId: 226,
+      pullRequestTitle: "Interrupt-safe queue draining",
+      pullRequestUrl: "https://bitbucket.org/team/explorer-core/pull-requests/226",
+      pullRequestState: "OPEN",
+      pullRequestAuthorDisplayName: "Lina Park",
+      isPullRequestAuthor: false,
+      jiraIssueKey: "YLOG-410",
+      dateKey: "2026-06-17",
+      startedISO: "2026-06-17T10:00:00.000Z",
+      endedISO: "2026-06-17T11:00:00.000Z",
+      estimatedSeconds: 45 * 60,
+      reviewStateLabel: "COMMENTED",
+      commentCount: 6,
+      activityCount: 7,
+      confidence: "high",
+      events: [],
+      status: "logged",
+      logged: {
+        issueKey: "YLOG-410",
+        worklogId: "wl-226",
+        loggedAt: "2026-06-17T12:00:00.000Z",
+        targetMode: "reviewed-ticket",
+        timeSpentSeconds: 60 * 60,
+        estimatedSecondsAtLog: 45 * 60
+      }
+    },
+    {
+      id: "team/explorer-core#226:2026-06-18",
+      workspace: "team",
+      repositorySlug: "explorer-core",
+      repositoryName: "explorer-core",
+      pullRequestId: 226,
+      pullRequestTitle: "Interrupt-safe queue draining",
+      pullRequestUrl: "https://bitbucket.org/team/explorer-core/pull-requests/226",
+      pullRequestState: "OPEN",
+      pullRequestAuthorDisplayName: "Lina Park",
+      isPullRequestAuthor: false,
+      jiraIssueKey: "YLOG-410",
+      dateKey: "2026-06-18",
+      startedISO: "2026-06-18T13:00:00.000Z",
+      endedISO: "2026-06-18T13:20:00.000Z",
+      estimatedSeconds: 20 * 60,
+      reviewStateLabel: "CHANGES",
+      commentCount: 8,
+      activityCount: 9,
+      confidence: "medium",
+      events: [],
+      status: "unlogged"
+    },
+    {
+      id: "team/explorer-web#231:2026-06-18",
+      workspace: "team",
+      repositorySlug: "explorer-web",
+      repositoryName: "explorer-web",
+      pullRequestId: 231,
+      pullRequestTitle: "Edge cases in poller interrupts",
+      pullRequestUrl: "https://bitbucket.org/team/explorer-web/pull-requests/231",
+      pullRequestState: "OPEN",
+      pullRequestAuthorDisplayName: "Demo Reviewer",
+      isPullRequestAuthor: true,
+      jiraIssueKey: "YLOG-377",
+      dateKey: "2026-06-18",
+      startedISO: "2026-06-18T15:00:00.000Z",
+      endedISO: "2026-06-18T15:30:00.000Z",
+      estimatedSeconds: 30 * 60,
+      reviewStateLabel: "APPROVED",
+      commentCount: 3,
+      activityCount: 4,
+      confidence: "high",
+      events: [],
+      status: "unlogged"
+    }
+  ]
 };
 
 describe("ReportsView", () => {
@@ -169,6 +260,113 @@ describe("ReportsView", () => {
     expect(markup).toContain("MON");
     expect(markup).toContain("WED");
     expect(markup).toContain("SUN");
+  });
+
+  it("adds a review teaser without changing the existing weekly totals", () => {
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="summary"
+        weekState={weekState}
+        reviewResult={reviewResult}
+        isBitbucketReady
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Code review summary");
+    expect(markup).toContain("1h 20m");
+    expect(markup).toContain("1h logged + 0h 20m estimated");
+    expect(markup).toContain("14");
+    expect(markup).toContain("comments by you");
+    // Review evidence stays separate: existing WeekState totals remain unchanged.
+    expect(markup).toContain("5h Jira of 5.5h");
+    expect(markup).toContain("YLOG-397");
+  });
+
+  it("renders the read-only Code review report with PR links and effort provenance", () => {
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="reviews"
+        weekState={weekState}
+        reviewResult={reviewResult}
+        isBitbucketReady
+        issueUrlsByKey={{ "YLOG-410": "https://example.atlassian.net/browse/YLOG-410" }}
+        issueTypesByKey={{ "YLOG-410": { name: "Task", hierarchyLevel: 0 } }}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("REPORTS / CODE REVIEW");
+    expect(markup).toContain("REVIEW EFFORT BY DAY");
+    expect(markup).toContain("MOST INVOLVED");
+    expect(markup).toContain("PULL REQUEST ACTIVITY");
+    expect(markup).toContain("Interrupt-safe queue draining");
+    expect(markup).toContain("https://bitbucket.org/team/explorer-core/pull-requests/226");
+    expect(markup).toContain("https://example.atlassian.net/browse/YLOG-410");
+    expect(markup).toContain("1h logged + 0h 20m estimated");
+    expect(markup).toContain("OWN PR");
+    expect(markup).toContain("not added to weekly tracked time");
+  });
+
+  it("shows an honest empty state before the configured week has been synced", () => {
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="reviews"
+        weekState={weekState}
+        isBitbucketReady
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("No Bitbucket review snapshot for this week");
+  });
+
+  it("keeps an own-PR-only week separate from peer-review rankings", () => {
+    const ownOnly = {
+      ...reviewResult,
+      pullRequestCount: 1,
+      sessionCount: 1,
+      sessions: [reviewResult.sessions[2]]
+    };
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="reviews"
+        weekState={weekState}
+        reviewResult={ownOnly}
+        isBitbucketReady
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("This week only contains activity on your own pull requests");
+    expect(markup).toContain("OWN PR");
+    expect(markup).toContain("0 reviewed / 1 own PR");
+  });
+
+  it("falls back to Summary if the saved review tab is unavailable", () => {
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        reportTab="reviews"
+        weekState={weekState}
+        reviewResult={reviewResult}
+        isBitbucketReady={false}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("BY TICKET");
+    expect(markup).not.toContain("REPORTS / CODE REVIEW");
+    expect(markup).not.toContain("Code review summary");
   });
 });
 

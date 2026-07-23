@@ -173,7 +173,8 @@ const reviewSession = ({
   comments,
   author = "Nadia Chen",
   isOwnPullRequest = false,
-  confidence = "high"
+  confidence = "high",
+  loggedSeconds
 }: {
   workspace: string;
   repositorySlug: string;
@@ -189,6 +190,7 @@ const reviewSession = ({
   author?: string;
   isOwnPullRequest?: boolean;
   confidence?: BitbucketReviewSession["confidence"];
+  loggedSeconds?: number;
 }): BitbucketReviewSession => {
   const started = new Date(localStartISO(dateKey, time));
   const ended = new Date(started.getTime() + duration * 1000);
@@ -223,7 +225,18 @@ const reviewSession = ({
         occurredAt: new Date(started.getTime() + 5 * 60 * 1000).toISOString()
       }
     ],
-    status: "unlogged"
+    status: loggedSeconds === undefined ? "unlogged" : "logged",
+    logged:
+      loggedSeconds === undefined
+        ? undefined
+        : {
+            issueKey,
+            worklogId: `demo-review-worklog-${pullRequestId}`,
+            loggedAt: ended.toISOString(),
+            targetMode: "reviewed-ticket",
+            timeSpentSeconds: loggedSeconds,
+            estimatedSecondsAtLog: duration
+          }
   };
 };
 
@@ -707,7 +720,8 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       duration: seconds(1),
       label: "CHANGES",
       comments: 12,
-      author: "Jules Patel"
+      author: "Jules Patel",
+      loggedSeconds: seconds(1)
     }),
     reviewSession({
       workspace: "yesterlog-demo",

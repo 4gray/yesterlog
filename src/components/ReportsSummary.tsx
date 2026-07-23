@@ -1,7 +1,14 @@
 import { useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import type { DayTrackingSummary, JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
+import type {
+  BitbucketReviewSyncResult,
+  DayTrackingSummary,
+  JiraEpicInfo,
+  JiraIssueTypeInfo,
+  WeekState
+} from "../../shared/types";
 import { activitySegments, dayActivitySeconds, sumActivitySeconds, weekBillableSplit } from "../domain/activity";
+import { buildReportsReview } from "../domain/reportsReview";
 import { buildReportsHistory, type KpiDelta } from "../domain/reportsTrend";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { DayRing } from "./DayRing";
@@ -9,10 +16,14 @@ import { TicketKeyLink } from "./TicketKeyLink";
 import { TimeSplit } from "./TimeSplit";
 import { WeekNavigator } from "./WeekNavigator";
 import { Sparkles } from "lucide-react";
+import { formatReviewEffortOrigin } from "./ReportsReviews";
 
 interface ReportsSummaryProps {
   weekState: WeekState;
   weekStates?: WeekState[];
+  reviewResult?: BitbucketReviewSyncResult;
+  showReviewAnalytics?: boolean;
+  onOpenReviewReport?: () => void;
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
   onNextWeek: () => void;
@@ -130,6 +141,9 @@ const DayChart = ({ days, chartTarget }: { days: DayTrackingSummary[]; chartTarg
 export const ReportsSummary = ({
   weekState,
   weekStates,
+  reviewResult,
+  showReviewAnalytics = false,
+  onOpenReviewReport = () => undefined,
   onPreviousWeek,
   onCurrentWeek,
   onNextWeek,
@@ -148,6 +162,7 @@ export const ReportsSummary = ({
         : undefined,
     [weekStates, weekState.weekKey]
   );
+  const reviewReport = useMemo(() => buildReportsReview(reviewResult), [reviewResult]);
 
   const stats = useMemo(() => {
     const activeDays = weekState.days.filter((day) => day.trackedHours > 0);
@@ -391,6 +406,45 @@ export const ReportsSummary = ({
           )}
         </div>
       </div>
+
+      {showReviewAnalytics ? (
+        <section className="review-summary-teaser" aria-label="Code review summary">
+          <div className="review-summary-lead">
+            <span className="review-summary-label">CODE REVIEW</span>
+            {reviewResult ? (
+              <>
+                <strong>{formatDuration(reviewReport.peerReview.totalSeconds / 3600)}</strong>
+                <span>review effort</span>
+              </>
+            ) : (
+              <span className="review-summary-empty">No Bitbucket snapshot for this week</span>
+            )}
+          </div>
+          {reviewResult ? (
+            <div className="review-summary-facts">
+              <div>
+                <strong>{reviewReport.reviewedPullRequestCount}</strong>
+                <span>PRs reviewed</span>
+              </div>
+              <div>
+                <strong>{reviewReport.commentsByYou}</strong>
+                <span>comments by you</span>
+              </div>
+              <div className="review-summary-origin">
+                <strong>{formatReviewEffortOrigin(reviewReport.peerReview)}</strong>
+                <span>not added to tracked time</span>
+              </div>
+            </div>
+          ) : (
+            <div className="review-summary-facts is-empty">
+              Sync reviews from the Review screen to populate this read-only report.
+            </div>
+          )}
+          <button type="button" className="review-summary-link" onClick={onOpenReviewReport}>
+            View code review
+          </button>
+        </section>
+      ) : null}
     </>
   );
 };
