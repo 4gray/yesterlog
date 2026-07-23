@@ -77,16 +77,17 @@ them from the final Snap on Ubuntu before promoting the snap to stable.
 - [x] Register `yesterlog` with the intended publisher account.
 - [x] Add the MIT license.
 - [x] Configure restricted GitHub Actions Store credentials for `yesterlog`/`edge`.
-- [ ] Paste the title, summary, primary category, description, and links.
-- [ ] Upload the icon and five Linux screenshots.
-- [ ] Upload the featured banner to the Snap Store.
+- [x] Paste the title, summary, primary and secondary categories, description, and links.
+- [x] Upload the icon and five Linux screenshots.
+- [x] Upload the featured banner to the Snap Store.
 - [ ] Configure the GitHub repository social preview.
 - [x] Upload the first `v3.0.0` revision to `edge`.
 - [x] Install the Store revision on a clean Ubuntu system.
 - [x] Complete the automated clean-Ubuntu/X11 launch and integration smoke test.
 - [x] Promote the tested revision to `candidate`, then `stable`.
 
-Revision `1` is the tested artifact in all three release channels. Snap Store
-summary, description, license, links, and icon come from the final release
-artifact. The remaining dashboard-only media/category/social-preview items are
-optional listing polish and are not release blockers.
+Revision `1` is the tested artifact in all three release channels. The public
+Snap Store page now includes the final Yesterlog metadata, Productivity and
+Development categories, license, links, icon, five version 3.0.0 screenshots,
+and featured banner. The GitHub repository social preview remains a separate
+optional follow-up.
