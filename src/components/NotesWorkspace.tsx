@@ -328,13 +328,13 @@ const makeDemoData = (currentDate: Date) => {
 };
 
 const DEMO_PULL_REQUEST: BitbucketPullRequestDetailsResult = {
-  workspace: "timebro",
+  workspace: "yesterlog",
   repositorySlug: "web",
   repositoryName: "web",
   pullRequestId: 472,
   title: "Redis session store",
   state: "OPEN",
-  url: "https://bitbucket.org/timebro/web/pull-requests/472",
+  url: "https://bitbucket.org/yesterlog/web/pull-requests/472",
   sourceBranch: "feature/TB-352-redis",
   destinationBranch: "main",
   jiraIssueKey: "TB-352",
@@ -1111,7 +1111,7 @@ export const NotesWorkspace = ({
             key,
             summary: jira.summary,
             projectKey: key.split("-")[0],
-            projectName: "TimeBro",
+            projectName: "Yesterlog",
             statusName: jira.statusName ?? "In progress",
             statusCategory: jira.statusCategory ?? "indeterminate",
             loggedSecondsTotal: selectedActivity?.loggedSeconds ?? 0,

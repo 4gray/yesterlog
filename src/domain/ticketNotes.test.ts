@@ -136,33 +136,33 @@ describe("ticket activity scopes", () => {
   });
   const current = new Date(2026, 6, 24, 12);
   const items = [
-    activity("TB-OLD", localIso(2026, 7, 17)),
-    activity("TB-WEEK", localIso(2026, 7, 18)),
-    activity("TB-TODAY-EARLY", localIso(2026, 7, 24, 8)),
-    activity("TB-TODAY-LATE", localIso(2026, 7, 24, 11))
+    activity("YLOG-OLD", localIso(2026, 7, 17)),
+    activity("YLOG-WEEK", localIso(2026, 7, 18)),
+    activity("YLOG-TODAY-EARLY", localIso(2026, 7, 24, 8)),
+    activity("YLOG-TODAY-LATE", localIso(2026, 7, 24, 11))
   ];
 
   it("uses local today and an inclusive rolling seven-day week", () => {
     expect(
       getScopedNoteTicketActivity(items, "today", current).map((item) => item.key)
-    ).toEqual(["TB-TODAY-LATE", "TB-TODAY-EARLY"]);
+    ).toEqual(["YLOG-TODAY-LATE", "YLOG-TODAY-EARLY"]);
     expect(
       getScopedNoteTicketActivity(items, "week", current).map((item) => item.key)
-    ).toEqual(["TB-TODAY-LATE", "TB-TODAY-EARLY", "TB-WEEK"]);
+    ).toEqual(["YLOG-TODAY-LATE", "YLOG-TODAY-EARLY", "YLOG-WEEK"]);
   });
 
   it("keeps all-time activity and sorts invalid timestamps last", () => {
-    const invalid = activity("TB-INVALID", "not-a-date");
+    const invalid = activity("YLOG-INVALID", "not-a-date");
     expect(
       getScopedNoteTicketActivity([...items, invalid], "all", current).map(
         (item) => item.key
       )
     ).toEqual([
-      "TB-TODAY-LATE",
-      "TB-TODAY-EARLY",
-      "TB-WEEK",
-      "TB-OLD",
-      "TB-INVALID"
+      "YLOG-TODAY-LATE",
+      "YLOG-TODAY-EARLY",
+      "YLOG-WEEK",
+      "YLOG-OLD",
+      "YLOG-INVALID"
     ]);
   });
 });

@@ -460,7 +460,7 @@ describe("Notes ticket activity index", () => {
     expect(activity[0]).toEqual({
       key: "NOTES-42",
       summary: "Current ticket title",
-      url: `${site}/browse/TB-notes-newer`,
+      url: newer.issueUrl,
       issueType: { name: "Story", hierarchyLevel: 0 },
       epic: {
         id: "epic-1",

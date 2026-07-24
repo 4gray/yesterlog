@@ -2,7 +2,7 @@
 
 ## Goal
 
-Implement the final `TimeBro - 10 Notes Workspace` handoff as a dedicated Yesterlog
+Implement the final Notes Workspace handoff as a dedicated Yesterlog
 route. Notes remain device-only and are never Jira worklogs; Jira issues are referenced,
 Bitbucket PR items stay live, and AI briefings stay in memory until the user explicitly
 copies a suggestion into a local to-do.

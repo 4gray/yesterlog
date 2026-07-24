@@ -53,7 +53,7 @@ const ticket: JiraTicket = {
   key: "TB-352",
   summary: "Migrate session storage to Redis",
   projectKey: "TB",
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "In progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 13_500,
