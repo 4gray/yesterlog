@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_SETTINGS } from "../domain/week";
-import type { BitbucketReviewSyncRequest, BitbucketReviewSyncResult } from "../../shared/types";
+import type {
+  BitbucketPullRequestDetailsRequest,
+  BitbucketPullRequestDetailsResult,
+  BitbucketReviewSyncRequest,
+  BitbucketReviewSyncResult,
+  ResolveBitbucketPullRequestTaskRequest,
+  ResolveBitbucketPullRequestTaskResult
+} from "../../shared/types";
 import { nativeApi } from "./native";
 
 type NativeApiBridge = NonNullable<Window["yesterlog"]>;
@@ -33,6 +40,46 @@ const syncResult: BitbucketReviewSyncResult = {
   pullRequestCount: 0,
   sessionCount: 0,
   sessions: []
+};
+
+const detailsRequest: BitbucketPullRequestDetailsRequest = {
+  settings: request.settings,
+  workspace: "team",
+  repositorySlug: "explorer-web",
+  pullRequestId: 214
+};
+
+const detailsResult: BitbucketPullRequestDetailsResult = {
+  workspace: "team",
+  repositorySlug: "explorer-web",
+  repositoryName: "Explorer Web",
+  pullRequestId: 214,
+  title: "YLOG-328 Active interrupt handling",
+  state: "OPEN",
+  url: "https://bitbucket.org/team/explorer-web/pull-requests/214",
+  approvalCount: 2,
+  commentCount: 14,
+  tasks: [],
+  comments: []
+};
+
+const taskRequest: ResolveBitbucketPullRequestTaskRequest = {
+  ...detailsRequest,
+  taskId: 9,
+  content: "Add a regression test.",
+  resolved: true
+};
+
+const taskResult: ResolveBitbucketPullRequestTaskResult = {
+  ok: true,
+  task: {
+    id: 9,
+    content: "Add a regression test.",
+    state: "RESOLVED",
+    resolved: true,
+    authorDisplayName: "Anna K.",
+    authorInitials: "AK"
+  }
 };
 
 const setNativeWindow = (bridges: { yesterlog?: Partial<NativeApiBridge> }) => {
@@ -80,6 +127,42 @@ describe("nativeApi Bitbucket bridge", () => {
 
     await expect(nativeApi.syncBitbucketReviews(request)).rejects.toThrow(
       "Restart Yesterlog to finish enabling Bitbucket review sync"
+    );
+  });
+
+  it("forwards pull request detail reads through the native bridge", async () => {
+    const fetchBitbucketPullRequestDetails = vi.fn().mockResolvedValue(detailsResult);
+
+    setNativeWindow({
+      yesterlog: {
+        fetchBitbucketPullRequestDetails
+      }
+    });
+
+    await expect(nativeApi.fetchBitbucketPullRequestDetails(detailsRequest)).resolves.toBe(detailsResult);
+    expect(fetchBitbucketPullRequestDetails).toHaveBeenCalledWith(detailsRequest);
+  });
+
+  it("forwards explicit task writes and explains stale bridges", async () => {
+    const setBitbucketPullRequestTaskState = vi.fn().mockResolvedValue(taskResult);
+
+    setNativeWindow({
+      yesterlog: {
+        setBitbucketPullRequestTaskState
+      }
+    });
+
+    await expect(nativeApi.setBitbucketPullRequestTaskState(taskRequest)).resolves.toBe(taskResult);
+    expect(setBitbucketPullRequestTaskState).toHaveBeenCalledWith(taskRequest);
+
+    setNativeWindow({
+      yesterlog: {
+        testBitbucketConnection: vi.fn()
+      }
+    });
+
+    await expect(nativeApi.setBitbucketPullRequestTaskState(taskRequest)).rejects.toThrow(
+      "Restart Yesterlog to finish enabling Bitbucket task updates"
     );
   });
 });

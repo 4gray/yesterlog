@@ -947,6 +947,37 @@ const fetchIssueComments = async (settings: AppSettings, issueKey: string) => {
   return { items: comments, isPartial } satisfies ActivityPagedResult<NonNullable<JiraCommentResponse["comments"]>[number]>;
 };
 
+const fetchRecentIssueComments = async (
+  settings: AppSettings,
+  issueKey: string,
+  limit: number
+) => {
+  const pageSize = Math.max(1, limit);
+  const params = new URLSearchParams({
+    startAt: "0",
+    maxResults: String(pageSize),
+    orderBy: "created"
+  });
+  const path = `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment`;
+  const firstPage = await jiraRequest<JiraCommentResponse>(
+    settings,
+    `${path}?${params.toString()}`
+  );
+  const firstComments = firstPage.comments ?? [];
+  const total = Math.max(0, firstPage.total);
+
+  if (total <= firstComments.length) {
+    return firstComments.slice(-limit);
+  }
+
+  params.set("startAt", String(Math.max(0, total - limit)));
+  const lastPage = await jiraRequest<JiraCommentResponse>(
+    settings,
+    `${path}?${params.toString()}`
+  );
+  return (lastPage.comments ?? []).slice(-limit);
+};
+
 const fetchIssueChangelogs = async (settings: AppSettings, issueKey: string) => {
   const histories: NonNullable<JiraChangelogResponse["values"]> = [];
   let startAt = 0;
@@ -1051,6 +1082,7 @@ export const syncJiraActivity = async (request: JiraActivitySyncRequest): Promis
 
 const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created,updated,assignee";
 const ISSUE_DETAILS_FIELDS = `${TICKET_FIELDS},description`;
+const ISSUE_DETAILS_COMMENT_LIMIT = 20;
 const TICKET_PAGE_SIZE = 100;
 const ASSIGNED_OPEN_TICKET_LIMIT = 500;
 const RECENTLY_CLOSED_TICKET_LIMIT = 50;
@@ -1174,13 +1206,23 @@ export const fetchJiraIssueDetails = async (request: IssueDetailsRequest): Promi
     jiraRequest<JiraTicketIssue>(settings, `/rest/api/3/issue/${encodeURIComponent(issueKey)}?${params.toString()}`)
   ]);
 
-  const worklogs = await fetchAllIssueWorklogs(settings, issue.key);
+  const [worklogs, issueComments] = await Promise.all([
+    fetchAllIssueWorklogs(settings, issue.key),
+    fetchRecentIssueComments(settings, issue.key, ISSUE_DETAILS_COMMENT_LIMIT).catch(
+      () => []
+    )
+  ]);
   const myWorklogs = worklogs.filter((worklog) => worklog.author?.accountId === currentUser.accountId);
   const myLoggedSecondsTotal = myWorklogs.reduce((sum, worklog) => sum + worklog.timeSpentSeconds, 0);
+  const comments = issueComments
+    .map((comment) => adfToPlainText(comment.body).trim())
+    .filter(Boolean)
+    .slice(-ISSUE_DETAILS_COMMENT_LIMIT);
   const details: JiraIssueDetails = {
     ...toTicket(settings, issue),
     description: adfToPlainText(issue.fields?.description) || undefined,
     descriptionAdf: issue.fields?.description,
+    comments,
     myLoggedSecondsTotal,
     myWorklogCount: myWorklogs.length
   };

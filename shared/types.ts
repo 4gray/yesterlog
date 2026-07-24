@@ -367,6 +367,73 @@ export interface BitbucketConnectionResult {
   workspace?: string;
 }
 
+export interface BitbucketPullRequestDetailsRequest {
+  settings: AppSettings;
+  workspace: string;
+  repositorySlug: string;
+  pullRequestId: number;
+}
+
+export interface BitbucketPullRequestTask {
+  id: number;
+  /** Bitbucket's plain-text task content. */
+  content: string;
+  state: "RESOLVED" | "UNRESOLVED";
+  resolved: boolean;
+  authorDisplayName?: string;
+  authorInitials: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * One unresolved, top-level PR comment. Replies, deleted comments, resolved
+ * conversations, and empty bodies are filtered in the main process.
+ */
+export interface BitbucketPullRequestComment {
+  id: number;
+  content: string;
+  authorDisplayName: string;
+  authorInitials: string;
+  path?: string;
+  line?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BitbucketPullRequestDetailsResult {
+  workspace: string;
+  repositorySlug: string;
+  repositoryName?: string;
+  pullRequestId: number;
+  title: string;
+  description?: string;
+  state: string;
+  url: string;
+  authorDisplayName?: string;
+  sourceBranch?: string;
+  destinationBranch?: string;
+  jiraIssueKey?: string;
+  approvalCount: number;
+  commentCount: number;
+  tasks: BitbucketPullRequestTask[];
+  comments: BitbucketPullRequestComment[];
+  /** Compact, prompt-safe summary of files and line changes from Bitbucket diffstat. */
+  diffstatSummary?: string;
+}
+
+export interface ResolveBitbucketPullRequestTaskRequest extends BitbucketPullRequestDetailsRequest {
+  taskId: number;
+  /** Current raw task text, required by Bitbucket's full-resource PUT contract. */
+  content: string;
+  resolved: boolean;
+}
+
+export interface ResolveBitbucketPullRequestTaskResult {
+  ok: boolean;
+  task: BitbucketPullRequestTask;
+}
+
 export type BitbucketReviewTargetMode = "reviewed-ticket" | "review-bucket";
 export type BitbucketReviewConfidence = "high" | "medium" | "low";
 export type BitbucketReviewSessionStatus = "unlogged" | "logged";
@@ -485,6 +552,8 @@ export interface JiraTicket {
 export interface JiraIssueDetails extends JiraTicket {
   description?: string;
   descriptionAdf?: unknown;
+  /** Recent Jira issue comments flattened from ADF for read-only briefing context. */
+  comments?: string[];
   myLoggedSecondsTotal: number;
   myWorklogCount: number;
 }

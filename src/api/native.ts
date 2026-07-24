@@ -11,6 +11,8 @@ import type {
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
+  BitbucketPullRequestDetailsRequest,
+  BitbucketPullRequestDetailsResult,
   BitbucketReviewSyncRequest,
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
@@ -23,6 +25,8 @@ import type {
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  ResolveBitbucketPullRequestTaskRequest,
+  ResolveBitbucketPullRequestTaskResult,
   SearchTicketsRequest,
   SearchTicketsResult,
   SyncRequest,
@@ -131,6 +135,44 @@ export const nativeApi = {
     }
 
     return bridge.syncBitbucketReviews(request);
+  },
+
+  fetchBitbucketPullRequestDetails(
+    request: BitbucketPullRequestDetailsRequest
+  ): Promise<BitbucketPullRequestDetailsResult> {
+    const bridge = getNativeBridgeWithMethod("fetchBitbucketPullRequestDetails");
+
+    if (!bridge) {
+      const hasStaleBridge = Boolean(getNativeBridge());
+      return Promise.reject(
+        new Error(
+          hasStaleBridge
+            ? "Restart Yesterlog to finish enabling Bitbucket pull request details. The current window is using an older native bridge."
+            : "Open the Electron app to load Bitbucket pull request details."
+        )
+      );
+    }
+
+    return bridge.fetchBitbucketPullRequestDetails(request);
+  },
+
+  setBitbucketPullRequestTaskState(
+    request: ResolveBitbucketPullRequestTaskRequest
+  ): Promise<ResolveBitbucketPullRequestTaskResult> {
+    const bridge = getNativeBridgeWithMethod("setBitbucketPullRequestTaskState");
+
+    if (!bridge) {
+      const hasStaleBridge = Boolean(getNativeBridge());
+      return Promise.reject(
+        new Error(
+          hasStaleBridge
+            ? "Restart Yesterlog to finish enabling Bitbucket task updates. The current window is using an older native bridge."
+            : "Open the Electron app to update a Bitbucket pull request task."
+        )
+      );
+    }
+
+    return bridge.setBitbucketPullRequestTaskState(request);
   },
 
   fetchAssignedTickets(request: TicketsRequest): Promise<TicketsResult> {

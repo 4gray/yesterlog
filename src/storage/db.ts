@@ -14,14 +14,20 @@ import type {
 } from "../../shared/types";
 import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
+import type {
+  NoteNotebook,
+  NoteTicketActivity,
+  WorkspaceNoteBucket
+} from "../domain/ticketNotes";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 13;
+const DB_VERSION = 14;
 const SETTINGS_KEY = "default";
 const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
+const NOTEBOOKS_KEY = "default";
 
 type StoreName =
   | "settings"
@@ -38,7 +44,9 @@ type StoreName =
   | "recapDrafts"
   | "savedRecaps"
   | "worklogAllocationPreferences"
-  | "jiraWorklogs";
+  | "jiraWorklogs"
+  | "workspaceNotes"
+  | "noteNotebooks";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -144,6 +152,14 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("jiraWorklogs")) {
         db.createObjectStore("jiraWorklogs", { keyPath: "cacheKey" });
+      }
+
+      if (!db.objectStoreNames.contains("workspaceNotes")) {
+        db.createObjectStore("workspaceNotes", { keyPath: "containerId" });
+      }
+
+      if (!db.objectStoreNames.contains("noteNotebooks")) {
+        db.createObjectStore("noteNotebooks", { keyPath: "id" });
       }
     };
 
@@ -607,6 +623,9 @@ export const getBitbucketReviewResult = (weekKey: string) => {
   return readStore<BitbucketReviewSyncResult>("bitbucketReviewResults", weekKey);
 };
 
+export const getBitbucketReviewResults = () =>
+  readAllStore<BitbucketReviewSyncResult>("bitbucketReviewResults");
+
 export const saveBitbucketReviewResult = (result: BitbucketReviewSyncResult) => {
   return writeStore("bitbucketReviewResults", result);
 };
@@ -627,6 +646,112 @@ export const getPersonalNotes = async (weekKey: string): Promise<PersonalNote[]>
 
 export const savePersonalNotes = (weekKey: string, notes: PersonalNote[]) => {
   return writeStore("personalNotes", { weekKey, notes });
+};
+
+export const getWorkspaceNoteBuckets = () =>
+  readAllStore<WorkspaceNoteBucket>("workspaceNotes");
+
+export const saveWorkspaceNoteBucket = (bucket: WorkspaceNoteBucket) =>
+  writeStore("workspaceNotes", bucket);
+
+export const saveWorkspaceNoteBuckets = async (buckets: WorkspaceNoteBucket[]) => {
+  const db = await openDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction("workspaceNotes", "readwrite");
+    const store = transaction.objectStore("workspaceNotes");
+    for (const bucket of buckets) {
+      store.put(bucket);
+    }
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("Could not save local notes."));
+    transaction.oncomplete = () => resolve();
+  });
+};
+
+export const deleteWorkspaceNoteBucket = (containerId: string) =>
+  deleteStore("workspaceNotes", containerId);
+
+export const getNoteNotebooks = async (): Promise<NoteNotebook[]> => {
+  const stored = await readStore<{ id: string; notebooks: NoteNotebook[] }>(
+    "noteNotebooks",
+    NOTEBOOKS_KEY
+  );
+  return stored?.notebooks ?? [];
+};
+
+export const saveNoteNotebooks = (notebooks: NoteNotebook[]) =>
+  writeStore("noteNotebooks", { id: NOTEBOOKS_KEY, notebooks });
+
+/**
+ * Builds the Notes workspace's all-time ticket activity index from the
+ * site/account-scoped local Jira ledger. Only issue metadata and worklog totals
+ * leave this storage layer; settings and credentials never do.
+ */
+export const getNoteTicketActivity = async (): Promise<NoteTicketActivity[]> => {
+  const { activeContext } = await getConfiguredJiraContext();
+  if (!activeContext) {
+    return [];
+  }
+
+  const cachedEntries = await readJiraWorklogCache();
+  const activity = new Map<
+    string,
+    NoteTicketActivity & { lastWorkedTime: number }
+  >();
+
+  for (const entry of cachedEntries) {
+    if (
+      entry.jiraSite !== activeContext.jiraSite ||
+      entry.authorAccountId !== activeContext.authorAccountId
+    ) {
+      continue;
+    }
+
+    const worklog = entry.worklog;
+    const key = worklog.issueKey.trim().toUpperCase();
+    const lastWorkedTime = Date.parse(worklog.started);
+    if (!key || !Number.isFinite(lastWorkedTime)) {
+      continue;
+    }
+
+    const existing = activity.get(key);
+    const loggedSeconds = Number.isFinite(worklog.timeSpentSeconds)
+      ? Math.max(0, worklog.timeSpentSeconds)
+      : 0;
+    const useThisSnapshot = !existing || lastWorkedTime >= existing.lastWorkedTime;
+
+    if (!existing) {
+      activity.set(key, {
+        key,
+        summary: worklog.issueSummary.trim() || key,
+        url: worklog.issueUrl,
+        issueType: worklog.issueType,
+        epic: worklog.epic,
+        lastWorkedAt: worklog.started,
+        lastWorkedTime,
+        loggedSeconds
+      });
+      continue;
+    }
+
+    existing.loggedSeconds += loggedSeconds;
+    if (useThisSnapshot) {
+      existing.summary = worklog.issueSummary.trim() || existing.summary;
+      existing.url = worklog.issueUrl ?? existing.url;
+      existing.issueType = worklog.issueType ?? existing.issueType;
+      existing.epic = worklog.epic ?? existing.epic;
+      existing.lastWorkedAt = worklog.started;
+      existing.lastWorkedTime = lastWorkedTime;
+    }
+  }
+
+  return [...activity.values()]
+    .sort(
+      (left, right) =>
+        right.lastWorkedTime - left.lastWorkedTime ||
+        left.key.localeCompare(right.key, undefined, { numeric: true })
+    )
+    .map(({ lastWorkedTime: _lastWorkedTime, ...item }) => item);
 };
 
 export const getRecurringEvents = async (): Promise<RecurringEvent[] | undefined> => {

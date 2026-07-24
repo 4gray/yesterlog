@@ -6,6 +6,14 @@ import {
   parseAiDrafts,
   type AiDrafts
 } from "../domain/enhancePrompt";
+import {
+  buildNotesBriefingPrompt,
+  EMPTY_NOTES_BRIEFING,
+  NOTES_BRIEFING_SYSTEM_PROMPT,
+  parseNotesBriefing,
+  type NotesBriefingInput,
+  type NotesBriefingSuggestion
+} from "../domain/notesBriefing";
 import { RECAP_POLISH_SYSTEM_PROMPT, buildRecapPolishPrompt } from "../domain/recapPolishPrompt";
 import { redactForCloud } from "../domain/redaction";
 import { recapSourceRef } from "../domain/recapWorkspace";
@@ -238,6 +246,42 @@ export const polishRecap = async (recapText: string, connection: AiConnection): 
     return response.trim() || recapText;
   } catch {
     return recapText;
+  }
+};
+
+/**
+ * Builds ephemeral ticket/PR suggestions through the configured provider.
+ * Local workspace notes are not part of {@link NotesBriefingInput}; all failure
+ * paths return an empty list so the notes workspace remains fully usable.
+ */
+export const computeNotesBriefing = async (
+  input: NotesBriefingInput,
+  connection: AiConnection
+): Promise<NotesBriefingSuggestion[]> => {
+  const provider = connection.provider ?? "ollama";
+  const prompt = buildNotesBriefingPrompt(input);
+  const redaction = isCloudProvider(provider)
+    ? redactForCloud(prompt, connection.redactLiterals)
+    : undefined;
+
+  try {
+    const result = await nativeApi.generateWithAi({
+      provider,
+      endpoint: connection.endpoint,
+      model: connection.model,
+      cliPath: connection.cliPath,
+      system: NOTES_BRIEFING_SYSTEM_PROMPT,
+      prompt: redaction ? redaction.text : prompt,
+      format: "json"
+    });
+
+    if (!result.ok || !result.response) {
+      return EMPTY_NOTES_BRIEFING;
+    }
+
+    return parseNotesBriefing(redaction ? redaction.restore(result.response) : result.response);
+  } catch {
+    return EMPTY_NOTES_BRIEFING;
   }
 };
 

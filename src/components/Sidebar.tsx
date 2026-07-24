@@ -7,6 +7,7 @@ import {
   GitPullRequest,
   History,
   LineChart,
+  NotebookPen,
   Settings,
   Sparkles,
   Sun,
@@ -20,7 +21,17 @@ const SYNC_DOT_STATE: Record<AppSyncState, string> = {
   offline: "is-offline"
 };
 
-export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "recap" | "settings";
+export type AppView =
+  | "today"
+  | "week"
+  | "month"
+  | "recon"
+  | "review"
+  | "tickets"
+  | "notes"
+  | "reports"
+  | "recap"
+  | "settings";
 export type ReportTab = "summary" | "composition" | "focus" | "trends" | "reviews";
 export type ThemeMode = "light" | "dark";
 
@@ -31,6 +42,7 @@ const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof
   { id: "recon", label: "RECONSTRUCT", Icon: History },
   { id: "review", label: "REVIEW", Icon: GitPullRequest },
   { id: "tickets", label: "TICKETS", Icon: Tag },
+  { id: "notes", label: "NOTES", Icon: NotebookPen },
   { id: "reports", label: "REPORTS", Icon: LineChart },
   { id: "recap", label: "RECAP", Icon: Sparkles }
 ];

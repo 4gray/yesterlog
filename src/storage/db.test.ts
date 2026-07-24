@@ -2,17 +2,25 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import type { JiraWorklog, RecapDraftRecord, SavedRecap, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import type { NoteNotebook, WorkspaceNoteBucket } from "../domain/ticketNotes";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import {
+  deleteWorkspaceNoteBucket,
   deleteWorklogAllocationPreference,
+  getNoteNotebooks,
+  getNoteTicketActivity,
   getSyncResult,
+  getWorkspaceNoteBuckets,
   getWorklogAllocationPreferences,
-  saveSyncResult,
-  saveSettings,
   getRecapDraft,
   getSavedRecaps,
+  saveNoteNotebooks,
   saveRecapDraft,
   saveSavedRecap,
+  saveSettings,
+  saveSyncResult,
+  saveWorkspaceNoteBucket,
+  saveWorkspaceNoteBuckets,
   saveWorklogAllocationPreference
 } from "./db";
 import { mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
@@ -28,6 +36,34 @@ const source = (id: string, jiraSite: string, started: string): JiraWorklog => (
   created: started,
   updated: started,
   timeSpentSeconds: 16 * 3600
+});
+
+describe("notes workspace schema migration", () => {
+  it("additively upgrades a version 13 database with workspace note stores", async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open("jira-week-tracker", 13);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        request.result.close();
+        resolve();
+      };
+    });
+
+    expect(await getWorkspaceNoteBuckets()).toEqual([]);
+    expect(await getNoteNotebooks()).toEqual([]);
+
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("jira-week-tracker");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+
+    expect(db.version).toBe(14);
+    expect([...db.objectStoreNames]).toContain("workspaceNotes");
+    expect([...db.objectStoreNames]).toContain("noteNotebooks");
+    expect([...db.objectStoreNames]).toContain("personalNotes");
+    db.close();
+  });
 });
 
 describe("Recap persistence", () => {
@@ -68,6 +104,93 @@ describe("Recap persistence", () => {
     const stored = (await getSavedRecaps()).filter((item) => item.id.startsWith("saved-recap-"));
     expect(stored.map((item) => item.id)).toEqual([newer.id, older.id]);
     expect(stored.find((item) => item.id === older.id)?.format).toBe("perf");
+  });
+});
+
+describe("Notes workspace persistence", () => {
+  const bucket: WorkspaceNoteBucket = {
+    containerId: "NOTES-900",
+    jira: {
+      key: "NOTES-900",
+      summary: "Persist local ticket notes",
+      url: "https://notes-storage.atlassian.net/browse/NOTES-900",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      issueType: { name: "Task", hierarchyLevel: 0 }
+    },
+    notes: [
+      {
+        id: "workspace-note-1",
+        type: "todo",
+        done: false,
+        text: "Keep this on device",
+        createdAt: "2026-07-24T09:00:00.000Z",
+        updatedAt: "2026-07-24T09:00:00.000Z"
+      }
+    ]
+  };
+
+  const notebooks: NoteNotebook[] = [
+    {
+      id: "notebook:one-on-one",
+      title: "1:1 with Lena",
+      createdAt: "2026-07-24T09:00:00.000Z",
+      updatedAt: "2026-07-24T09:00:00.000Z"
+    }
+  ];
+
+  it("stores note buckets independently by flat container id", async () => {
+    await saveWorkspaceNoteBucket(bucket);
+    await saveWorkspaceNoteBucket({
+      containerId: "GENERAL",
+      notes: [{ ...bucket.notes[0], id: "workspace-note-general" }]
+    });
+
+    const stored = await getWorkspaceNoteBuckets();
+    expect(stored.find((item) => item.containerId === bucket.containerId)).toEqual(
+      bucket
+    );
+    expect(stored.find((item) => item.containerId === "GENERAL")?.notes[0].id).toBe(
+      "workspace-note-general"
+    );
+
+    await deleteWorkspaceNoteBucket(bucket.containerId);
+    expect(
+      (await getWorkspaceNoteBuckets()).find(
+        (item) => item.containerId === bucket.containerId
+      )
+    ).toBeUndefined();
+  });
+
+  it("stores both sides of a note move in one batch", async () => {
+    const source: WorkspaceNoteBucket = {
+      ...bucket,
+      containerId: "NOTES-MOVE-SOURCE",
+      notes: []
+    };
+    const target: WorkspaceNoteBucket = {
+      containerId: "GENERAL",
+      notes: [{ ...bucket.notes[0], id: "workspace-note-moved" }]
+    };
+
+    await saveWorkspaceNoteBuckets([source, target]);
+
+    const stored = await getWorkspaceNoteBuckets();
+    expect(
+      stored.find((item) => item.containerId === source.containerId)?.notes
+    ).toEqual([]);
+    expect(
+      stored.find((item) => item.containerId === target.containerId)?.notes[0].id
+    ).toBe("workspace-note-moved");
+  });
+
+  it("persists the flat notebook list separately", async () => {
+    await saveNoteNotebooks(notebooks);
+    expect(await getNoteNotebooks()).toEqual(notebooks);
+
+    const renamed = [{ ...notebooks[0], title: "Weekly 1:1" }];
+    await saveNoteNotebooks(renamed);
+    expect(await getNoteNotebooks()).toEqual(renamed);
   });
 });
 
@@ -282,5 +405,86 @@ describe("Jira worklog ledger", () => {
       jiraEmail: "old@example.com"
     });
     expect(await getSyncResult("2026-08-24")).toBeUndefined();
+  });
+});
+
+describe("Notes ticket activity index", () => {
+  it("aggregates the active Jira context by key using the latest started worklog snapshot", async () => {
+    const site = "https://notes-activity.atlassian.net";
+    const older = {
+      ...source("notes-older", site, "2026-07-21T09:00:00.000Z"),
+      issueKey: "NOTES-42",
+      issueSummary: "Older ticket title",
+      issueType: { name: "Task", hierarchyLevel: 0 },
+      timeSpentSeconds: 1800
+    };
+    const newer = {
+      ...source("notes-newer", site, "2026-07-24T11:00:00.000Z"),
+      issueKey: "NOTES-42",
+      issueSummary: "Current ticket title",
+      issueType: { name: "Story", hierarchyLevel: 0 },
+      epic: {
+        id: "epic-1",
+        key: "NOTES-1",
+        summary: "Notes workspace",
+        url: `${site}/browse/NOTES-1`
+      },
+      timeSpentSeconds: 5400
+    };
+    const other = {
+      ...source("notes-other", site, "2026-07-23T10:00:00.000Z"),
+      issueKey: "NOTES-7",
+      issueSummary: "Another ticket",
+      timeSpentSeconds: 900
+    };
+
+    await saveSettings({
+      ...DEFAULT_SETTINGS,
+      jiraBaseUrl: site,
+      jiraEmail: "notes@example.com"
+    });
+    await saveSyncResult(
+      syncResult(
+        "2026-07-20",
+        site,
+        "2026-07-24T12:00:00.000Z",
+        [older, newer, other]
+      )
+    );
+
+    const activity = (await getNoteTicketActivity()).filter((item) =>
+      item.key.startsWith("NOTES-")
+    );
+
+    expect(activity.map((item) => item.key)).toEqual(["NOTES-42", "NOTES-7"]);
+    expect(activity[0]).toEqual({
+      key: "NOTES-42",
+      summary: "Current ticket title",
+      url: `${site}/browse/TB-notes-newer`,
+      issueType: { name: "Story", hierarchyLevel: 0 },
+      epic: {
+        id: "epic-1",
+        key: "NOTES-1",
+        summary: "Notes workspace",
+        url: `${site}/browse/NOTES-1`
+      },
+      lastWorkedAt: "2026-07-24T11:00:00.000Z",
+      loggedSeconds: 7200
+    });
+    expect(activity[1]).toMatchObject({
+      key: "NOTES-7",
+      lastWorkedAt: "2026-07-23T10:00:00.000Z",
+      loggedSeconds: 900
+    });
+  });
+
+  it("returns no ledger activity when configured Jira identity no longer matches", async () => {
+    await saveSettings({
+      ...DEFAULT_SETTINGS,
+      jiraBaseUrl: "https://notes-activity.atlassian.net",
+      jiraEmail: "someone-else@example.com"
+    });
+
+    expect(await getNoteTicketActivity()).toEqual([]);
   });
 });

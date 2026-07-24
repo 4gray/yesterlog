@@ -332,6 +332,56 @@ describe("fetchJiraIssueDetails", () => {
         });
       }
 
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/comment") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 3,
+          comments: [
+            {
+              id: "comment-1",
+              author: { accountId: "other", displayName: "Anna K." },
+              created: "2026-06-22T11:00:00.000+0000",
+              body: {
+                type: "doc",
+                version: 1,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Confirm the rollback plan." }]
+                  }
+                ]
+              }
+            },
+            {
+              id: "comment-2",
+              author: { accountId: "me", displayName: "Me" },
+              created: "2026-06-22T12:00:00.000+0000",
+              body: {
+                type: "doc",
+                version: 1,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: "Added the missing metrics." }]
+                  }
+                ]
+              }
+            },
+            {
+              id: "comment-3",
+              author: { accountId: "other", displayName: "Other" },
+              created: "2026-06-22T13:00:00.000+0000",
+              body: {
+                type: "doc",
+                version: 1,
+                content: [{ type: "paragraph" }]
+              }
+            }
+          ]
+        });
+      }
+
       throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -350,6 +400,7 @@ describe("fetchJiraIssueDetails", () => {
         type: "doc",
         version: 1
       },
+      comments: ["Confirm the rollback plan.", "Added the missing metrics."],
       statusName: "In Progress",
       statusCategory: "indeterminate",
       assigneeDisplayName: "Sam Rivera",
@@ -357,6 +408,135 @@ describe("fetchJiraIssueDetails", () => {
       myLoggedSecondsTotal: 5400,
       myWorklogCount: 2
     });
+  });
+
+  it("keeps ticket details usable when Jira comments are unavailable", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77") {
+        return jsonResponse({
+          id: "10001",
+          key: "OPS-77",
+          fields: {
+            summary: "Restricted discussion",
+            project: { key: "OPS", name: "Operations" },
+            status: {
+              name: "In Progress",
+              statusCategory: { key: "indeterminate" }
+            }
+          }
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/worklog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 0,
+          worklogs: []
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/comment") {
+        return new Response(JSON.stringify({ errorMessages: ["Forbidden"] }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchJiraIssueDetails({ settings, issueKey: "OPS-77" })
+    ).resolves.toMatchObject({
+      key: "OPS-77",
+      summary: "Restricted discussion",
+      comments: [],
+      myLoggedSecondsTotal: 0,
+      myWorklogCount: 0
+    });
+  });
+
+  it("uses the most recent comment page for large issues", async () => {
+    const comment = (id: number) => ({
+      id: `comment-${id}`,
+      created: `2026-06-${String(id).padStart(2, "0")}T12:00:00.000+0000`,
+      body: {
+        type: "doc",
+        version: 1,
+        content: [
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: `Comment ${id}` }]
+          }
+        ]
+      }
+    });
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77") {
+        return jsonResponse({
+          id: "10001",
+          key: "OPS-77",
+          fields: {
+            summary: "Large discussion",
+            project: { key: "OPS", name: "Operations" },
+            status: {
+              name: "In Progress",
+              statusCategory: { key: "indeterminate" }
+            }
+          }
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/worklog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 0,
+          worklogs: []
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/comment") {
+        const startAt = Number(requestedUrl.searchParams.get("startAt") ?? "0");
+        const ids = startAt === 0
+          ? Array.from({ length: 20 }, (_, index) => index + 1)
+          : Array.from({ length: 20 }, (_, index) => index + 6);
+        return jsonResponse({
+          startAt,
+          maxResults: 20,
+          total: 25,
+          comments: ids.map(comment)
+        });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchJiraIssueDetails({ settings, issueKey: "OPS-77" });
+    const commentRequests = fetchMock.mock.calls
+      .map((call) => new URL(String(call[0])))
+      .filter((url) => url.pathname.endsWith("/comment"));
+
+    expect(commentRequests).toHaveLength(2);
+    expect(commentRequests[1]?.searchParams.get("startAt")).toBe("5");
+    expect(result.comments).toHaveLength(20);
+    expect(result.comments?.[0]).toBe("Comment 6");
+    expect(result.comments?.at(-1)).toBe("Comment 25");
   });
 });
 

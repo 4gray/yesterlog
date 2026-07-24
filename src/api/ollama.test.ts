@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AiGenerateResult } from "../../shared/types";
 import { buildDeterministicRecap, recapIntervalForDate, type RecapEvidenceInput } from "../domain/recapWorkspace";
-import { enhanceRecapWorkspace, polishRecap } from "./ollama";
+import { computeNotesBriefing, enhanceRecapWorkspace, polishRecap } from "./ollama";
 import { nativeApi } from "./native";
 
 const connection = { provider: "ollama" as const, endpoint: "http://localhost:11434", model: "llama3.1:8b" };
@@ -75,6 +75,97 @@ describe("polishRecap redaction", () => {
 
     await polishRecap(recapWithKey, { provider: "ollama", endpoint: "http://localhost:11434", model: "llama3.1:8b" });
     expect(sentPrompt).toContain("ABC-1");
+  });
+});
+
+describe("computeNotesBriefing", () => {
+  const briefingInput = {
+    ticket: {
+      key: "ABC-1",
+      summary: "Move sessions to Redis",
+      description: "Keep the fallback path.",
+      comments: ["Confirm rollback behavior."]
+    },
+    pullRequest: {
+      id: 42,
+      title: "ABC-1 Redis session store",
+      diffstatSummary: "3 files changed, +51 -12."
+    }
+  };
+
+  it("requests strict JSON from the configured provider and parses suggestions", async () => {
+    const generate = vi.spyOn(nativeApi, "generateWithAi").mockResolvedValue({
+      ok: true,
+      response: JSON.stringify({
+        suggestions: [
+          { kind: "risk", text: "The fallback may mask connection failures." },
+          { kind: "check", text: "Verify rollback metrics." }
+        ]
+      })
+    });
+
+    await expect(computeNotesBriefing(briefingInput, connection)).resolves.toEqual([
+      {
+        id: "briefing-1",
+        kind: "risk",
+        text: "The fallback may mask connection failures."
+      },
+      {
+        id: "briefing-2",
+        kind: "check",
+        text: "Verify rollback metrics."
+      }
+    ]);
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "ollama",
+        endpoint: connection.endpoint,
+        model: connection.model,
+        format: "json",
+        prompt: expect.stringContaining('"key":"ABC-1"'),
+        system: expect.stringContaining("cautious engineering briefing assistant")
+      })
+    );
+  });
+
+  it("redacts cloud prompts and restores reversible ticket keys in suggestions", async () => {
+    let sentPrompt = "";
+    vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
+      sentPrompt = request.prompt;
+      return {
+        ok: true,
+        response: JSON.stringify({
+          suggestions: [{ kind: "question", text: "Does TICKET-1 cover rollback?" }]
+        })
+      };
+    });
+
+    const result = await computeNotesBriefing(briefingInput, {
+      provider: "claude-cli",
+      endpoint: "",
+      model: "sonnet",
+      cliPath: "claude",
+      redactLiterals: []
+    });
+
+    expect(sentPrompt).not.toContain("ABC-1");
+    expect(sentPrompt).toContain("TICKET-1");
+    expect(result[0]?.text).toBe("Does ABC-1 cover rollback?");
+  });
+
+  it("degrades to an empty briefing on provider, transport, or parse failure", async () => {
+    mockGenerate(async () => ({ ok: false, message: "offline" }));
+    await expect(computeNotesBriefing(briefingInput, connection)).resolves.toEqual([]);
+
+    vi.restoreAllMocks();
+    mockGenerate(async () => ({ ok: true, response: "not json" }));
+    await expect(computeNotesBriefing(briefingInput, connection)).resolves.toEqual([]);
+
+    vi.restoreAllMocks();
+    mockGenerate(async () => {
+      throw new Error("no bridge");
+    });
+    await expect(computeNotesBriefing(briefingInput, connection)).resolves.toEqual([]);
   });
 });
 

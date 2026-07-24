@@ -12,7 +12,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const packageJson = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf8"));
 
-const DEFAULT_VIEWS = ["today", "week", "month", "recon", "review", "tickets", "reports", "recap", "settings"];
+const DEFAULT_VIEWS = [
+  "today",
+  "week",
+  "month",
+  "recon",
+  "review",
+  "tickets",
+  "notes",
+  "reports",
+  "recap",
+  "settings"
+];
 const DEFAULT_THEMES = ["dark", "light"];
 const DEFAULT_VIEWPORT = "1440x1000";
 

@@ -54,6 +54,10 @@ vi.mock("../components/TicketsView", () => ({
   )
 }));
 
+vi.mock("../components/NotesWorkspace", () => ({
+  NotesWorkspace: () => <section data-testid="notes-workspace">Notes</section>
+}));
+
 vi.mock("../components/ReportsView", () => ({
   ReportsView: ({ weekState }: { weekState: { weekRangeLabel: string } }) => (
     <section data-testid="reports-view">{weekState.weekRangeLabel}</section>
@@ -131,6 +135,8 @@ const baseProps = (): AppMainViewProps => ({
   monthState,
   visibleBitbucketReviewResult: undefined,
   tickets: { inProgress: [{}], recentlyClosed: [{}, {}] } as AppMainViewProps["tickets"],
+  notesTickets: undefined,
+  searchTickets: async () => [],
   ticketFilters: {
     assignedOnly: true,
     statusCategories: ["new", "indeterminate", "done"],
@@ -252,6 +258,7 @@ describe("AppMainView", () => {
     ["month", "month-view"],
     ["review", "review-view"],
     ["tickets", "tickets-view"],
+    ["notes", "notes-workspace"],
     ["reports", "reports-view"],
     ["recap", "recap-view"],
     ["settings", "settings-view"]

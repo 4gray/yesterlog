@@ -2,10 +2,16 @@ import type {
   AppSettings,
   BitbucketCommitGroup,
   BitbucketConnectionResult,
+  BitbucketPullRequestComment,
+  BitbucketPullRequestDetailsRequest,
+  BitbucketPullRequestDetailsResult,
+  BitbucketPullRequestTask,
   BitbucketReviewEvent,
   BitbucketReviewSession,
   BitbucketReviewSyncRequest,
-  BitbucketReviewSyncResult
+  BitbucketReviewSyncResult,
+  ResolveBitbucketPullRequestTaskRequest,
+  ResolveBitbucketPullRequestTaskResult
 } from "../shared/types";
 
 interface BitbucketUser {
@@ -37,11 +43,65 @@ interface BitbucketPullRequest {
     branch?: {
       name?: string;
     };
+    repository?: {
+      name?: string;
+      slug?: string;
+    };
   };
+  participants?: Array<{
+    user?: BitbucketUser;
+    approved?: boolean;
+    state?: string;
+  }>;
+  comment_count?: number;
   links?: {
     html?: {
       href?: string;
     };
+  };
+}
+
+interface BitbucketPullRequestTaskResponse {
+  id?: number;
+  state?: string;
+  content?: {
+    raw?: string;
+  };
+  creator?: BitbucketUser;
+  created_on?: string;
+  updated_on?: string;
+}
+
+interface BitbucketPullRequestCommentResponse {
+  id?: number;
+  parent?: {
+    id?: number;
+  } | null;
+  deleted?: boolean;
+  pending?: boolean;
+  resolution?: unknown;
+  user?: BitbucketUser;
+  content?: {
+    raw?: string;
+  };
+  inline?: {
+    path?: string;
+    from?: number | null;
+    to?: number | null;
+  };
+  created_on?: string;
+  updated_on?: string;
+}
+
+interface BitbucketDiffstatResponse {
+  status?: string;
+  lines_added?: number;
+  lines_removed?: number;
+  old?: {
+    path?: string;
+  };
+  new?: {
+    path?: string;
   };
 }
 
@@ -101,6 +161,7 @@ const PULL_REQUEST_STATES = ["OPEN", "MERGED", "DECLINED"] as const;
 const MAX_PAGES_PER_REPOSITORY_STATE = 8;
 const MAX_ACTIVITY_PAGES_PER_PULL_REQUEST = 8;
 const MAX_COMMIT_PAGES_PER_PULL_REQUEST = 6;
+const MAX_DETAIL_PAGES = 50;
 const JIRA_ISSUE_KEY_RE = /\b([a-z][a-z0-9]+-\d+)\b/i;
 
 const ensureBitbucketSettings = (settings: AppSettings) => {
@@ -183,8 +244,153 @@ const normalizeWorkspace = (settings: AppSettings) => settings.bitbucketWorkspac
 const repositoryPath = (workspace: string, repositorySlug: string) =>
   `/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repositorySlug)}`;
 
+const pullRequestPath = (workspace: string, repositorySlug: string, pullRequestId: number) =>
+  `${repositoryPath(workspace, repositorySlug)}/pullrequests/${pullRequestId}`;
+
 const fetchRepository = (settings: AppSettings, workspace: string, repositorySlug: string) => {
   return bitbucketRequest<BitbucketRepository>(settings, repositoryPath(workspace, repositorySlug));
+};
+
+const normalizedPullRequestTarget = ({
+  settings,
+  workspace,
+  repositorySlug,
+  pullRequestId
+}: BitbucketPullRequestDetailsRequest) => {
+  const normalizedWorkspace = workspace.trim() || normalizeWorkspace(settings);
+  const normalizedRepositorySlug = repositorySlug.trim();
+
+  if (!normalizedWorkspace) {
+    throw new BitbucketApiError("Choose a Bitbucket workspace first.");
+  }
+
+  if (!normalizedRepositorySlug) {
+    throw new BitbucketApiError("Choose a Bitbucket repository first.");
+  }
+
+  if (!Number.isInteger(pullRequestId) || pullRequestId <= 0) {
+    throw new BitbucketApiError("Choose a valid Bitbucket pull request first.");
+  }
+
+  return {
+    workspace: normalizedWorkspace,
+    repositorySlug: normalizedRepositorySlug,
+    pullRequestId
+  };
+};
+
+const fetchAllPages = async <T>(
+  settings: AppSettings,
+  initialUrl: string
+): Promise<T[]> => {
+  const values: T[] = [];
+  let next: string | undefined = initialUrl;
+  let guard = 0;
+
+  while (next && guard < MAX_DETAIL_PAGES) {
+    const page: BitbucketPage<T> = await bitbucketRequest(settings, next);
+    values.push(...(page.values ?? []));
+    next = page.next;
+    guard += 1;
+  }
+
+  return values;
+};
+
+const displayNameForUser = (user?: BitbucketUser) =>
+  user?.display_name?.trim() || user?.nickname?.trim() || undefined;
+
+const initialsForUser = (user?: BitbucketUser) => {
+  const displayName = displayNameForUser(user);
+  if (!displayName) {
+    return "?";
+  }
+
+  const words = displayName.split(/\s+/).filter(Boolean);
+  const initials = words
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toLocaleUpperCase();
+  return initials || displayName.slice(0, 1).toLocaleUpperCase() || "?";
+};
+
+const normalizePullRequestTask = (
+  task: BitbucketPullRequestTaskResponse,
+  fallback: { id?: number; content?: string; resolved?: boolean } = {}
+): BitbucketPullRequestTask => {
+  const resolved =
+    task.state?.trim().toLocaleUpperCase() === "RESOLVED" ||
+    (task.state == null && fallback.resolved === true);
+
+  return {
+    id: task.id ?? fallback.id ?? 0,
+    content: task.content?.raw ?? fallback.content ?? "",
+    state: resolved ? "RESOLVED" : "UNRESOLVED",
+    resolved,
+    authorDisplayName: displayNameForUser(task.creator),
+    authorInitials: initialsForUser(task.creator),
+    createdAt: task.created_on,
+    updatedAt: task.updated_on
+  };
+};
+
+const normalizePullRequestComment = (
+  comment: BitbucketPullRequestCommentResponse
+): BitbucketPullRequestComment | undefined => {
+  const content = comment.content?.raw?.trim();
+
+  if (
+    !Number.isInteger(comment.id) ||
+    comment.deleted ||
+    comment.pending ||
+    comment.parent != null ||
+    comment.resolution != null ||
+    !content
+  ) {
+    return undefined;
+  }
+
+  const authorDisplayName = displayNameForUser(comment.user) ?? "Unknown author";
+  const path = comment.inline?.path?.trim() || undefined;
+  const rawLine = comment.inline?.to ?? comment.inline?.from;
+  const line = typeof rawLine === "number" && Number.isFinite(rawLine) && rawLine > 0
+    ? Math.round(rawLine)
+    : undefined;
+
+  return {
+    id: comment.id!,
+    content,
+    authorDisplayName,
+    authorInitials: initialsForUser(comment.user),
+    path,
+    line,
+    createdAt: comment.created_on,
+    updatedAt: comment.updated_on
+  };
+};
+
+const safeCount = (value?: number) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : 0;
+
+const buildDiffstatSummary = (diffstat: BitbucketDiffstatResponse[]) => {
+  if (diffstat.length === 0) {
+    return undefined;
+  }
+
+  const added = diffstat.reduce((sum, file) => sum + safeCount(file.lines_added), 0);
+  const removed = diffstat.reduce((sum, file) => sum + safeCount(file.lines_removed), 0);
+  const fileLabel = `${diffstat.length} ${diffstat.length === 1 ? "file" : "files"} changed`;
+  const files = diffstat.slice(0, 20).map((file) => {
+    const path = file.new?.path?.trim() || file.old?.path?.trim() || "unknown file";
+    const status = file.status?.trim().toLocaleLowerCase();
+    const change = `+${safeCount(file.lines_added)} -${safeCount(file.lines_removed)}`;
+    return `${path}${status ? ` (${status}, ${change})` : ` (${change})`}`;
+  });
+  const omitted = diffstat.length - files.length;
+  const detail = omitted > 0 ? `${files.join("; ")}; ${omitted} more` : files.join("; ");
+
+  return `${fileLabel}, +${added} -${removed}. ${detail}`;
 };
 
 export const testBitbucketConnection = async (settings: AppSettings): Promise<BitbucketConnectionResult> => {
@@ -209,6 +415,109 @@ export const testBitbucketConnection = async (settings: AppSettings): Promise<Bi
       message: error instanceof Error ? error.message : "Unable to connect to Bitbucket."
     };
   }
+};
+
+export const fetchBitbucketPullRequestDetails = async (
+  request: BitbucketPullRequestDetailsRequest
+): Promise<BitbucketPullRequestDetailsResult> => {
+  const { settings } = request;
+  const { workspace, repositorySlug, pullRequestId } = normalizedPullRequestTarget(request);
+  const path = pullRequestPath(workspace, repositorySlug, pullRequestId);
+  const [pullRequest, rawTasks, rawComments, diffstat] = await Promise.all([
+    bitbucketRequest<BitbucketPullRequest>(settings, path),
+    fetchAllPages<BitbucketPullRequestTaskResponse>(
+      settings,
+      `${API_BASE_URL}${path}/tasks?pagelen=50`
+    ),
+    fetchAllPages<BitbucketPullRequestCommentResponse>(
+      settings,
+      `${API_BASE_URL}${path}/comments?pagelen=50`
+    ),
+    fetchAllPages<BitbucketDiffstatResponse>(
+      settings,
+      `${API_BASE_URL}${path}/diffstat?pagelen=100`
+    ).catch(() => [])
+  ]);
+
+  const tasks = rawTasks
+    .map((task) => normalizePullRequestTask(task))
+    .filter((task) => task.id > 0);
+  const comments = rawComments
+    .map(normalizePullRequestComment)
+    .filter((comment): comment is BitbucketPullRequestComment => Boolean(comment));
+  const approvalCount = (pullRequest.participants ?? []).filter(
+    (participant) =>
+      participant.approved === true ||
+      participant.state?.trim().toLocaleLowerCase() === "approved"
+  ).length;
+
+  return {
+    workspace,
+    repositorySlug,
+    repositoryName: pullRequest.destination?.repository?.name,
+    pullRequestId,
+    title: pullRequest.title?.trim() || `Pull request #${pullRequestId}`,
+    description: pullRequest.description?.trim() || undefined,
+    state: pullRequest.state?.trim().toLocaleUpperCase() || "UNKNOWN",
+    url:
+      pullRequest.links?.html?.href ??
+      `https://bitbucket.org/${encodeURIComponent(workspace)}/${encodeURIComponent(repositorySlug)}/pull-requests/${pullRequestId}`,
+    authorDisplayName: displayNameForUser(pullRequest.author),
+    sourceBranch: pullRequest.source?.branch?.name,
+    destinationBranch: pullRequest.destination?.branch?.name,
+    jiraIssueKey: extractJiraIssueKey(
+      pullRequest.title,
+      pullRequest.description,
+      pullRequest.source?.branch?.name,
+      pullRequest.destination?.branch?.name
+    ),
+    approvalCount,
+    commentCount:
+      typeof pullRequest.comment_count === "number"
+        ? safeCount(pullRequest.comment_count)
+        : rawComments.length,
+    tasks,
+    comments,
+    diffstatSummary: buildDiffstatSummary(diffstat)
+  };
+};
+
+export const setBitbucketPullRequestTaskState = async (
+  request: ResolveBitbucketPullRequestTaskRequest
+): Promise<ResolveBitbucketPullRequestTaskResult> => {
+  const { settings } = request;
+  const { workspace, repositorySlug, pullRequestId } = normalizedPullRequestTarget(request);
+
+  if (!Number.isInteger(request.taskId) || request.taskId <= 0) {
+    throw new BitbucketApiError("Choose a valid Bitbucket pull request task first.");
+  }
+
+  const state = request.resolved ? "RESOLVED" : "UNRESOLVED";
+  const task = await bitbucketRequest<BitbucketPullRequestTaskResponse>(
+    settings,
+    `${pullRequestPath(workspace, repositorySlug, pullRequestId)}/tasks/${request.taskId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: {
+          raw: request.content
+        },
+        state
+      })
+    }
+  );
+
+  return {
+    ok: true,
+    task: normalizePullRequestTask(task, {
+      id: request.taskId,
+      content: request.content,
+      resolved: request.resolved
+    })
+  };
 };
 
 const toDateKey = (date: Date) => {

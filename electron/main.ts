@@ -1,7 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
-import { syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
+import {
+  fetchBitbucketPullRequestDetails,
+  setBitbucketPullRequestTaskState,
+  syncBitbucketReviewSessions,
+  testBitbucketConnection
+} from "./bitbucket";
 import {
   addWorklog,
   deleteWorklog,
@@ -32,12 +37,14 @@ import type {
   AiGenerateRequest,
   AiListModelsRequest,
   AppSettings,
+  BitbucketPullRequestDetailsRequest,
   BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
   IssueDetailsRequest,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
+  ResolveBitbucketPullRequestTaskRequest,
   SearchTicketsRequest,
   SyncRequest,
   TicketsRequest,
@@ -211,6 +218,14 @@ ipcMain.handle("bitbucket:test-connection", (_event, settings: AppSettings) => {
 
 ipcMain.handle("bitbucket:sync-reviews", (_event, request: BitbucketReviewSyncRequest) => {
   return syncBitbucketReviewSessions(request);
+});
+
+ipcMain.handle("bitbucket:fetch-pull-request-details", (_event, request: BitbucketPullRequestDetailsRequest) => {
+  return fetchBitbucketPullRequestDetails(request);
+});
+
+ipcMain.handle("bitbucket:set-pull-request-task-state", (_event, request: ResolveBitbucketPullRequestTaskRequest) => {
+  return setBitbucketPullRequestTaskState(request);
 });
 
 ipcMain.handle("ai:list-models", (_event, request: AiListModelsRequest) => {

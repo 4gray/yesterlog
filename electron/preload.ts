@@ -12,6 +12,8 @@ import type {
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
+  BitbucketPullRequestDetailsRequest,
+  BitbucketPullRequestDetailsResult,
   BitbucketReviewSyncRequest,
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
@@ -24,6 +26,8 @@ import type {
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  ResolveBitbucketPullRequestTaskRequest,
+  ResolveBitbucketPullRequestTaskResult,
   SearchTicketsRequest,
   SearchTicketsResult,
   SyncRequest,
@@ -49,6 +53,16 @@ const yesterlogApi = {
   },
   syncBitbucketReviews: (request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> => {
     return ipcRenderer.invoke("bitbucket:sync-reviews", request);
+  },
+  fetchBitbucketPullRequestDetails: (
+    request: BitbucketPullRequestDetailsRequest
+  ): Promise<BitbucketPullRequestDetailsResult> => {
+    return ipcRenderer.invoke("bitbucket:fetch-pull-request-details", request);
+  },
+  setBitbucketPullRequestTaskState: (
+    request: ResolveBitbucketPullRequestTaskRequest
+  ): Promise<ResolveBitbucketPullRequestTaskResult> => {
+    return ipcRenderer.invoke("bitbucket:set-pull-request-task-state", request);
   },
   fetchAssignedTickets: (request: TicketsRequest): Promise<TicketsResult> => {
     return ipcRenderer.invoke("jira:fetch-tickets", request);

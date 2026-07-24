@@ -59,7 +59,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 export const App = () => {
   const { currentDate, demoConfig, demoScenario, isDemo } = useDemoScenario();
   const hashView = typeof window !== "undefined"
-    ? window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|reports|recap|settings)/)?.[1] as AppView | undefined
+    ? window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|notes|reports|recap|settings)/)?.[1] as AppView | undefined
     : undefined;
   const { view, setView, isBooting, setIsBooting } = useAppShellState({ initialView: demoConfig?.view ?? hashView, isDemo });
   const { reportTab, setReportTab } = useReportTabState({ initialTab: demoConfig?.reportTab, persist: !isDemo });
@@ -244,7 +244,7 @@ export const App = () => {
   useEffect(() => {
     if (isDemo) return;
     const onHash = () => {
-      const next = window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|reports|recap|settings)/)?.[1] as AppView | undefined;
+      const next = window.location.hash.match(/^#\/(today|week|month|recon|review|tickets|notes|reports|recap|settings)/)?.[1] as AppView | undefined;
       const params = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
       if (next === "week" && /^\d{4}-\d{2}-\d{2}$/.test(params.get("week") ?? "")) {
         setWeekStart(fromLocalDateKey(params.get("week")!));
@@ -792,6 +792,8 @@ export const App = () => {
         monthState={monthState}
         visibleBitbucketReviewResult={visibleBitbucketReviewResult}
         tickets={ticketViewTickets}
+        notesTickets={tickets}
+        searchTickets={searchTickets}
         ticketFilters={ticketFilters}
         setTicketFilters={setTicketFilters}
         favoriteKeys={favoriteKeys}

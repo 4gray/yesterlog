@@ -13,6 +13,8 @@ import type {
   AppAutoUpdateState,
   AppReleaseHistoryResult,
   BitbucketConnectionResult,
+  BitbucketPullRequestDetailsRequest,
+  BitbucketPullRequestDetailsResult,
   BitbucketReviewSyncRequest,
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
@@ -25,6 +27,8 @@ import type {
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
+  ResolveBitbucketPullRequestTaskRequest,
+  ResolveBitbucketPullRequestTaskResult,
   SearchTicketsRequest,
   SearchTicketsResult,
   SyncRequest,
@@ -41,6 +45,12 @@ interface YesterlogNativeApi {
   syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
   syncJiraActivity: (request: SyncRequest) => Promise<JiraActivitySyncResult>;
   syncBitbucketReviews: (request: BitbucketReviewSyncRequest) => Promise<BitbucketReviewSyncResult>;
+  fetchBitbucketPullRequestDetails: (
+    request: BitbucketPullRequestDetailsRequest
+  ) => Promise<BitbucketPullRequestDetailsResult>;
+  setBitbucketPullRequestTaskState: (
+    request: ResolveBitbucketPullRequestTaskRequest
+  ) => Promise<ResolveBitbucketPullRequestTaskResult>;
   fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
   searchJiraTickets: (request: SearchTicketsRequest) => Promise<SearchTicketsResult>;
   fetchJiraIssueDetails: (request: IssueDetailsRequest) => Promise<IssueDetailsResult>;

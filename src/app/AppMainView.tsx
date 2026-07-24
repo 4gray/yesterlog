@@ -4,6 +4,7 @@ import { LoadingView } from "../components/LoadingView";
 import type { AppView, ReportTab } from "../components/Sidebar";
 import { TicketDetailsProvider, type OpenTicketDetails } from "../components/TicketDetailsContext";
 import { AppMonthRoute } from "./AppMonthRoute";
+import { AppNotesRoute } from "./AppNotesRoute";
 import { AppReconRoute } from "./AppReconRoute";
 import { AppRecapRoute } from "./AppRecapRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
@@ -15,6 +16,7 @@ import type { AppSyncState } from "./useSyncControls";
 import { AppWeekRoute } from "./AppWeekRoute";
 
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
+type AppNotesRouteProps = ComponentProps<typeof AppNotesRoute>;
 type AppReconRouteProps = ComponentProps<typeof AppReconRoute>;
 type AppRecapRouteProps = ComponentProps<typeof AppRecapRoute>;
 type AppReportsRouteProps = ComponentProps<typeof AppReportsRoute>;
@@ -54,6 +56,8 @@ export interface AppMainViewProps {
   monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: AppTicketsRouteProps["tickets"];
+  notesTickets: AppNotesRouteProps["tickets"];
+  searchTickets: AppNotesRouteProps["searchTickets"];
   ticketFilters: AppTicketsRouteProps["ticketFilters"];
   setTicketFilters: AppTicketsRouteProps["setTicketFilters"];
   favoriteKeys: AppTicketsRouteProps["favoriteKeys"];
@@ -168,6 +172,8 @@ export const AppMainView = ({
   monthState,
   visibleBitbucketReviewResult,
   tickets,
+  notesTickets,
+  searchTickets,
   ticketFilters,
   setTicketFilters,
   favoriteKeys,
@@ -388,6 +394,20 @@ export const AppMainView = ({
         ticketsError={ticketsError}
         toggleFavorite={toggleFavorite}
         handleLogTicket={handleLogTicket}
+      />
+    );
+  } else if (view === "notes") {
+    content = (
+      <AppNotesRoute
+        settings={settings}
+        currentDate={currentDate}
+        isDemo={isDemo}
+        ticketOptions={ticketOptions}
+        tickets={notesTickets}
+        syncResult={syncResult}
+        reviewResult={visibleBitbucketReviewResult}
+        searchTickets={searchTickets}
+        onError={recapError}
       />
     );
   } else if (view === "reports") {
