@@ -248,7 +248,9 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
 
     await clickNav(page, "NOTES", "notes");
     await page.locator(".notes-workspace").waitFor();
-    assert.ok(await page.getByText("Local only · never synced to Jira").isVisible());
+    const localOnlyNotice = page.getByText("Local only · never synced to Jira");
+    await localOnlyNotice.waitFor({ state: "visible" });
+    assert.ok(await localOnlyNotice.isVisible());
 
     await clickNav(page, "REPORTS", "reports");
     assert.ok(await page.getByText("BY TICKET").isVisible());
