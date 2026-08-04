@@ -298,21 +298,29 @@ describe("ReviewView", () => {
     });
 
     const schedule = container.querySelector<HTMLElement>(".review-dialog-schedule");
+    const dateInput = container.querySelector<HTMLInputElement>('input[aria-label="Worklog date for PR 214"]');
     const timeInput = container.querySelector<HTMLInputElement>('input[aria-label="Start time for PR 214"]');
     expect(schedule?.getAttribute("aria-label")).toBe("Worklog schedule: TUE, JUN 16 · 14:15–15:00");
+    expect(dateInput?.value).toBe("2026-06-16");
     expect(timeInput?.value).toBe("14:15");
     expect(getDialogPanel().textContent).toContain(
-      "Edit a start time or duration below to change the exact local time range that will appear in Jira"
+      "Edit a date, start time, or duration below to change the exact local time range that will appear in Jira"
     );
 
     const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    act(() => {
+      valueSetter?.call(dateInput, "2026-06-18");
+      dateInput?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
     act(() => {
       valueSetter?.call(timeInput, "13:30");
       timeInput?.dispatchEvent(new Event("input", { bubbles: true }));
       getButtonByText("1h").click();
     });
 
-    expect(schedule?.getAttribute("aria-label")).toBe("Worklog schedule: TUE, JUN 16 · 13:30–14:30");
+    editedStarted.setDate(18);
+    expect(schedule?.getAttribute("aria-label")).toBe("Worklog schedule: THU, JUN 18 · 13:30–14:30");
+    expect(dateInput?.value).toBe("2026-06-18");
     expect(container.querySelector(".review-session-time span")?.textContent).toBe("13:30-14:30");
 
     await act(async () => {

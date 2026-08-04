@@ -14,7 +14,8 @@ import {
   formatHm24,
   formatWeekRangeCompact,
   fromLocalDateKey,
-  getIsoWeekNumber
+  getIsoWeekNumber,
+  toLocalDateKey
 } from "../utils/date";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { WeekNavigator } from "./WeekNavigator";
@@ -194,6 +195,21 @@ const areSameLocalDay = (left: Date, right: Date) =>
 const formatReviewTimeInput = (date: Date) =>
   `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 
+const reviewStartedISOAtDate = (session: BitbucketReviewSession, dateValue: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return undefined;
+  }
+
+  const date = fromLocalDateKey(dateValue);
+  if (Number.isNaN(date.getTime()) || toLocalDateKey(date) !== dateValue) {
+    return undefined;
+  }
+
+  const started = new Date(session.startedISO);
+  started.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
+  return started.toISOString();
+};
+
 const reviewStartedISOAtTime = (session: BitbucketReviewSession, timeValue: string) => {
   const match = /^(\d{2}):(\d{2})$/.exec(timeValue);
   if (!match) {
@@ -365,23 +381,40 @@ const ReviewWorklogScheduleEditor = ({ session, onApplyStartedISO }: ReviewWorkl
   return (
     <div className="review-dialog-schedule" aria-label={`Worklog schedule: ${formatReviewWorklogSchedule(session)}`}>
       <span className="review-dialog-schedule-label">WHEN</span>
-      <span className="review-dialog-schedule-date">{formatReviewWorklogDay(start)}</span>
-      <div className="review-dialog-schedule-times">
+      <div className="review-dialog-schedule-controls">
         {onApplyStartedISO ? (
-          <input
-            type="time"
-            step={60}
-            value={formatReviewTimeInput(start)}
-            aria-label={`Start time for PR ${session.pullRequestId}`}
-            onChange={(event) => {
-              const startedISO = reviewStartedISOAtTime(session, event.target.value);
-              if (startedISO) {
-                onApplyStartedISO(session.id, startedISO);
-              }
-            }}
-          />
+          <>
+            <input
+              className="review-dialog-schedule-date-input"
+              type="date"
+              value={toLocalDateKey(start)}
+              aria-label={`Worklog date for PR ${session.pullRequestId}`}
+              onChange={(event) => {
+                const startedISO = reviewStartedISOAtDate(session, event.target.value);
+                if (startedISO) {
+                  onApplyStartedISO(session.id, startedISO);
+                }
+              }}
+            />
+            <input
+              className="review-dialog-schedule-time-input"
+              type="time"
+              step={60}
+              value={formatReviewTimeInput(start)}
+              aria-label={`Start time for PR ${session.pullRequestId}`}
+              onChange={(event) => {
+                const startedISO = reviewStartedISOAtTime(session, event.target.value);
+                if (startedISO) {
+                  onApplyStartedISO(session.id, startedISO);
+                }
+              }}
+            />
+          </>
         ) : (
-          <span>{formatHm24(start)}</span>
+          <>
+            <span className="review-dialog-schedule-date">{formatReviewWorklogDay(start)}</span>
+            <span>{formatHm24(start)}</span>
+          </>
         )}
         <span className="review-dialog-schedule-arrow" aria-hidden="true">
           →
@@ -854,8 +887,8 @@ export const ReviewView = ({
         >
           <p className="review-dialog-copy">
             Yesterlog will create Jira worklogs for the selected Bitbucket review sessions using the current target mode:
-            <strong> {targetModeCopy[targetMode]}</strong>. Edit a start time or duration below to change the exact local
-            time range that will appear in Jira.
+            <strong> {targetModeCopy[targetMode]}</strong>. Edit a date, start time, or duration below to change the exact
+            local time range that will appear in Jira.
           </p>
           <ReviewPreviewList
             items={logPreview}
