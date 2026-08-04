@@ -380,7 +380,7 @@ export const AddTimeModal = ({
     clockTimeToMinutes(timeStr) + durationSeconds / 60 <= 24 * 60;
 
   const handleSubmit = async () => {
-    if (!hasWorkingDate) {
+    if (!hasWorkingDate || (isMovingWorklog && !isMoveTargetSelected)) {
       return;
     }
 

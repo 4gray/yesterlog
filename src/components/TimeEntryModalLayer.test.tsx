@@ -205,6 +205,27 @@ describe("TimeEntryModalLayer", () => {
     expect(onCloseEditingWorklog).toHaveBeenCalledTimes(1);
   });
 
+  it("blocks the move keyboard shortcut until a different issue is selected", async () => {
+    const onUpdateWorklog = vi.fn<AddTimeModalProps["onLog"]>(async () => true);
+    renderLayer({ editingWorklog: worklog, ticketOptions: [ticket, targetTicket], onUpdateWorklog });
+
+    const moveToggle = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
+      button.textContent?.includes("Move worklog")
+    );
+    if (!moveToggle) {
+      throw new Error("Expected Move worklog action.");
+    }
+    act(() => moveToggle.click());
+
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true }));
+    });
+
+    expect(onUpdateWorklog).not.toHaveBeenCalled();
+    expect(onCloseEditingWorklog).not.toHaveBeenCalled();
+    expect(dialog()?.getAttribute("aria-label")).toBe("Move time entry");
+  });
+
   it("renders the personal-note edit modal and closes it through the personal-note handler", () => {
     renderLayer({ editingPersonalNote: personalNote, isConfigured: false });
 
