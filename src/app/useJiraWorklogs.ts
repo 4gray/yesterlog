@@ -243,13 +243,16 @@ export const useJiraWorklogs = ({
             targetTicket: payload.ticket,
             syncedAtISO: new Date().toISOString()
           });
+          const postMoveTasks: Array<() => Promise<unknown>> = [
+            () => runSync(settings, { queueAfterCurrent: true }),
+            () => loadTickets()
+          ];
           if (optimistic && optimistic !== syncResult) {
             onSyncResult(optimistic);
-            await saveSyncResult(optimistic);
+            postMoveTasks.unshift(() => saveSyncResult(optimistic));
           }
           showSuccess(`Moved worklog from ${result.sourceIssueKey} to ${result.targetIssueKey}.`);
-          await runSync(settings, { queueAfterCurrent: true });
-          await loadTickets();
+          await Promise.allSettled(postMoveTasks.map((task) => Promise.resolve().then(task)));
           return true;
         }
 

@@ -81,6 +81,28 @@ const syncResult = (overrides: Partial<SyncResult> = {}): SyncResult => ({
   ...overrides
 });
 
+const syncResultWithEditingWorklog = () =>
+  syncResult({
+    trackedSeconds: editingWorklog.timeSpentSeconds,
+    issueCount: 1,
+    worklogCount: 1,
+    daySummaries: {
+      "2026-06-18": {
+        trackedSeconds: editingWorklog.timeSpentSeconds,
+        issues: [
+          {
+            id: editingWorklog.issueId,
+            key: editingWorklog.issueKey,
+            summary: editingWorklog.issueSummary,
+            loggedSeconds: editingWorklog.timeSpentSeconds
+          }
+        ],
+        worklogs: [editingWorklog]
+      }
+    },
+    sourceWorklogs: [editingWorklog]
+  });
+
 type JiraWorklogsApi = ReturnType<typeof useJiraWorklogs>;
 
 let container: HTMLDivElement;
@@ -458,26 +480,7 @@ describe("useJiraWorklogs", () => {
   });
 
   it("moves an editing worklog to the selected ticket and updates the cached week immediately", async () => {
-    const currentSync = syncResult({
-      trackedSeconds: editingWorklog.timeSpentSeconds,
-      issueCount: 1,
-      worklogCount: 1,
-      daySummaries: {
-        "2026-06-18": {
-          trackedSeconds: editingWorklog.timeSpentSeconds,
-          issues: [
-            {
-              id: editingWorklog.issueId,
-              key: editingWorklog.issueKey,
-              summary: editingWorklog.issueSummary,
-              loggedSeconds: editingWorklog.timeSpentSeconds
-            }
-          ],
-          worklogs: [editingWorklog]
-        }
-      },
-      sourceWorklogs: [editingWorklog]
-    });
+    const currentSync = syncResultWithEditingWorklog();
     moveWorklog.mockResolvedValue({
       ok: true,
       worklogId: editingWorklog.id,
@@ -523,6 +526,39 @@ describe("useJiraWorklogs", () => {
     expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
     expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
     expect(loadTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an accepted Jira move successful when local persistence and refresh fail", async () => {
+    moveWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      sourceIssueKey: editingWorklog.issueKey,
+      targetIssueKey: targetTicket.key,
+      adjustEstimate: "auto"
+    });
+    saveSyncResult.mockRejectedValue(new Error("IndexedDB unavailable"));
+    runSync.mockRejectedValue(new Error("Sync unavailable"));
+    loadTickets.mockRejectedValue(new Error("Ticket refresh unavailable"));
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          issueKey: targetTicket.key,
+          ticket: targetTicket,
+          estimateAdjustment: "auto"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    expect(saveSyncResult).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(loadTickets).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
+    expect(showError).not.toHaveBeenCalled();
+    expect(getApi().logError).toBeUndefined();
   });
 
   it("leaves local state untouched when Jira rejects a worklog move", async () => {
