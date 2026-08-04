@@ -520,6 +520,7 @@
 .review-dialog-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(92px, auto) minmax(260px, 320px);
+  grid-template-areas: "main meta duration";
   gap: 14px;
   align-items: center;
   padding: 12px 14px;
@@ -528,7 +529,14 @@
   background: var(--bg-sunken);
 }
 
+.review-dialog-item.has-schedule {
+  grid-template-areas:
+    "main meta duration"
+    "schedule schedule schedule";
+}
+
 .review-dialog-item-main {
+  grid-area: main;
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -557,6 +565,7 @@
 }
 
 .review-dialog-schedule {
+  grid-area: schedule;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: 8px;
@@ -586,7 +595,7 @@
 
 .review-dialog-schedule-controls {
   display: grid;
-  grid-template-columns: minmax(118px, 1fr) 82px auto minmax(68px, auto);
+  grid-template-columns: minmax(118px, 150px) 82px minmax(82px, 1fr);
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -628,6 +637,13 @@
   color: var(--dim);
 }
 
+.review-dialog-schedule-end-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .review-dialog-schedule-end {
   min-width: 0;
   color: var(--text-bright);
@@ -635,6 +651,7 @@
 }
 
 .review-dialog-item-meta {
+  grid-area: meta;
   display: grid;
   justify-items: end;
   gap: 5px;
@@ -644,6 +661,10 @@
 .review-dialog-item-meta strong {
   color: var(--text-bright);
   font-size: 12px;
+}
+
+.review-dialog-item > .review-row-duration-editor {
+  grid-area: duration;
 }
 
 .review-dialog-empty {

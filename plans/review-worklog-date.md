@@ -24,3 +24,11 @@ Let users change the Jira worklog date independently for every selected review s
 - Full Vitest suite: 133 files, 902 tests passed.
 - Production build: passed.
 - Seeded Review dialog inspected at desktop and 680px widths: no horizontal overflow, no console errors, date/time controls remained readable and usable.
+
+## Review follow-up
+
+- [x] Move each schedule editor to an explicit full-width row so its intrinsic controls never overflow a narrow grid column.
+- [x] Add regression coverage for the dialog item structure.
+- [x] Re-run focused tests, full tests, build, and rendered checks at 701px, desktop, and phone widths.
+
+Follow-up verification: focused tests passed; full suite passed (133 files, 902 tests); production build passed. At 701px the schedule and its controls both receive 520px with no overflow. At 390px the controls wrap inside the card with no document overflow or console errors.

@@ -487,6 +487,18 @@
 
   .review-dialog-item {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "main"
+      "meta"
+      "duration";
+  }
+
+  .review-dialog-item.has-schedule {
+    grid-template-areas:
+      "main"
+      "schedule"
+      "meta"
+      "duration";
   }
 
   .review-dialog-item-meta {
@@ -500,6 +512,30 @@
   .review-duration-editor-controls button,
   .review-duration-apply {
     padding: 0 6px;
+  }
+
+  .review-dialog-schedule {
+    grid-template-columns: 1fr;
+    row-gap: 6px;
+  }
+
+  .review-dialog-schedule-controls {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .review-dialog-schedule-controls .review-dialog-schedule-date-input {
+    flex: 1 1 118px;
+    width: auto;
+  }
+
+  .review-dialog-schedule-controls .review-dialog-schedule-time-input {
+    flex: 0 0 82px;
+    width: 82px;
+  }
+
+  .review-dialog-schedule-end-group {
+    flex: 1 1 82px;
   }
 
   .settings-panel {
