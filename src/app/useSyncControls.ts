@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { AppSettings, SyncResult } from "../../shared/types";
 import { isBitbucketConfigured } from "../domain/bitbucketReview";
 import { formatSyncTime } from "./appHelpers";
@@ -15,6 +15,7 @@ interface UseSyncControlsOptions {
   /** Browser connectivity; offline outranks every state except an in-flight sync. */
   isOnline?: boolean;
   runSync: () => Promise<unknown>;
+  refreshTickets?: (settings?: AppSettings) => Promise<unknown>;
   runJiraActivitySync: (settings?: AppSettings) => Promise<unknown>;
   runReviewSync: (settings?: AppSettings) => Promise<unknown>;
 }
@@ -42,10 +43,12 @@ export const useSyncControls = ({
   isSyncingReviews,
   isOnline = true,
   runSync,
+  refreshTickets,
   runJiraActivitySync,
   runReviewSync
 }: UseSyncControlsOptions) => {
-  const isAnySyncing = isSyncing || isSyncingJiraActivity || isSyncingReviews;
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+  const isAnySyncing = isManualSyncing || isSyncing || isSyncingJiraActivity || isSyncingReviews;
   const syncState = resolveSyncState(isAnySyncing, isOnline, syncResult);
   // Wall-clock variant, for the sidebar and Reconstruct; the week toolbar shows
   // the elapsed variant via `resolveRelativeSyncLabel`.
@@ -53,12 +56,18 @@ export const useSyncControls = ({
     syncState === "syncing" ? SYNCING_LABEL : syncState === "offline" ? OFFLINE_LABEL : formatSyncTime(syncResult);
 
   const handleSync = useCallback(async () => {
-    await runSync();
-    await runJiraActivitySync(settings);
-    if (isBitbucketConfigured(settings)) {
-      await runReviewSync(settings);
+    setIsManualSyncing(true);
+    try {
+      await runSync();
+      await refreshTickets?.(settings);
+      await runJiraActivitySync(settings);
+      if (isBitbucketConfigured(settings)) {
+        await runReviewSync(settings);
+      }
+    } finally {
+      setIsManualSyncing(false);
     }
-  }, [runJiraActivitySync, runReviewSync, runSync, settings]);
+  }, [refreshTickets, runJiraActivitySync, runReviewSync, runSync, settings]);
 
   return {
     handleSync,
