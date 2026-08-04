@@ -53,6 +53,7 @@ let container: HTMLDivElement;
 let root: Root;
 let api: SyncControlsApi | undefined;
 let runSync: ReturnType<typeof vi.fn<() => Promise<void>>>;
+let refreshTickets: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 let runJiraActivitySync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 let runReviewSync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 
@@ -81,6 +82,7 @@ function Harness({
     isSyncingReviews,
     isOnline,
     runSync,
+    refreshTickets,
     runJiraActivitySync,
     runReviewSync
   });
@@ -103,6 +105,7 @@ const renderHarness = (props: HarnessProps = {}) => {
 beforeEach(() => {
   api = undefined;
   runSync = vi.fn(async () => undefined);
+  refreshTickets = vi.fn(async () => undefined);
   runJiraActivitySync = vi.fn(async () => undefined);
   runReviewSync = vi.fn(async () => undefined);
   container = document.createElement("div");
@@ -174,10 +177,14 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(refreshTickets).toHaveBeenCalledTimes(1);
+    expect(refreshTickets).toHaveBeenCalledWith(settings);
     expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runJiraActivitySync).toHaveBeenCalledWith(settings);
     expect(runReviewSync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).toHaveBeenCalledWith(settings);
+    expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(refreshTickets.mock.invocationCallOrder[0]);
+    expect(refreshTickets.mock.invocationCallOrder[0]).toBeLessThan(runJiraActivitySync.mock.invocationCallOrder[0]);
     expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runJiraActivitySync.mock.invocationCallOrder[0]);
     expect(runJiraActivitySync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
     expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
@@ -191,6 +198,8 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(refreshTickets).toHaveBeenCalledTimes(1);
+    expect(refreshTickets).toHaveBeenCalledWith(jiraOnlySettings);
     expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).not.toHaveBeenCalled();
   });
@@ -201,6 +210,7 @@ describe("useSyncControls", () => {
 
     await expect(getApi().handleSync()).rejects.toThrow("Jira unavailable");
 
+    expect(refreshTickets).not.toHaveBeenCalled();
     expect(runJiraActivitySync).not.toHaveBeenCalled();
     expect(runReviewSync).not.toHaveBeenCalled();
   });
@@ -212,6 +222,7 @@ describe("useSyncControls", () => {
     await expect(getApi().handleSync()).rejects.toThrow("Jira activity unavailable");
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(refreshTickets).toHaveBeenCalledTimes(1);
     expect(runReviewSync).not.toHaveBeenCalled();
   });
 });

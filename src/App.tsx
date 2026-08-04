@@ -537,6 +537,7 @@ export const App = () => {
     isSyncingReviews,
     isOnline,
     runSync,
+    refreshTickets: isDemo ? undefined : loadTickets,
     runJiraActivitySync,
     runReviewSync
   });
