@@ -22,6 +22,8 @@ import type {
   IssueDetailsResult,
   JiraActivitySyncResult,
   JiraConnectionResult,
+  MoveWorklogRequest,
+  MoveWorklogResult,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -81,6 +83,9 @@ const yesterlogApi = {
   },
   deleteWorklog: (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
     return ipcRenderer.invoke("jira:delete-worklog", request);
+  },
+  moveWorklog: (request: MoveWorklogRequest): Promise<MoveWorklogResult> => {
+    return ipcRenderer.invoke("jira:move-worklog", request);
   },
   listAiModels: (request: AiListModelsRequest): Promise<AiListModelsResult> => {
     return ipcRenderer.invoke("ai:list-models", request);

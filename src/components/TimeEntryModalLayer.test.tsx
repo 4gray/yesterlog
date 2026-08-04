@@ -21,6 +21,14 @@ const ticket: JiraTicket = {
   url: "https://example.atlassian.net/browse/YLOG-397"
 };
 
+const targetTicket: JiraTicket = {
+  ...ticket,
+  id: "133471",
+  key: "YLOG-401",
+  summary: "Correct Jira issue",
+  url: "https://example.atlassian.net/browse/YLOG-401"
+};
+
 const worklog: JiraWorklog = {
   id: "wl-1",
   issueId: "133470",
@@ -136,6 +144,65 @@ describe("TimeEntryModalLayer", () => {
     expect(onCloseEditingWorklog).toHaveBeenCalledTimes(1);
     expect(onCloseAddTime).not.toHaveBeenCalled();
     expect(onCloseEditingPersonalNote).not.toHaveBeenCalled();
+  });
+
+  it("moves a worklog with preserved fields and the selected estimate behavior", async () => {
+    const onUpdateWorklog = vi.fn<AddTimeModalProps["onLog"]>(async () => true);
+    renderLayer({ editingWorklog: worklog, ticketOptions: [ticket, targetTicket], onUpdateWorklog });
+
+    const moveToggle = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
+      button.textContent?.includes("Move worklog")
+    );
+    if (!moveToggle) {
+      throw new Error("Expected Move worklog action.");
+    }
+    act(() => moveToggle.click());
+
+    expect(dialog()?.getAttribute("aria-label")).toBe("Move time entry");
+    expect(container.textContent).toContain("Choose the correct Jira issue");
+
+    const picker = container.querySelector<HTMLButtonElement>(".modal-ticket");
+    if (!picker) {
+      throw new Error("Expected Jira ticket picker.");
+    }
+    act(() => picker.click());
+
+    const targetOption = Array.from(container.querySelectorAll<HTMLButtonElement>(".ticket-picker-item")).find((button) =>
+      button.textContent?.includes(targetTicket.key)
+    );
+    if (!targetOption) {
+      throw new Error("Expected target Jira issue option.");
+    }
+    act(() => targetOption.click());
+
+    expect(container.textContent).toContain("BEFORE");
+    expect(container.textContent).toContain("AFTER");
+    expect(container.textContent).toContain("Same date, time, duration, comment, and author");
+
+    const leaveEstimate = container.querySelector<HTMLInputElement>('input[name="move-worklog-estimate"][value="leave"]');
+    if (!leaveEstimate) {
+      throw new Error("Expected estimate adjustment choice.");
+    }
+    act(() => leaveEstimate.click());
+
+    const submit = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
+      button.textContent?.includes(`Move to ${targetTicket.key}`)
+    );
+    if (!submit) {
+      throw new Error("Expected worklog move submit action.");
+    }
+    await act(async () => submit.click());
+
+    expect(onUpdateWorklog).toHaveBeenCalledWith({
+      issueKey: targetTicket.key,
+      ticket: targetTicket,
+      timeSpentSeconds: worklog.timeSpentSeconds,
+      startedISO: worklog.started,
+      comment: worklog.comment,
+      allocationDirection: undefined,
+      estimateAdjustment: "leave"
+    });
+    expect(onCloseEditingWorklog).toHaveBeenCalledTimes(1);
   });
 
   it("renders the personal-note edit modal and closes it through the personal-note handler", () => {

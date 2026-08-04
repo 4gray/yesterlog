@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { JiraTicket, SyncResult } from "../../shared/types";
-import { mergeCreatedWorklogIntoSyncResult, mergeUpdatedWorklogIntoSyncResult } from "./syncResult";
+import {
+  mergeCreatedWorklogIntoSyncResult,
+  mergeMovedWorklogIntoSyncResult,
+  mergeUpdatedWorklogIntoSyncResult
+} from "./syncResult";
 
 const ticket: JiraTicket = {
   id: "10002",
@@ -230,5 +234,44 @@ describe("mergeUpdatedWorklogIntoSyncResult", () => {
     expect(mergeUpdatedWorklogIntoSyncResult(input, { worklogId: "20001", startedISO: outside, timeSpentSeconds: 900 })).toBe(
       input
     );
+  });
+});
+
+describe("mergeMovedWorklogIntoSyncResult", () => {
+  it("retargets the cached worklog while keeping time totals and worklog identity stable", () => {
+    const source = {
+      ...syncResult,
+      sourceWorklogs: [syncResult.daySummaries["2026-06-18"].worklogs[0]]
+    };
+
+    const merged = mergeMovedWorklogIntoSyncResult(source, {
+      worklogId: "20001",
+      targetTicket: ticket,
+      syncedAtISO: "2026-06-18T12:00:00.000Z"
+    });
+
+    expect(merged).not.toBe(source);
+    expect(merged?.trackedSeconds).toBe(3600);
+    expect(merged?.worklogCount).toBe(1);
+    expect(merged?.issueCount).toBe(1);
+    expect(merged?.daySummaries["2026-06-18"].worklogs[0]).toMatchObject({
+      id: "20001",
+      issueId: ticket.id,
+      issueKey: ticket.key,
+      issueSummary: ticket.summary,
+      authorAccountId: "account-1",
+      started: "2026-06-18T08:00:00.000Z",
+      timeSpentSeconds: 3600
+    });
+    expect(merged?.daySummaries["2026-06-18"].issues).toEqual([
+      expect.objectContaining({ key: ticket.key, loggedSeconds: 3600 })
+    ]);
+    expect(merged?.sourceWorklogs?.[0]).toMatchObject({ id: "20001", issueKey: ticket.key });
+  });
+
+  it("returns the input unchanged when the worklog is missing", () => {
+    expect(
+      mergeMovedWorklogIntoSyncResult(syncResult, { worklogId: "missing", targetTicket: ticket })
+    ).toBe(syncResult);
   });
 });

@@ -720,6 +720,24 @@ export interface DeleteWorklogResult {
   issueKey: string;
 }
 
+export type WorklogEstimateAdjustment = "auto" | "leave";
+
+export interface MoveWorklogRequest {
+  settings: AppSettings;
+  sourceIssueKey: string;
+  targetIssueKey: string;
+  worklogId: string;
+  adjustEstimate: WorklogEstimateAdjustment;
+}
+
+export interface MoveWorklogResult {
+  ok: boolean;
+  worklogId: string;
+  sourceIssueKey: string;
+  targetIssueKey: string;
+  adjustEstimate: WorklogEstimateAdjustment;
+}
+
 export interface SyncRequest {
   settings: AppSettings;
   weekStartISO: string;

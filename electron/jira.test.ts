@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { fetchAssignedTickets, fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity, syncJiraWorklogs } from "./jira";
+import {
+  fetchAssignedTickets,
+  fetchJiraIssueDetails,
+  moveWorklog,
+  searchJiraTickets,
+  syncJiraActivity,
+  syncJiraWorklogs
+} from "./jira";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -115,6 +122,65 @@ describe("syncJiraWorklogs", () => {
     });
     expect(result.daySummaries["2026-07-14"].worklogs.map((worklog) => worklog.id)).toEqual(["visible"]);
     expect(result.trackedSeconds).toBe(3600);
+  });
+});
+
+describe("moveWorklog", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("moves one worklog with Jira's atomic endpoint and automatic estimate adjustment", async () => {
+    const fetchMock = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
+      new Response(null, { status: 204 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      moveWorklog({
+        settings,
+        sourceIssueKey: "OLD-1",
+        targetIssueKey: "NEW-2",
+        worklogId: "20001",
+        adjustEstimate: "auto"
+      })
+    ).resolves.toEqual({
+      ok: true,
+      sourceIssueKey: "OLD-1",
+      targetIssueKey: "NEW-2",
+      worklogId: "20001",
+      adjustEstimate: "auto"
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    const requestedUrl = new URL(String(url));
+    expect(requestedUrl.pathname).toBe("/rest/api/3/issue/OLD-1/worklog/move");
+    expect(requestedUrl.searchParams.get("adjustEstimate")).toBe("auto");
+    expect(init).toMatchObject({ method: "POST" });
+    expect(JSON.parse(String(init?.body))).toEqual({ ids: [20001], issueIdOrKey: "NEW-2" });
+  });
+
+  it("adds the required Jira permission hint when the move is rejected", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ errorMessages: ["You do not have permission to move this worklog."] }), {
+          status: 400,
+          statusText: "Bad Request",
+          headers: { "Content-Type": "application/json" }
+        })
+      )
+    );
+
+    await expect(
+      moveWorklog({
+        settings,
+        sourceIssueKey: "OLD-1",
+        targetIssueKey: "NEW-2",
+        worklogId: "20001",
+        adjustEstimate: "leave"
+      })
+    ).rejects.toThrow("Delete all worklogs permissions");
   });
 });
 

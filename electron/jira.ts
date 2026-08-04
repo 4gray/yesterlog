@@ -16,6 +16,8 @@ import type {
   JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
+  MoveWorklogRequest,
+  MoveWorklogResult,
   SearchTicketsRequest,
   SearchTicketsResult,
   SyncDayBucket,
@@ -229,7 +231,7 @@ const parseJiraError = async (response: Response) => {
   }
 };
 
-const jiraRequest = async <T>(settings: AppSettings, path: string, init: RequestInit = {}) => {
+const jiraFetch = async (settings: AppSettings, path: string, init: RequestInit = {}) => {
   ensureSettings(settings);
   const baseUrl = normalizeBaseUrl(settings.jiraBaseUrl);
   const response = await fetch(`${baseUrl}${path}`, {
@@ -250,6 +252,12 @@ const jiraRequest = async <T>(settings: AppSettings, path: string, init: Request
 
     throw new JiraApiError(`Jira request failed: ${message}`, response.status);
   }
+
+  return response;
+};
+
+const jiraRequest = async <T>(settings: AppSettings, path: string, init: RequestInit = {}) => {
+  const response = await jiraFetch(settings, path, init);
 
   if (response.status === 204) {
     return undefined as T;
@@ -1435,5 +1443,56 @@ export const deleteWorklog = async (request: DeleteWorklogRequest): Promise<Dele
     ok: true,
     worklogId,
     issueKey
+  };
+};
+
+export const moveWorklog = async (request: MoveWorklogRequest): Promise<MoveWorklogResult> => {
+  const { settings, sourceIssueKey, targetIssueKey, worklogId, adjustEstimate } = request;
+  const numericWorklogId = Number(worklogId);
+
+  if (!Number.isSafeInteger(numericWorklogId) || numericWorklogId <= 0) {
+    throw new JiraApiError("Jira worklog ID is invalid.");
+  }
+
+  if (!sourceIssueKey.trim() || !targetIssueKey.trim() || sourceIssueKey === targetIssueKey) {
+    throw new JiraApiError("Choose a different Jira issue for the worklog move.");
+  }
+
+  const params = new URLSearchParams({ adjustEstimate });
+
+  try {
+    const response = await jiraFetch(
+      settings,
+      `/rest/api/3/issue/${encodeURIComponent(sourceIssueKey)}/worklog/move?${params.toString()}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [numericWorklogId], issueIdOrKey: targetIssueKey })
+      }
+    );
+
+    if (response.status !== 204) {
+      const detail = (await response.text()).trim();
+      throw new JiraApiError(
+        `Jira only partially completed the worklog move${detail ? `: ${detail}` : "."}`,
+        response.status
+      );
+    }
+  } catch (error) {
+    if (error instanceof JiraApiError && (error.status === 400 || error.status === 403)) {
+      throw new JiraApiError(
+        `${error.message} Jira's move operation requires Work on issues and Delete all worklogs permissions.`,
+        error.status
+      );
+    }
+    throw error;
+  }
+
+  return {
+    ok: true,
+    worklogId,
+    sourceIssueKey,
+    targetIssueKey,
+    adjustEstimate
   };
 };

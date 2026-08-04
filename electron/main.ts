@@ -16,6 +16,7 @@ import {
   syncJiraActivity,
   testJiraConnection,
   syncJiraWorklogs,
+  moveWorklog,
   updateWorklog
 } from "./jira";
 import { generateWithAi, listAiModels } from "./aiProvider";
@@ -41,6 +42,7 @@ import type {
   BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
   IssueDetailsRequest,
+  MoveWorklogRequest,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -210,6 +212,10 @@ ipcMain.handle("jira:update-worklog", (_event, request: UpdateWorklogRequest) =>
 
 ipcMain.handle("jira:delete-worklog", (_event, request: DeleteWorklogRequest) => {
   return deleteWorklog(request);
+});
+
+ipcMain.handle("jira:move-worklog", (_event, request: MoveWorklogRequest) => {
+  return moveWorklog(request);
 });
 
 ipcMain.handle("bitbucket:test-connection", (_event, settings: AppSettings) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
 import type {
   JiraTicket,
   JiraWorklog,
@@ -7,7 +7,8 @@ import type {
   PersonalNoteCategory,
   RecurringEvent,
   RecurringEntry,
-  WorklogAllocationDirection
+  WorklogAllocationDirection,
+  WorklogEstimateAdjustment
 } from "../../shared/types";
 import { clockTimeToMinutes, minutesToClockTime, type Range } from "../domain/dayCalendar";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
@@ -35,6 +36,7 @@ export interface LogPayload {
   startedISO: string;
   comment?: string;
   allocationDirection?: WorklogAllocationDirection;
+  estimateAdjustment?: WorklogEstimateAdjustment;
 }
 
 export interface AddTimePrefill {
@@ -289,6 +291,8 @@ export const AddTimeModal = ({
   const [allocationDirection, setAllocationDirection] = useState<WorklogAllocationDirection>(
     editingWorklog?.allocation?.direction ?? "backward"
   );
+  const [isMovingWorklog, setIsMovingWorklog] = useState(false);
+  const [estimateAdjustment, setEstimateAdjustment] = useState<WorklogEstimateAdjustment>("auto");
   const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
   const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
   const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
@@ -331,18 +335,23 @@ export const AddTimeModal = ({
   const isRecurringView = mode === "recurring" && !isEditing;
   const isTicketView = (mode === "ticket" && !isEditingPersonalNote) || isEditingWorklog;
   const isNoteMode = !isTicketView && !isRecurringView;
+  const isMoveTargetSelected = Boolean(
+    isMovingWorklog && editingWorklog && activeTicket && activeTicket.key !== editingWorklog.issueKey
+  );
   const isBulkDuration = isTicketView && durationSeconds > dailyTargetHours * 3600;
   const recurringCandidates = isRecurringView && getRecurringCandidates ? getRecurringCandidates(dateStr) : [];
   const recEvent = recurringCandidates.find((event) => event.id === recSelectedId) ?? recurringCandidates[0];
-  const modalTitle = isEditingWorklog
-    ? "Edit time"
-    : isEditingPersonalNote
-      ? "Edit note"
-      : isRecurringView
-        ? "Recurring event"
-        : mode === "note"
-          ? "Personal note"
-          : "Log time";
+  const modalTitle = isMovingWorklog
+    ? "Move worklog"
+    : isEditingWorklog
+      ? "Edit time"
+      : isEditingPersonalNote
+        ? "Edit note"
+        : isRecurringView
+          ? "Recurring event"
+          : mode === "note"
+            ? "Personal note"
+            : "Log time";
   const canSubmit = isRecurringView
     ? Boolean(hasWorkingDate && recEvent && recMinutes > 0 && !isLogging)
     : isNoteMode
@@ -353,9 +362,18 @@ export const AddTimeModal = ({
             personalNoteSeconds > 0 &&
             !isLogging
         )
-      : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
+      : Boolean(
+          hasWorkingDate &&
+            isConfigured &&
+            activeTicket &&
+            durationSeconds > 0 &&
+            !isLogging &&
+            !isDeleting &&
+            (!isMovingWorklog || isMoveTargetSelected)
+        );
   const showTicketTimeline =
     isTicketView &&
+    !isMovingWorklog &&
     !isBulkDuration &&
     durationSeconds > 0 &&
     durationSeconds <= 24 * 60 * 60 &&
@@ -407,14 +425,26 @@ export const AddTimeModal = ({
     if (!activeTicket || durationSeconds <= 0) {
       return;
     }
-    const ok = await onLog({
-      issueKey: activeTicket.key,
-      ticket: activeTicket,
-      timeSpentSeconds: durationSeconds,
-      startedISO,
-      comment: note.trim() || undefined,
-      allocationDirection: isBulkDuration ? allocationDirection : undefined
-    });
+    const ok = await onLog(
+      isMovingWorklog && editingWorklog
+        ? {
+            issueKey: activeTicket.key,
+            ticket: activeTicket,
+            timeSpentSeconds: editingWorklog.timeSpentSeconds,
+            startedISO: editingWorklog.started,
+            comment: editingWorklog.comment,
+            allocationDirection: editingWorklog.allocation?.direction,
+            estimateAdjustment
+          }
+        : {
+            issueKey: activeTicket.key,
+            ticket: activeTicket,
+            timeSpentSeconds: durationSeconds,
+            startedISO,
+            comment: note.trim() || undefined,
+            allocationDirection: isBulkDuration ? allocationDirection : undefined
+          }
+    );
     if (ok) {
       onClose();
     }
@@ -470,6 +500,8 @@ export const AddTimeModal = ({
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
     setAllocationDirection(editingWorklog?.allocation?.direction ?? "backward");
+    setIsMovingWorklog(false);
+    setEstimateAdjustment("auto");
     setIsStartEdited(false);
     setNote(editingWorklog?.comment ?? nextPrefill?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
@@ -652,7 +684,7 @@ export const AddTimeModal = ({
       className="modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
+      aria-label={isMovingWorklog ? "Move time entry" : isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
     >
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-panel add-time-modal-panel">
@@ -717,15 +749,34 @@ export const AddTimeModal = ({
             />
           ) : isTicketView ? (
             <>
-              <div className="modal-label">TICKET</div>
+              <div className="modal-label-row">
+                <div className="modal-label">TICKET</div>
+                {isEditingWorklog && (
+                  <button
+                    type="button"
+                    className={`move-worklog-toggle${isMovingWorklog ? " active" : ""}`}
+                    onClick={() => {
+                      if (isMovingWorklog) {
+                        setActiveKey(editingWorklog?.issueKey);
+                        setSelectedTicketOverride(undefined);
+                      }
+                      setIsMovingWorklog((moving) => !moving);
+                    }}
+                    disabled={isLogging || isDeleting}
+                  >
+                    <ArrowRightLeft size={12} strokeWidth={2} />
+                    {isMovingWorklog ? "Back to edit" : "Move worklog"}
+                  </button>
+                )}
+              </div>
               <TicketPicker
                 variant="modal"
                 activeTicket={activeTicket}
                 ticketOptions={ticketOptions}
                 isConfigured={isConfigured}
                 emptyText="Search Jira to choose a ticket"
-                locked={isEditingWorklog}
-                lockedTitle="Ticket cannot be changed for an existing Jira worklog"
+                locked={isEditingWorklog && !isMovingWorklog}
+                lockedTitle="Use Move worklog to choose another Jira issue"
                 searchTickets={onSearchTickets}
                 onSelect={(ticket) => {
                   setSelectedTicketOverride(ticket);
@@ -733,6 +784,71 @@ export const AddTimeModal = ({
                 }}
               />
 
+              {isMovingWorklog && editingWorklog ? (
+                <div className="move-worklog-panel">
+                  {!isMoveTargetSelected ? (
+                    <div className="move-worklog-empty">
+                      <ArrowRightLeft size={20} strokeWidth={1.7} />
+                      <strong>Choose the correct Jira issue</strong>
+                      <span>The original worklog stays unchanged until Jira accepts the move.</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="move-worklog-route" aria-label="Worklog move preview">
+                        <div>
+                          <span>BEFORE</span>
+                          <strong>{editingWorklog.issueKey}</strong>
+                          <small>{formatClock(editingWorklog.timeSpentSeconds)} currently logged</small>
+                        </div>
+                        <ArrowRightLeft size={18} strokeWidth={1.8} />
+                        <div>
+                          <span>AFTER</span>
+                          <strong>{activeTicket?.key}</strong>
+                          <small>Same date, time, duration, comment, and author</small>
+                        </div>
+                      </div>
+
+                      <div className="move-worklog-estimates">
+                        <div className="move-worklog-estimate-copy">
+                          <span>REMAINING ESTIMATES</span>
+                          <strong>{estimateAdjustment === "auto" ? "Adjust automatically" : "Leave unchanged"}</strong>
+                          <small>
+                            {estimateAdjustment === "auto"
+                              ? `${editingWorklog.issueKey} gets ${formatClock(editingWorklog.timeSpentSeconds)} back; ${activeTicket?.key} deducts it when estimates exist.`
+                              : "Only logged time moves; both remaining estimates stay as they are."}
+                          </small>
+                        </div>
+                        <div className="move-worklog-estimate-toggle" role="radiogroup" aria-label="Remaining estimate adjustment">
+                          <label className={estimateAdjustment === "auto" ? "active" : ""}>
+                            <input
+                              type="radio"
+                              name="move-worklog-estimate"
+                              value="auto"
+                              checked={estimateAdjustment === "auto"}
+                              onChange={() => setEstimateAdjustment("auto")}
+                            />
+                            <span>Auto</span>
+                          </label>
+                          <label className={estimateAdjustment === "leave" ? "active" : ""}>
+                            <input
+                              type="radio"
+                              name="move-worklog-estimate"
+                              value="leave"
+                              checked={estimateAdjustment === "leave"}
+                              onChange={() => setEstimateAdjustment("leave")}
+                            />
+                            <span>Leave</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="move-worklog-permission-note">
+                        Jira requires <strong>Work on issues</strong> and <strong>Delete all worklogs</strong> permissions for this move.
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
               <div className="add-time-ticket-workspace">
                 <div className="add-time-ticket-form">
                   <div className="modal-grid">
@@ -819,6 +935,7 @@ export const AddTimeModal = ({
                 </div>
 
               </div>
+              )}
             </>
           ) : (
             <div className="personal-note-form">
@@ -936,7 +1053,7 @@ export const AddTimeModal = ({
         </div>
 
         <div className="modal-foot">
-          {(isEditingWorklog || isEditingPersonalNote) && onDelete ? (
+          {(isEditingWorklog || isEditingPersonalNote) && onDelete && !isMovingWorklog ? (
             <button
               type="button"
               className="modal-delete-action"
@@ -948,7 +1065,9 @@ export const AddTimeModal = ({
               Delete
             </button>
           ) : (
-            <span className="modal-foot-hint">⌘⏎ TO SAVE · ESC TO CANCEL</span>
+            <span className="modal-foot-hint">
+              {isMovingWorklog ? "SELECT A DIFFERENT TICKET · ⌘⏎ TO MOVE" : "⌘⏎ TO SAVE · ESC TO CANCEL"}
+            </span>
           )}
           <div className="modal-foot-actions">
             <button type="button" className="modal-cancel" onClick={onClose}>
@@ -964,17 +1083,21 @@ export const AddTimeModal = ({
                 {isLogging && (isTicketView || isNoteMode || isRecurringView) ? (
                   <Loader2 className="spin" size={15} />
                 ) : null}
-                {isEditingWorklog
-                  ? `Save ${formatClock(durationSeconds)}`
-                  : isEditingPersonalNote
-                    ? "Save note"
-                    : isRecurringView
-                      ? `Log ${formatRecurringMinutes(recMinutes)} locally`
-                      : mode === "note"
-                        ? "Save note"
-                        : activeTicket
-                          ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
-                          : "Log time"}
+                {isMovingWorklog
+                  ? activeTicket && isMoveTargetSelected
+                    ? `Move to ${activeTicket.key}`
+                    : "Choose destination"
+                  : isEditingWorklog
+                    ? `Save ${formatClock(durationSeconds)}`
+                    : isEditingPersonalNote
+                      ? "Save note"
+                      : isRecurringView
+                        ? `Log ${formatRecurringMinutes(recMinutes)} locally`
+                        : mode === "note"
+                          ? "Save note"
+                          : activeTicket
+                            ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
+                            : "Log time"}
               </button>
             )}
           </div>
