@@ -298,8 +298,11 @@ describe("ReviewView", () => {
     });
 
     const schedule = container.querySelector<HTMLElement>(".review-dialog-schedule");
+    const dialogItem = container.querySelector<HTMLElement>(".review-dialog-item");
     const dateInput = container.querySelector<HTMLInputElement>('input[aria-label="Worklog date for PR 214"]');
     const timeInput = container.querySelector<HTMLInputElement>('input[aria-label="Start time for PR 214"]');
+    expect(dialogItem?.classList.contains("has-schedule")).toBe(true);
+    expect(schedule?.parentElement).toBe(dialogItem);
     expect(schedule?.getAttribute("aria-label")).toBe("Worklog schedule: TUE, JUN 16 · 14:15–15:00");
     expect(dateInput?.value).toBe("2026-06-16");
     expect(timeInput?.value).toBe("14:15");

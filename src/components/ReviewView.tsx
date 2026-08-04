@@ -416,10 +416,12 @@ const ReviewWorklogScheduleEditor = ({ session, onApplyStartedISO }: ReviewWorkl
             <span>{formatHm24(start)}</span>
           </>
         )}
-        <span className="review-dialog-schedule-arrow" aria-hidden="true">
-          →
+        <span className="review-dialog-schedule-end-group">
+          <span className="review-dialog-schedule-arrow" aria-hidden="true">
+            →
+          </span>
+          <span className="review-dialog-schedule-end">{endLabel}</span>
         </span>
-        <span className="review-dialog-schedule-end">{endLabel}</span>
       </div>
     </div>
   );
@@ -440,16 +442,16 @@ const ReviewPreviewList = ({
   return (
     <div className="review-dialog-list">
       {items.map(({ session, targetIssueKey }) => (
-        <div className="review-dialog-item" key={session.id}>
+        <div
+          className={`review-dialog-item${onApplySessionStartedISO ? " has-schedule" : ""}`}
+          key={session.id}
+        >
           <div className="review-dialog-item-main">
             <span className="review-dialog-pr">PR #{session.pullRequestId}</span>
             <strong>{session.pullRequestTitle}</strong>
             <span>
               {session.repositoryName} · {getSessionAuthorLabel(session)}
             </span>
-            {onApplySessionStartedISO ? (
-              <ReviewWorklogScheduleEditor session={session} onApplyStartedISO={onApplySessionStartedISO} />
-            ) : null}
           </div>
           <div className="review-dialog-item-meta">
             <strong>{formatClock(session.estimatedSeconds)}</strong>
@@ -464,6 +466,9 @@ const ReviewPreviewList = ({
               <span className="review-missing-target">NO JIRA TARGET</span>
             )}
           </div>
+          {onApplySessionStartedISO ? (
+            <ReviewWorklogScheduleEditor session={session} onApplyStartedISO={onApplySessionStartedISO} />
+          ) : null}
           <ReviewSessionDurationEditor
             sessionId={session.id}
             seconds={session.estimatedSeconds}
