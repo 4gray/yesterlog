@@ -114,6 +114,16 @@ Replace the auto-generated notes with a **curated, user-facing changelog**. Dete
 ```bash
 PREV=$(git tag --sort=-v:refname | grep -v "^$TAG$" | head -1)   # e.g. v1.3.2
 ```
+Use the generated draft to identify the included pull requests, then inspect each pull request's `## Release note` section:
+```bash
+gh release view "$TAG" --json body -q .body
+PR_NUMBER=37 # replace with each pull request number from the generated notes
+gh pr view "$PR_NUMBER" --repo 4gray/yesterlog --json title,body,url
+```
+- Treat a non-`None` `## Release note` as the primary user-facing input. Combine and polish entries for a coherent release; do not copy raw commit subjects or implementation details into the final notes.
+- Omit entries marked exactly `None`. For older pull requests without the section, fall back to their title and body.
+- Cross-check `git log "$PREV..$TAG"` and the full compare link so direct commits, stale pull request descriptions, and meaningful changes omitted by generated notes are caught. Resolve mismatches from the actual shipped diff rather than blindly trusting the pull request field.
+
 Write `/tmp/notes.md` (group changes under headings like **Highlights**, **Fixes**, **Improvements** — describe user-visible impact, not raw commit subjects). For a feature release, embed the screenshot captured in step 2b via its public Pages URL (it renders inline; a committed private-repo raw/asset URL would NOT). ALWAYS end with the compare link:
 ```markdown
 ## What's new in vX.Y.Z

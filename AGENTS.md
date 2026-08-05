@@ -70,9 +70,17 @@ Use `npm run dev` for the full Electron app. Use `npm run dev:renderer` for a br
 - For frontend work, inspect the app in a browser or Electron window and check for clipping, overflow, console errors, and broken interaction states.
 - Document any intentionally skipped verification in the final response.
 
+## Pull Requests & Release Notes
+
+- When drafting or updating a pull request, keep its `## Release note` section current with the final scope.
+- For a user-visible change, write one concise sentence about the user benefit or behavior change. Do not use a raw commit subject, implementation detail, or test summary as the release note.
+- Write exactly `None` when the change is internal-only and should not appear in release notes. Do not invent user impact for tests, refactors, maintenance, or documentation-only work.
+- Treat the pull request release note as input to release curation, not as permission to publish or as the final release copy.
+
 ## Releasing
 
 - Use the `/release` skill to cut a release; it is the canonical, end-to-end flow.
+- During release curation, use merged pull requests' `## Release note` sections as the primary source, then verify them against GitHub's generated notes and the full tag comparison so direct commits and stale descriptions are not missed.
 - Commit your change first (`npm version` aborts on a dirty tree), then bump with `npm run release:patch` (or `release:minor` / `release:major`).
 - Push the release commit and the `vX.Y.Z` tag with `npm run release:push` (= `git push && git push --tags`).
 - Pushing a `v*.*.*` tag triggers `.github/workflows/release.yml`, which tests, builds, packages macOS/Windows/Linux, and creates a DRAFT GitHub Release; leave it as a draft unless the user asks to publish.
