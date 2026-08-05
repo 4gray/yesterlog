@@ -196,6 +196,199 @@
   cursor: default;
 }
 
+.modal-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.move-worklog-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.move-worklog-toggle:hover:not(:disabled),
+.move-worklog-toggle.active {
+  border-color: color-mix(in srgb, var(--blue) 55%, var(--border));
+  background: color-mix(in srgb, var(--blue) 10%, var(--bg-sunken));
+  color: var(--blue-soft);
+}
+
+.move-worklog-toggle:disabled {
+  opacity: 0.5;
+}
+
+.move-worklog-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--blue) 35%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--blue) 5%, var(--bg-sunken));
+}
+
+.move-worklog-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px 12px;
+  color: var(--dim);
+  text-align: center;
+}
+
+.move-worklog-empty strong {
+  color: var(--text-bright);
+  font-size: 13px;
+}
+
+.move-worklog-empty span {
+  font-size: 12px;
+}
+
+.move-worklog-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.move-worklog-route > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.move-worklog-route > div > span,
+.move-worklog-estimate-copy > span {
+  color: var(--dim-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+}
+
+.move-worklog-route strong {
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.move-worklog-route small,
+.move-worklog-estimate-copy small {
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.move-worklog-route > svg {
+  color: var(--blue-soft);
+}
+
+.move-worklog-estimates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.move-worklog-estimate-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.move-worklog-estimate-copy strong {
+  color: var(--text-strong);
+  font-size: 12px;
+}
+
+.move-worklog-estimate-toggle {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-sunken);
+}
+
+.move-worklog-estimate-toggle label {
+  position: relative;
+  padding: 7px 10px;
+  border-radius: 5px;
+  color: var(--dim);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.move-worklog-estimate-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.move-worklog-estimate-toggle label.active {
+  background: color-mix(in srgb, var(--blue) 16%, var(--bg-raised));
+  color: var(--blue-soft);
+}
+
+.move-worklog-estimate-toggle label:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.move-worklog-permission-note {
+  color: var(--dim-2);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.move-worklog-permission-note strong {
+  color: var(--dim);
+  font-weight: 600;
+}
+
+@media (max-width: 620px) {
+  .move-worklog-route,
+  .move-worklog-estimates {
+    grid-template-columns: 1fr;
+  }
+
+  .move-worklog-route > svg {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+
+  .move-worklog-estimate-toggle label {
+    flex: 1;
+    text-align: center;
+  }
+}
+
 .modal-ticket-summary {
   font-size: 14px;
   color: var(--text-strong);

@@ -21,6 +21,8 @@ import type {
   IssueDetailsResult,
   JiraActivitySyncResult,
   JiraConnectionResult,
+  MoveWorklogRequest,
+  MoveWorklogResult,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -241,6 +243,16 @@ export const nativeApi = {
     }
 
     return bridge.deleteWorklog(request);
+  },
+
+  moveWorklog(request: MoveWorklogRequest): Promise<MoveWorklogResult> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      return Promise.reject(new Error("Open the Electron app to move Jira worklogs."));
+    }
+
+    return bridge.moveWorklog(request);
   },
 
   listAiModels(request: AiListModelsRequest): Promise<AiListModelsResult> {

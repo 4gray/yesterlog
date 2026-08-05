@@ -23,6 +23,8 @@ import type {
   IssueDetailsResult,
   JiraActivitySyncResult,
   JiraConnectionResult,
+  MoveWorklogRequest,
+  MoveWorklogResult,
   OpenCursorPromptResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
@@ -57,6 +59,7 @@ interface YesterlogNativeApi {
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;
+  moveWorklog: (request: MoveWorklogRequest) => Promise<MoveWorklogResult>;
   listAiModels: (request: AiListModelsRequest) => Promise<AiListModelsResult>;
   generateWithAi: (request: AiGenerateRequest) => Promise<AiGenerateResult>;
   scheduleReminder: (payload: ReminderSchedulePayload) => Promise<ReminderScheduleResult>;

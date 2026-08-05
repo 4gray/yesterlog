@@ -38,6 +38,14 @@ const ticket: JiraTicket = {
   url: "https://example.atlassian.net/browse/TB-22"
 };
 
+const targetTicket: JiraTicket = {
+  ...ticket,
+  id: "10023",
+  key: "TB-23",
+  summary: "Correct Jira issue",
+  url: "https://example.atlassian.net/browse/TB-23"
+};
+
 const editingWorklog: JiraWorklog = {
   id: "20001",
   issueId: "10022",
@@ -73,6 +81,28 @@ const syncResult = (overrides: Partial<SyncResult> = {}): SyncResult => ({
   ...overrides
 });
 
+const syncResultWithEditingWorklog = () =>
+  syncResult({
+    trackedSeconds: editingWorklog.timeSpentSeconds,
+    issueCount: 1,
+    worklogCount: 1,
+    daySummaries: {
+      "2026-06-18": {
+        trackedSeconds: editingWorklog.timeSpentSeconds,
+        issues: [
+          {
+            id: editingWorklog.issueId,
+            key: editingWorklog.issueKey,
+            summary: editingWorklog.issueSummary,
+            loggedSeconds: editingWorklog.timeSpentSeconds
+          }
+        ],
+        worklogs: [editingWorklog]
+      }
+    },
+    sourceWorklogs: [editingWorklog]
+  });
+
 type JiraWorklogsApi = ReturnType<typeof useJiraWorklogs>;
 
 let container: HTMLDivElement;
@@ -82,6 +112,7 @@ let activeEditingWorklog: JiraWorklog | undefined;
 let addWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["addWorklog"]>>;
 let updateWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["updateWorklog"]>>;
 let deleteWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["deleteWorklog"]>>;
+let moveWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["moveWorklog"]>>;
 let saveSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => Promise<void>>>;
 let saveWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => Promise<void>>>;
 let deleteWorklogAllocationPreference: ReturnType<typeof vi.fn<(preferenceKey: string) => Promise<void>>>;
@@ -148,6 +179,7 @@ beforeEach(() => {
   addWorklog = vi.fn();
   updateWorklog = vi.fn();
   deleteWorklog = vi.fn();
+  moveWorklog = vi.fn();
   saveSyncResult = vi.fn(async () => undefined);
   saveWorklogAllocationPreference = vi.fn(async () => undefined);
   deleteWorklogAllocationPreference = vi.fn(async () => undefined);
@@ -161,7 +193,8 @@ beforeEach(() => {
   client = {
     addWorklog,
     updateWorklog,
-    deleteWorklog
+    deleteWorklog,
+    moveWorklog
   };
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -429,7 +462,7 @@ describe("useJiraWorklogs", () => {
     renderHarness();
 
     await act(async () => {
-      await expect(getApi().handleUpdateWorklog({ ...payload, issueKey: "IGNORED-1", timeSpentSeconds: 3600 })).resolves.toBe(true);
+      await expect(getApi().handleUpdateWorklog({ ...payload, timeSpentSeconds: 3600 })).resolves.toBe(true);
     });
 
     expect(updateWorklog).toHaveBeenCalledWith({
@@ -444,6 +477,110 @@ describe("useJiraWorklogs", () => {
     expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isLogging).toBe(false);
+  });
+
+  it("moves an editing worklog to the selected ticket and updates the cached week immediately", async () => {
+    const currentSync = syncResultWithEditingWorklog();
+    moveWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      sourceIssueKey: editingWorklog.issueKey,
+      targetIssueKey: targetTicket.key,
+      adjustEstimate: "leave"
+    });
+    renderHarness({ currentSyncResult: currentSync });
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          issueKey: targetTicket.key,
+          ticket: targetTicket,
+          estimateAdjustment: "leave"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(moveWorklog).toHaveBeenCalledWith({
+      settings,
+      sourceIssueKey: editingWorklog.issueKey,
+      targetIssueKey: targetTicket.key,
+      worklogId: editingWorklog.id,
+      adjustEstimate: "leave"
+    });
+    expect(updateWorklog).not.toHaveBeenCalled();
+    expect(onSyncResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trackedSeconds: editingWorklog.timeSpentSeconds,
+        worklogCount: 1,
+        issueCount: 1
+      })
+    );
+    expect(onSyncResult.mock.calls[0][0].daySummaries["2026-06-18"].worklogs[0]).toMatchObject({
+      id: editingWorklog.id,
+      issueKey: targetTicket.key,
+      timeSpentSeconds: editingWorklog.timeSpentSeconds,
+      comment: editingWorklog.comment
+    });
+    expect(saveSyncResult).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
+    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(loadTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps an accepted Jira move successful when local persistence and refresh fail", async () => {
+    moveWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      sourceIssueKey: editingWorklog.issueKey,
+      targetIssueKey: targetTicket.key,
+      adjustEstimate: "auto"
+    });
+    saveSyncResult.mockRejectedValue(new Error("IndexedDB unavailable"));
+    runSync.mockRejectedValue(new Error("Sync unavailable"));
+    loadTickets.mockRejectedValue(new Error("Ticket refresh unavailable"));
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          issueKey: targetTicket.key,
+          ticket: targetTicket,
+          estimateAdjustment: "auto"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    expect(saveSyncResult).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(loadTickets).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
+    expect(showError).not.toHaveBeenCalled();
+    expect(getApi().logError).toBeUndefined();
+  });
+
+  it("leaves local state untouched when Jira rejects a worklog move", async () => {
+    moveWorklog.mockRejectedValue(new Error("Delete all worklogs permission required"));
+    renderHarness();
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          issueKey: targetTicket.key,
+          ticket: targetTicket,
+          estimateAdjustment: "auto"
+        })
+      ).resolves.toBe(false);
+    });
+
+    expect(onSyncResult).not.toHaveBeenCalled();
+    expect(saveSyncResult).not.toHaveBeenCalled();
+    expect(runSync).not.toHaveBeenCalled();
+    expect(loadTickets).not.toHaveBeenCalled();
+    expect(showError).toHaveBeenCalledWith("Delete all worklogs permission required");
   });
 
   it("skips update and delete when no worklog is being edited", async () => {

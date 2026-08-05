@@ -7,14 +7,21 @@ import type {
   DeleteWorklogResult,
   JiraTicket,
   JiraWorklog,
+  MoveWorklogRequest,
+  MoveWorklogResult,
   SyncResult,
   UpdateWorklogRequest,
   UpdateWorklogResult,
   WorklogAllocationDirection,
-  WorklogAllocationPreference
+  WorklogAllocationPreference,
+  WorklogEstimateAdjustment
 } from "../../shared/types";
 import { nativeApi } from "../api/native";
-import { mergeCreatedWorklogIntoSyncResult, mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
+import {
+  mergeCreatedWorklogIntoSyncResult,
+  mergeMovedWorklogIntoSyncResult,
+  mergeUpdatedWorklogIntoSyncResult
+} from "../domain/syncResult";
 import {
   deleteWorklogAllocationPreference as deleteWorklogAllocationPreferenceFromStorage,
   saveSyncResult as saveSyncResultToStorage,
@@ -27,6 +34,7 @@ export interface JiraWorklogsClient {
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult>;
   updateWorklog(request: UpdateWorklogRequest): Promise<UpdateWorklogResult>;
   deleteWorklog(request: DeleteWorklogRequest): Promise<DeleteWorklogResult>;
+  moveWorklog(request: MoveWorklogRequest): Promise<MoveWorklogResult>;
 }
 
 export interface JiraWorklogPayload {
@@ -36,6 +44,7 @@ export interface JiraWorklogPayload {
   startedISO: string;
   comment?: string;
   allocationDirection?: WorklogAllocationDirection;
+  estimateAdjustment?: WorklogEstimateAdjustment;
 }
 
 interface UseJiraWorklogsOptions {
@@ -216,6 +225,37 @@ export const useJiraWorklogs = ({
       setLogError(undefined);
 
       try {
+        if (payload.issueKey !== editingWorklog.issueKey) {
+          if (isDemo) {
+            showSuccess(`Demo moved worklog from ${editingWorklog.issueKey} to ${payload.issueKey}.`);
+            return true;
+          }
+
+          const result = await client.moveWorklog({
+            settings,
+            sourceIssueKey: editingWorklog.issueKey,
+            targetIssueKey: payload.issueKey,
+            worklogId: editingWorklog.id,
+            adjustEstimate: payload.estimateAdjustment ?? "auto"
+          });
+          const optimistic = mergeMovedWorklogIntoSyncResult(syncResult, {
+            worklogId: result.worklogId,
+            targetTicket: payload.ticket,
+            syncedAtISO: new Date().toISOString()
+          });
+          const postMoveTasks: Array<() => Promise<unknown>> = [
+            () => runSync(settings, { queueAfterCurrent: true }),
+            () => loadTickets()
+          ];
+          if (optimistic && optimistic !== syncResult) {
+            onSyncResult(optimistic);
+            postMoveTasks.unshift(() => saveSyncResult(optimistic));
+          }
+          showSuccess(`Moved worklog from ${result.sourceIssueKey} to ${result.targetIssueKey}.`);
+          await Promise.allSettled(postMoveTasks.map((task) => Promise.resolve().then(task)));
+          return true;
+        }
+
         if (isDemo) {
           showSuccess(`Demo updated ${formatDuration(payload.timeSpentSeconds / 3600)} on ${editingWorklog.issueKey}.`);
           return true;
@@ -256,7 +296,7 @@ export const useJiraWorklogs = ({
         setIsLogging(false);
       }
     },
-    [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, rememberAllocationPreference, runSync, settings, showError, showSuccess, syncResult]
+    [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, onSyncResult, rememberAllocationPreference, runSync, saveSyncResult, settings, showError, showSuccess, syncResult]
   );
 
   // Drag move/resize from the calendar: apply the geometry optimistically to the

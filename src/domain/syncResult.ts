@@ -19,6 +19,12 @@ interface UpdatedWorklogPayload {
   syncedAtISO?: string;
 }
 
+interface MovedWorklogPayload {
+  worklogId: string;
+  targetTicket: JiraTicket;
+  syncedAtISO?: string;
+}
+
 const cloneIssue = (issue: JiraIssueSummary): JiraIssueSummary => ({
   ...issue,
   comments: issue.comments ? [...issue.comments] : undefined
@@ -47,6 +53,34 @@ const mergeIssue = (bucket: SyncDayBucket, issue: JiraIssueSummary) => {
 
   bucket.issues.push(issue);
 };
+
+const issueFromWorklog = (worklog: JiraWorklog, loggedSeconds: number): JiraIssueSummary => ({
+  id: worklog.issueId,
+  key: worklog.issueKey,
+  summary: worklog.issueSummary,
+  url: worklog.issueUrl,
+  issueType: worklog.issueType,
+  epic: worklog.epic,
+  loggedSeconds,
+  comments: worklog.comment ? [worklog.comment] : []
+});
+
+const moveWorklogToTicket = (
+  worklog: JiraWorklog,
+  targetTicket: JiraTicket,
+  syncedAtISO?: string
+): JiraWorklog => ({
+  ...worklog,
+  issueId: targetTicket.id,
+  issueKey: targetTicket.key,
+  issueSummary: targetTicket.summary,
+  issueUrl: targetTicket.url,
+  issueType: targetTicket.issueType,
+  epic: targetTicket.epic,
+  projectKey: targetTicket.projectKey,
+  projectName: targetTicket.projectName,
+  updated: syncedAtISO ?? worklog.updated
+});
 
 export const mergeCreatedWorklogIntoSyncResult = (
   syncResult: SyncResult | undefined,
@@ -266,5 +300,72 @@ export const mergeUpdatedWorklogIntoSyncResult = (
           }
         : worklog
     )
+  };
+};
+
+/**
+ * Move an existing cached worklog to a new Jira issue after Jira accepts the
+ * server-side move. The worklog ID, timing, comment, author, and any local bulk
+ * allocation stay unchanged; only issue metadata and affected issue summaries
+ * change.
+ */
+export const mergeMovedWorklogIntoSyncResult = (
+  syncResult: SyncResult | undefined,
+  payload: MovedWorklogPayload
+) => {
+  if (!syncResult) {
+    return undefined;
+  }
+
+  const sourceMatch =
+    syncResult.sourceWorklogs?.find((worklog) => worklog.id === payload.worklogId) ??
+    Object.values(syncResult.daySummaries)
+      .flatMap((bucket) => bucket.worklogs)
+      .find((worklog) => worklog.id === payload.worklogId);
+
+  if (!sourceMatch || sourceMatch.issueKey === payload.targetTicket.key) {
+    return syncResult;
+  }
+
+  let changedVisibleBucket = false;
+  const daySummaries = Object.fromEntries(
+    Object.entries(syncResult.daySummaries).map(([dateKey, bucket]) => {
+      if (!bucket.worklogs.some((worklog) => worklog.id === payload.worklogId)) {
+        return [dateKey, bucket];
+      }
+
+      changedVisibleBucket = true;
+      const worklogs = bucket.worklogs.map((worklog) =>
+        worklog.id === payload.worklogId
+          ? moveWorklogToTicket(worklog, payload.targetTicket, payload.syncedAtISO)
+          : worklog
+      );
+      const issues: JiraIssueSummary[] = [];
+      for (const worklog of worklogs) {
+        mergeIssue(
+          { trackedSeconds: bucket.trackedSeconds, worklogs: [], issues },
+          issueFromWorklog(worklog, worklog.allocation?.timeSpentSeconds ?? worklog.timeSpentSeconds)
+        );
+      }
+
+      return [dateKey, { ...bucket, worklogs, issues }];
+    })
+  );
+
+  const sourceWorklogs = syncResult.sourceWorklogs?.map((worklog) =>
+    worklog.id === payload.worklogId
+      ? moveWorklogToTicket(worklog, payload.targetTicket, payload.syncedAtISO)
+      : worklog
+  );
+  const issueCount = changedVisibleBucket
+    ? new Set(Object.values(daySummaries).flatMap((bucket) => bucket.issues.map((issue) => issue.key))).size
+    : syncResult.issueCount;
+
+  return {
+    ...syncResult,
+    syncedAt: payload.syncedAtISO ?? syncResult.syncedAt,
+    issueCount,
+    daySummaries,
+    sourceWorklogs
   };
 };
