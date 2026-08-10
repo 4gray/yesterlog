@@ -275,6 +275,10 @@ describe("Notes workspace persistence", () => {
     await saveWorkspaceNoteBucket(bucket, notesScope);
     await saveWorkspaceNoteBucket({
       containerId: "GENERAL",
+      document: {
+        text: "Loose thoughts\n\nA second paragraph",
+        updatedAt: "2026-07-24T10:00:00.000Z"
+      },
       notes: [{ ...bucket.notes[0], id: "workspace-note-general" }]
     });
 
@@ -285,6 +289,10 @@ describe("Notes workspace persistence", () => {
     expect(stored.find((item) => item.containerId === "GENERAL")?.notes[0].id).toBe(
       "workspace-note-general"
     );
+    expect(stored.find((item) => item.containerId === "GENERAL")?.document).toEqual({
+      text: "Loose thoughts\n\nA second paragraph",
+      updatedAt: "2026-07-24T10:00:00.000Z"
+    });
 
     await deleteWorkspaceNoteBucket(bucket.containerId, notesScope);
     expect(

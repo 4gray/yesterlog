@@ -16,6 +16,7 @@ import {
   removeWorkspaceNoteBucket,
   setWorkspaceNoteArchived,
   setWorkspaceNoteDone,
+  updateWorkspaceNoteDocument,
   updateWorkspaceNoteText,
   upsertWorkspaceNoteBucket,
   type NoteTicketActivity,
@@ -168,6 +169,22 @@ describe("ticket activity scopes", () => {
 });
 
 describe("immutable ticket-note CRUD", () => {
+  it("updates a multiline document without changing structured notes", () => {
+    const original = bucket("GENERAL", [note("kept")]);
+    const updated = updateWorkspaceNoteDocument(
+      original,
+      "First thought\n\nSecond thought",
+      "2026-07-24T13:00:00.000Z"
+    );
+
+    expect(original.document).toBeUndefined();
+    expect(updated.document).toEqual({
+      text: "First thought\n\nSecond thought",
+      updatedAt: "2026-07-24T13:00:00.000Z"
+    });
+    expect(updated.notes).toBe(original.notes);
+  });
+
   it("adds, edits, checks, archives, restores and deletes without mutating input", () => {
     const originalNote = note("todo", { type: "todo", text: " Original " });
     const original = bucket("TB-1", [originalNote]);

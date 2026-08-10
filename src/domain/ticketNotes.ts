@@ -22,6 +22,11 @@ export interface WorkspaceNote {
   updatedAt: string;
 }
 
+export interface WorkspaceNoteDocument {
+  text: string;
+  updatedAt: string;
+}
+
 export interface NoteJiraSnapshot {
   key: string;
   summary: string;
@@ -35,6 +40,8 @@ export interface NoteJiraSnapshot {
 export interface WorkspaceNoteBucket {
   containerId: string;
   jira?: NoteJiraSnapshot;
+  /** Optional freeform page. General uses it first; other containers stay item-first. */
+  document?: WorkspaceNoteDocument;
   notes: WorkspaceNote[];
 }
 
@@ -207,6 +214,15 @@ export const addWorkspaceNote = (
 ): WorkspaceNoteBucket => ({
   ...bucket,
   notes: [...bucket.notes, note]
+});
+
+export const updateWorkspaceNoteDocument = (
+  bucket: WorkspaceNoteBucket,
+  text: string,
+  updatedAt: string
+): WorkspaceNoteBucket => ({
+  ...bucket,
+  document: { text, updatedAt }
 });
 
 export const updateWorkspaceNoteText = (

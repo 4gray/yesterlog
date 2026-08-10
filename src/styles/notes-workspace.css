@@ -587,6 +587,99 @@
   overflow: hidden;
 }
 
+.notes-toolbar.is-general {
+  align-items: flex-start;
+}
+
+.notes-surface-tabs {
+  height: 29px;
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--nw-line);
+  border-radius: 9px;
+  background: #101218;
+}
+
+.notes-surface-tabs button {
+  height: 23px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nw-muted);
+  font-size: 10.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.notes-surface-tabs button:hover {
+  color: var(--nw-secondary);
+}
+
+.notes-surface-tabs button.is-active {
+  background: rgba(237, 196, 136, 0.11);
+  color: var(--nw-amber);
+  box-shadow: inset 0 0 0 1px rgba(237, 196, 136, 0.08);
+}
+
+.notes-surface-tabs button > span {
+  min-width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  margin-left: 1px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--nw-faint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 8.5px;
+}
+
+.notes-scratchpad-save {
+  margin: 6px 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--nw-faint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.notes-scratchpad-save::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--nw-teal);
+  content: "";
+}
+
+.notes-scratchpad-save.is-saving::before {
+  background: var(--nw-amber);
+  animation: notes-save-pulse 1s ease-in-out infinite;
+}
+
+.notes-scratchpad-save.is-error {
+  color: var(--nw-red);
+}
+
+.notes-scratchpad-save.is-error::before {
+  background: var(--nw-red);
+}
+
+@keyframes notes-save-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .notes-filter-chips {
   display: flex;
   gap: 5px;
@@ -712,6 +805,99 @@
   width: min(720px, 100%);
   margin: 0 auto;
   padding: 0 28px;
+}
+
+.notes-scratchpad-scroll {
+  display: flex;
+  overflow: hidden;
+}
+
+.notes-scratchpad-column {
+  min-height: 100%;
+  flex: 1;
+  display: flex;
+  padding-top: 17px;
+  padding-bottom: 26px;
+}
+
+.notes-scratchpad-sheet {
+  position: relative;
+  min-height: 360px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(237, 196, 136, 0.1);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(237, 196, 136, 0.025), transparent 24%),
+    var(--nw-card);
+  box-shadow:
+    0 18px 54px rgba(0, 0, 0, 0.16),
+    inset 0 1px rgba(255, 255, 255, 0.018);
+}
+
+.notes-scratchpad-rule {
+  position: absolute;
+  z-index: 1;
+  top: 21px;
+  left: 27px;
+  display: flex;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.notes-scratchpad-rule span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(237, 196, 136, 0.42);
+}
+
+.notes-scratchpad-sheet textarea {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+  padding: 48px 40px 32px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nw-text);
+  caret-color: var(--nw-amber);
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 450;
+  letter-spacing: 0.002em;
+  line-height: 1.75;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nw-control) transparent;
+}
+
+.notes-scratchpad-sheet textarea::placeholder {
+  color: var(--nw-faint-2);
+  opacity: 1;
+}
+
+.notes-scratchpad-sheet > footer {
+  min-height: 38px;
+  padding: 9px 14px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.035);
+  color: var(--nw-faint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9px;
+}
+
+.notes-scratchpad-sheet > footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .notes-editor-scroll > .notes-editor-column {
@@ -1522,6 +1708,10 @@
     scrollbar-width: none;
   }
 
+  .notes-toolbar.is-general {
+    padding-bottom: 3px;
+  }
+
   .notes-progress {
     min-width: 70px;
   }
@@ -1560,6 +1750,16 @@
     padding-left: 16px;
   }
 
+  .notes-scratchpad-column {
+    padding-top: 12px;
+    padding-bottom: 16px;
+  }
+
+  .notes-scratchpad-sheet textarea {
+    padding-right: 26px;
+    padding-left: 26px;
+  }
+
   .notes-editor-meta {
     display: none;
   }
@@ -1593,6 +1793,29 @@
   .notes-tool-button {
     padding-right: 7px;
     padding-left: 7px;
+  }
+
+  .notes-surface-tabs button {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .notes-scratchpad-sheet textarea {
+    padding: 43px 20px 26px;
+    font-size: 14px;
+  }
+
+  .notes-scratchpad-rule {
+    left: 20px;
+  }
+
+  .notes-scratchpad-sheet > footer > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notes-scratchpad-sheet > footer > span:last-child {
+    display: none;
   }
 
   .notes-pr-comment,
