@@ -132,6 +132,7 @@ const mergeWorkspaceNoteBuckets = (
   return {
     containerId: logicalContainerId,
     jira: preferred.jira,
+    document: preferred.document,
     notes: [...notesById.values()]
   };
 };
@@ -873,6 +874,7 @@ const decodeWorkspaceNoteBucket = (
 ): WorkspaceNoteBucket => ({
   containerId: logicalWorkspaceNoteContainerId(bucket),
   jira: bucket.jira,
+  document: bucket.document,
   notes: bucket.notes
 });
 

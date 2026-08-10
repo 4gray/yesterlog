@@ -46,6 +46,40 @@ const storageMocks = vi.hoisted(() => ({
 
 vi.mock("../storage/db", () => storageMocks);
 
+vi.mock("./ScratchpadEditor", () => ({
+  ScratchpadEditor: ({
+    initialText,
+    onChange,
+    onBlur
+  }: {
+    initialText: string;
+    onChange: (value: {
+      text: string;
+      editorState: string;
+      plainText: string;
+    }) => void;
+    onBlur: () => void;
+  }) => (
+    <textarea
+      aria-label="General notes scratchpad"
+      value={initialText}
+      onChange={(event) =>
+        onChange({
+          text: event.target.value,
+          editorState: JSON.stringify({
+            root: {
+              type: "root",
+              children: [{ type: "paragraph", text: event.target.value }]
+            }
+          }),
+          plainText: event.target.value
+        })
+      }
+      onBlur={onBlur}
+    />
+  )
+}));
+
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
   jiraEmail: "person@example.com",
@@ -172,9 +206,13 @@ const baseProps = (
   ...overrides
 });
 
-const setInput = (input: HTMLInputElement, value: string) => {
+const setInput = (input: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+  const prototype =
+    input instanceof HTMLTextAreaElement
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
+    prototype,
     "value"
   )?.set;
   act(() => {
@@ -194,6 +232,10 @@ const buttonWithText = (container: HTMLElement, text: string) =>
   [...container.querySelectorAll<HTMLButtonElement>("button")].find((button) =>
     button.textContent?.includes(text)
   );
+
+const openGeneralItems = () => {
+  act(() => buttonWithText(container, "Notes & to-dos")?.click());
+};
 
 let container: HTMLDivElement;
 let root: Root;
@@ -222,11 +264,130 @@ afterEach(() => {
 });
 
 describe("NotesWorkspace", () => {
+  it("opens General as a multiline scratchpad and autosaves after an idle pause", async () => {
+    vi.useFakeTimers();
+    storageMocks.getWorkspaceNoteBuckets.mockResolvedValue([
+      {
+        containerId: "GENERAL",
+        document: {
+          text: "Existing first line\n\nExisting second line",
+          updatedAt: currentStarted
+        },
+        notes: []
+      }
+    ]);
+    await act(async () => {
+      root.render(<NotesWorkspace {...baseProps()} />);
+    });
+    await flush();
+
+    const scratchpad = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="General notes scratchpad"]'
+    )!;
+    expect(scratchpad.value).toBe(
+      "Existing first line\n\nExisting second line"
+    );
+    expect(
+      container.querySelector('[role="tab"][aria-selected="true"]')?.textContent
+    ).toContain("Scratchpad");
+
+    setInput(scratchpad, "First thought\nSecond thought");
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "Saving"
+    );
+    expect(storageMocks.saveWorkspaceNoteBucket).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(650);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(storageMocks.saveWorkspaceNoteBucket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        containerId: "GENERAL",
+        document: expect.objectContaining({
+          text: "First thought\nSecond thought",
+          editorState: expect.stringContaining('"root"')
+        }),
+        notes: []
+      }),
+      null
+    );
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "Saved locally"
+    );
+    expect(container.textContent).toContain("4 words · 2 lines");
+  });
+
+  it("flushes a scratchpad draft before opening structured General items", async () => {
+    vi.useFakeTimers();
+    await act(async () => {
+      root.render(<NotesWorkspace {...baseProps()} />);
+    });
+    await flush();
+
+    const scratchpad = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="General notes scratchpad"]'
+    )!;
+    setInput(scratchpad, "Save before switching surfaces");
+    openGeneralItems();
+    await flush();
+
+    expect(storageMocks.saveWorkspaceNoteBucket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        containerId: "GENERAL",
+        document: expect.objectContaining({
+          text: "Save before switching surfaces"
+        })
+      }),
+      null
+    );
+    expect(
+      container.querySelector<HTMLInputElement>(
+        'input[placeholder^="Add a note to General"]'
+      )
+    ).toBeTruthy();
+    expect(
+      container.querySelector('textarea[aria-label="General notes scratchpad"]')
+    ).toBeNull();
+  });
+
+  it("keeps a failed scratchpad save visible and reports the local storage error", async () => {
+    vi.useFakeTimers();
+    storageMocks.saveWorkspaceNoteBucket.mockRejectedValueOnce(
+      new Error("Scratchpad storage unavailable")
+    );
+    const onError = vi.fn();
+    await act(async () => {
+      root.render(<NotesWorkspace {...baseProps({ onError })} />);
+    });
+    await flush();
+
+    const scratchpad = container.querySelector<HTMLTextAreaElement>(
+      'textarea[aria-label="General notes scratchpad"]'
+    )!;
+    setInput(scratchpad, "Keep this draft visible");
+    await act(async () => {
+      vi.advanceTimersByTime(650);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "Could not save"
+    );
+    expect(scratchpad.value).toBe("Keep this draft visible");
+    expect(onError).toHaveBeenCalledWith("Scratchpad storage unavailable");
+  });
+
   it("creates a local to-do from the [] composer prefix", async () => {
     await act(async () => {
       root.render(<NotesWorkspace {...baseProps()} />);
     });
     await flush();
+    openGeneralItems();
 
     const composer = container.querySelector<HTMLInputElement>(
       'input[placeholder^="Add a note to General"]'
@@ -285,6 +446,7 @@ describe("NotesWorkspace", () => {
       root.render(<NotesWorkspace {...baseProps({ onError })} />);
     });
     await flush();
+    openGeneralItems();
 
     expect(container.textContent).toContain("Saved locally");
     expect(container.textContent).not.toContain("Local notes could not be opened");
@@ -326,6 +488,7 @@ describe("NotesWorkspace", () => {
       root.render(<NotesWorkspace {...baseProps()} />);
     });
     await flush();
+    openGeneralItems();
 
     act(() => buttonWithText(container, "Keep the original")?.click());
     const edit = container.querySelector<HTMLInputElement>(".notes-inline-edit")!;
@@ -491,6 +654,7 @@ describe("NotesWorkspace", () => {
     });
     await flush();
     await flush();
+    openGeneralItems();
 
     const composer = container.querySelector<HTMLInputElement>(
       'input[placeholder^="Add a note to General"]'

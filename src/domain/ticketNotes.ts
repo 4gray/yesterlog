@@ -22,6 +22,13 @@ export interface WorkspaceNote {
   updatedAt: string;
 }
 
+export interface WorkspaceNoteDocument {
+  text: string;
+  /** Serialized local rich-text state; `text` remains the portable fallback. */
+  editorState?: string;
+  updatedAt: string;
+}
+
 export interface NoteJiraSnapshot {
   key: string;
   summary: string;
@@ -35,6 +42,8 @@ export interface NoteJiraSnapshot {
 export interface WorkspaceNoteBucket {
   containerId: string;
   jira?: NoteJiraSnapshot;
+  /** Optional freeform page. General uses it first; other containers stay item-first. */
+  document?: WorkspaceNoteDocument;
   notes: WorkspaceNote[];
 }
 
@@ -207,6 +216,20 @@ export const addWorkspaceNote = (
 ): WorkspaceNoteBucket => ({
   ...bucket,
   notes: [...bucket.notes, note]
+});
+
+export const updateWorkspaceNoteDocument = (
+  bucket: WorkspaceNoteBucket,
+  text: string,
+  updatedAt: string,
+  editorState?: string
+): WorkspaceNoteBucket => ({
+  ...bucket,
+  document: {
+    text,
+    ...(editorState ? { editorState } : {}),
+    updatedAt
+  }
 });
 
 export const updateWorkspaceNoteText = (

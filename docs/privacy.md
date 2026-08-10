@@ -31,6 +31,8 @@ IndexedDB stores:
 - `jiraWorklogs`
 - `favorites`
 - `personalNotes`
+- `workspaceNotes`
+- `noteNotebooks`
 - `bitbucketReviewResults`
 - `recurringEvents`
 - `recurringOccurrences`
@@ -123,11 +125,18 @@ No cloud request occurs merely because a view was opened. Cloud AI is called
 only after an explicit action such as drafting Reconstruct copy or rewriting a
 Recap version.
 
-## Personal notes and saved drafts
+## Personal notes, workspace notes, and saved drafts
 
-Personal notes never sync to Jira or Bitbucket. Reconstruct placements,
-durations, and AI drafts are cached per day. Recap drafts, version histories,
-trusted CV outcomes, and brag-doc snapshots remain local.
+Personal notes, ticket-note items, local notebooks, and the General notes
+Scratchpad never sync to Jira or Bitbucket. The Scratchpad is not counted as
+time and is not included in reports. Its Markdown fallback and rich formatting
+state are stored only in the local notes database. Notes AI briefings use Jira
+and optional pull-request context; local notes and Scratchpad text are
+deliberately excluded from their prompts.
+
+Reconstruct placements, durations, and AI drafts are cached per day. Recap
+drafts, version histories, trusted CV outcomes, and brag-doc snapshots remain
+local.
 
 Import and export actions occur only when you choose them.
 

@@ -60,6 +60,7 @@ import {
   parseWorkspaceNoteInput,
   setWorkspaceNoteArchived,
   setWorkspaceNoteDone,
+  updateWorkspaceNoteDocument,
   updateWorkspaceNoteText,
   type NoteJiraSnapshot,
   type NoteNotebook,
@@ -67,6 +68,7 @@ import {
   type NoteTicketScope,
   type WorkspaceNote,
   type WorkspaceNoteBucket,
+  type WorkspaceNoteDocument,
   type WorkspaceNoteFilter,
   type WorkspaceNoteJiraScope,
   type WorkspaceNoteType
@@ -82,6 +84,10 @@ import {
   saveWorkspaceNoteBuckets
 } from "../storage/db";
 import { toLocalDateKey } from "../utils/date";
+import {
+  ScratchpadEditor,
+  type ScratchpadEditorValue
+} from "./ScratchpadEditor";
 import type { TicketSearchHandler } from "./TicketPicker";
 
 export interface NotesWorkspaceProps {
@@ -109,6 +115,20 @@ interface BriefingCacheEntry {
   suggestions: NotesBriefingSuggestion[];
   sourceLabel: string;
 }
+
+type GeneralNotesSurface = "scratchpad" | "items";
+type ScratchpadSaveState = "saved" | "saving" | "error";
+
+interface ScratchpadDraft {
+  text: string;
+  editorState?: string;
+  plainText: string;
+}
+
+const SCRATCHPAD_SAVE_DELAY_MS = 650;
+
+const scratchpadDraftKey = ({ text, editorState }: ScratchpadDraft) =>
+  `${text}\u0000${editorState ?? ""}`;
 
 interface TargetOption {
   containerId: string;
@@ -309,6 +329,17 @@ const makeDemoData = (currentDate: Date) => {
     },
     {
       containerId: GENERAL_NOTES_CONTAINER_ID,
+      document: {
+        text: [
+          "Loose threads",
+          "",
+          "Redis rollout: confirm the fallback metric before Thursday.",
+          "Bring the new standup format to the platform retro.",
+          "",
+          "The Vitest migration still looks like a good Friday experiment."
+        ].join("\n"),
+        updatedAt: at(-1)
+      },
       notes: [
         note("demo-general-open", "todo", "Prep talking points for Monday 1:1", -1),
         note("demo-general-text", "text", "Vitest migration looks painless — try it in a side branch.", -2),
@@ -435,6 +466,12 @@ export const NotesWorkspace = ({
   const [loadError, setLoadError] = useState<string>();
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [selectedContainer, setSelectedContainer] = useState(GENERAL_NOTES_CONTAINER_ID);
+  const [generalSurface, setGeneralSurface] = useState<GeneralNotesSurface>("scratchpad");
+  const [scratchpadText, setScratchpadText] = useState("");
+  const [scratchpadEditorState, setScratchpadEditorState] = useState<string>();
+  const [scratchpadPlainText, setScratchpadPlainText] = useState("");
+  const [scratchpadSaveState, setScratchpadSaveState] =
+    useState<ScratchpadSaveState>("saved");
   const [scope, setScope] = useState<NoteTicketScope>("today");
   const [typeFilter, setTypeFilter] = useState<WorkspaceNoteFilter>("all");
   const [showArchive, setShowArchive] = useState(false);
@@ -462,6 +499,17 @@ export const NotesWorkspace = ({
   const bucketsRef = useRef<BucketMap>({});
   const notebooksRef = useRef<NoteNotebook[]>([]);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const scratchpadDraftRef = useRef<ScratchpadDraft>({
+    text: "",
+    plainText: ""
+  });
+  const scratchpadSavedKeyRef = useRef(scratchpadDraftKey(scratchpadDraftRef.current));
+  const scratchpadQueuedKeyRef = useRef(scratchpadDraftKey(scratchpadDraftRef.current));
+  const scratchpadRevisionRef = useRef(0);
+  const scratchpadSaveTimerRef = useRef<
+    ReturnType<typeof setTimeout> | undefined
+  >(undefined);
+  const flushScratchpadRef = useRef<() => void>(() => undefined);
   const jiraContextGenerationRef = useRef(0);
   const jiraDetailsPromisesRef = useRef(new Map<string, Promise<JiraIssueDetails | undefined>>());
   const prRequestTargetsRef = useRef(new Map<string, string>());
@@ -487,14 +535,35 @@ export const NotesWorkspace = ({
 
   const enqueueMutation = useCallback(
     (mutation: () => Promise<void>) => {
-      mutationQueueRef.current = mutationQueueRef.current
-        .then(mutation)
-        .catch((error) => {
-          onError(error instanceof Error ? error.message : "Could not save local notes.");
-        });
+      const pending = mutationQueueRef.current.then(mutation);
+      mutationQueueRef.current = pending.catch((error) => {
+        onError(error instanceof Error ? error.message : "Could not save local notes.");
+      });
+      return pending;
     },
     [onError]
   );
+
+  const hydrateScratchpad = useCallback((document?: WorkspaceNoteDocument) => {
+    if (scratchpadSaveTimerRef.current) {
+      clearTimeout(scratchpadSaveTimerRef.current);
+      scratchpadSaveTimerRef.current = undefined;
+    }
+    const draft: ScratchpadDraft = {
+      text: document?.text ?? "",
+      editorState: document?.editorState,
+      plainText: document?.text ?? ""
+    };
+    const draftKey = scratchpadDraftKey(draft);
+    scratchpadRevisionRef.current += 1;
+    scratchpadDraftRef.current = draft;
+    scratchpadSavedKeyRef.current = draftKey;
+    scratchpadQueuedKeyRef.current = draftKey;
+    setScratchpadText(draft.text);
+    setScratchpadEditorState(draft.editorState);
+    setScratchpadPlainText(draft.plainText);
+    setScratchpadSaveState("saved");
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -510,6 +579,8 @@ export const NotesWorkspace = ({
         setJiraNoteScope(undefined);
         setLoadedNotesContextKey(undefined);
         setSelectedContainer(GENERAL_NOTES_CONTAINER_ID);
+        setGeneralSurface("scratchpad");
+        hydrateScratchpad();
         setTypeFilter("all");
         setShowArchive(false);
         setComposerText("");
@@ -544,6 +615,7 @@ export const NotesWorkspace = ({
             demo.buckets.map((bucket) => [bucket.containerId, bucket])
           );
           setBucketState(nextBuckets);
+          hydrateScratchpad(nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document);
           notebooksRef.current = demo.notebooks;
           setNotebooks(demo.notebooks);
           setStoredActivity(demo.activity);
@@ -578,6 +650,7 @@ export const NotesWorkspace = ({
             savedBuckets.value.map((bucket) => [bucket.containerId, bucket])
           );
           setBucketState(nextBuckets);
+          hydrateScratchpad(nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document);
         }
         if (savedNotebooks.status === "fulfilled") {
           notebooksRef.current = savedNotebooks.value;
@@ -628,9 +701,11 @@ export const NotesWorkspace = ({
     void load();
     return () => {
       cancelled = true;
+      flushScratchpadRef.current();
     };
   }, [
     isDemo,
+    hydrateScratchpad,
     loadAttempt,
     setBucketState,
     notesContextKey
@@ -853,7 +928,7 @@ export const NotesWorkspace = ({
         title: "General notes",
         nick: "General",
         color: "#9d9b95",
-        statusLabel: "Scratchpad",
+        statusLabel: "Local",
         statusKind: "scratchpad",
         metaLine: "not tied to a ticket",
         isNotebook: false,
@@ -962,6 +1037,113 @@ export const NotesWorkspace = ({
     [enqueueMutation, isDemo, jiraNoteScope, setBucketState]
   );
 
+  const persistScratchpad = useCallback(
+    (draft: ScratchpadDraft, revision: number) => {
+      const draftKey = scratchpadDraftKey(draft);
+      const current = bucketsRef.current[GENERAL_NOTES_CONTAINER_ID] ?? {
+        containerId: GENERAL_NOTES_CONTAINER_ID,
+        notes: []
+      };
+      const nextBucket = updateWorkspaceNoteDocument(
+        current,
+        draft.text,
+        new Date().toISOString(),
+        draft.editorState
+      );
+      scratchpadQueuedKeyRef.current = draftKey;
+      setBucketState({
+        ...bucketsRef.current,
+        [GENERAL_NOTES_CONTAINER_ID]: nextBucket
+      });
+
+      if (isDemo) {
+        scratchpadSavedKeyRef.current = draftKey;
+        if (
+          scratchpadRevisionRef.current === revision &&
+          scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
+        ) {
+          setScratchpadSaveState("saved");
+        }
+        return;
+      }
+
+      void enqueueMutation(() => saveWorkspaceNoteBucket(nextBucket, null))
+        .then(() => {
+          scratchpadSavedKeyRef.current = draftKey;
+          if (
+            scratchpadRevisionRef.current === revision &&
+            scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
+          ) {
+            setScratchpadSaveState("saved");
+          }
+        })
+        .catch(() => {
+          if (scratchpadQueuedKeyRef.current === draftKey) {
+            scratchpadQueuedKeyRef.current = scratchpadSavedKeyRef.current;
+          }
+          if (
+            scratchpadRevisionRef.current === revision &&
+            scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
+          ) {
+            setScratchpadSaveState("error");
+          }
+        });
+    },
+    [enqueueMutation, isDemo, setBucketState]
+  );
+
+  const scheduleScratchpadSave = useCallback(
+    (value: ScratchpadEditorValue) => {
+      const draft: ScratchpadDraft = value;
+      const draftKey = scratchpadDraftKey(draft);
+      scratchpadRevisionRef.current += 1;
+      const revision = scratchpadRevisionRef.current;
+      scratchpadDraftRef.current = draft;
+      setScratchpadText(draft.text);
+      setScratchpadEditorState(draft.editorState);
+      setScratchpadPlainText(draft.plainText);
+
+      if (scratchpadSaveTimerRef.current) {
+        clearTimeout(scratchpadSaveTimerRef.current);
+      }
+      if (
+        draftKey === scratchpadSavedKeyRef.current &&
+        draftKey === scratchpadQueuedKeyRef.current
+      ) {
+        scratchpadSaveTimerRef.current = undefined;
+        setScratchpadSaveState("saved");
+        return;
+      }
+
+      setScratchpadSaveState("saving");
+      scratchpadSaveTimerRef.current = setTimeout(() => {
+        scratchpadSaveTimerRef.current = undefined;
+        persistScratchpad(draft, revision);
+      }, SCRATCHPAD_SAVE_DELAY_MS);
+    },
+    [persistScratchpad]
+  );
+
+  const flushScratchpad = useCallback(() => {
+    if (scratchpadSaveTimerRef.current) {
+      clearTimeout(scratchpadSaveTimerRef.current);
+      scratchpadSaveTimerRef.current = undefined;
+    }
+    const draft = scratchpadDraftRef.current;
+    const draftKey = scratchpadDraftKey(draft);
+    if (
+      draftKey === scratchpadSavedKeyRef.current &&
+      draftKey === scratchpadQueuedKeyRef.current
+    ) {
+      setScratchpadSaveState("saved");
+      return;
+    }
+    if (draftKey === scratchpadQueuedKeyRef.current) return;
+    persistScratchpad(draft, scratchpadRevisionRef.current);
+  }, [persistScratchpad]);
+
+  flushScratchpadRef.current = flushScratchpad;
+
   const addNoteToContainer = useCallback(
     (
       containerId: string,
@@ -989,17 +1171,26 @@ export const NotesWorkspace = ({
     [mutateBucket]
   );
 
-  const chooseContainer = useCallback((containerId: string) => {
-    setSelectedContainer(containerId);
-    setEditingNoteId(undefined);
-    if (
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(max-width: 760px)").matches
-    ) {
-      setSidebarOpen(false);
-    }
-  }, []);
+  const chooseContainer = useCallback(
+    (containerId: string) => {
+      if (
+        selectedContainer === GENERAL_NOTES_CONTAINER_ID &&
+        generalSurface === "scratchpad"
+      ) {
+        flushScratchpad();
+      }
+      setSelectedContainer(containerId);
+      setEditingNoteId(undefined);
+      if (
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(max-width: 760px)").matches
+      ) {
+        setSidebarOpen(false);
+      }
+    },
+    [flushScratchpad, generalSurface, selectedContainer]
+  );
 
   const createNotebook = () => {
     const title = notebookName.trim();
@@ -1556,6 +1747,13 @@ export const NotesWorkspace = ({
   });
   const counts = getWorkspaceNoteCounts(selectedBucket.notes);
   const progress = getWorkspaceNoteProgress(selectedBucket.notes);
+  const showScratchpad = selectedMeta.isGeneral && generalSurface === "scratchpad";
+  const scratchpadWordCount = scratchpadPlainText.trim()
+    ? scratchpadPlainText.trim().split(/\s+/).length
+    : 0;
+  const scratchpadLineCount = scratchpadPlainText
+    ? scratchpadPlainText.split("\n").length
+    : 0;
   const currentBriefing = selectedJiraKey ? briefingCache[selectedJiraKey] : undefined;
   const isPrOpen = selectedJiraKey ? Boolean(prOpen[selectedJiraKey]) : false;
   const isBriefingOpen = selectedJiraKey
@@ -1821,76 +2019,131 @@ export const NotesWorkspace = ({
               <span className="notes-editor-meta">{selectedMeta.metaLine}</span>
             </div>
             <h1>{selectedMeta.title}</h1>
-            <div className="notes-toolbar">
-              <div className="notes-filter-chips" role="group" aria-label="Note type">
-                {([
-                  ["all", "All"],
-                  ["todo", "To-dos"],
-                  ["text", "Notes"]
-                ] as const).map(([value, label]) => (
+            <div
+              className={`notes-toolbar${selectedMeta.isGeneral ? " is-general" : ""}`}
+            >
+              {selectedMeta.isGeneral ? (
+                <div
+                  className="notes-surface-tabs"
+                  role="tablist"
+                  aria-label="General notes view"
+                >
                   <button
                     type="button"
-                    className={typeFilter === value ? "is-active" : ""}
-                    onClick={() => setTypeFilter(value)}
-                    key={value}
+                    role="tab"
+                    aria-selected={generalSurface === "scratchpad"}
+                    aria-controls="general-scratchpad-panel"
+                    className={generalSurface === "scratchpad" ? "is-active" : ""}
+                    onClick={() => {
+                      setShowArchive(false);
+                      setGeneralSurface("scratchpad");
+                    }}
                   >
-                    {label}
+                    <FileText size={12} />
+                    Scratchpad
                   </button>
-                ))}
-              </div>
-              <span className="notes-progress">
-                {progress.total
-                  ? `${progress.done} of ${progress.total} done`
-                  : counts.total
-                    ? `${counts.total} ${counts.total === 1 ? "note" : "notes"}`
-                    : ""}
-              </span>
-              {prAvailable && !showArchive ? (
-                <button
-                  type="button"
-                  className={`notes-tool-button is-pr${isPrOpen ? " is-open" : ""}`}
-                  onClick={() =>
-                    selectedJiraKey &&
-                    setPrOpen((current) => ({
-                      ...current,
-                      [selectedJiraKey]: !current[selectedJiraKey]
-                    }))
-                  }
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={generalSurface === "items"}
+                    aria-controls="general-items-panel"
+                    className={generalSurface === "items" ? "is-active" : ""}
+                    onClick={() => {
+                      flushScratchpad();
+                      setGeneralSurface("items");
+                    }}
+                  >
+                    <ListTodo size={12} />
+                    Notes &amp; to-dos
+                    {counts.total ? <span>{counts.total}</span> : null}
+                  </button>
+                </div>
+              ) : null}
+
+              {showScratchpad ? (
+                <span
+                  className={`notes-scratchpad-save is-${scratchpadSaveState}`}
+                  role={scratchpadSaveState === "error" ? "alert" : "status"}
                 >
-                  <GitPullRequest size={11} />
-                  PR #{selectedPr?.pullRequestId ?? linkedPullRequest?.pullRequestId ?? 472}
-                  {selectedPrOpenItemCount > 0 ? (
-                    <i aria-label="Open pull request items" />
+                  {scratchpadSaveState === "saving"
+                    ? "Saving…"
+                    : scratchpadSaveState === "error"
+                      ? "Could not save"
+                      : "Saved locally"}
+                </span>
+              ) : (
+                <>
+                  <div className="notes-filter-chips" role="group" aria-label="Note type">
+                    {([
+                      ["all", "All"],
+                      ["todo", "To-dos"],
+                      ["text", "Notes"]
+                    ] as const).map(([value, label]) => (
+                      <button
+                        type="button"
+                        className={typeFilter === value ? "is-active" : ""}
+                        onClick={() => setTypeFilter(value)}
+                        key={value}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="notes-progress">
+                    {progress.total
+                      ? `${progress.done} of ${progress.total} done`
+                      : counts.total
+                        ? `${counts.total} ${counts.total === 1 ? "note" : "notes"}`
+                        : ""}
+                  </span>
+                  {prAvailable && !showArchive ? (
+                    <button
+                      type="button"
+                      className={`notes-tool-button is-pr${isPrOpen ? " is-open" : ""}`}
+                      onClick={() =>
+                        selectedJiraKey &&
+                        setPrOpen((current) => ({
+                          ...current,
+                          [selectedJiraKey]: !current[selectedJiraKey]
+                        }))
+                      }
+                    >
+                      <GitPullRequest size={11} />
+                      PR #{selectedPr?.pullRequestId ?? linkedPullRequest?.pullRequestId ?? 472}
+                      {selectedPrOpenItemCount > 0 ? (
+                        <i aria-label="Open pull request items" />
+                      ) : null}
+                    </button>
                   ) : null}
-                </button>
-              ) : null}
-              {selectedMeta.jira && !showArchive ? (
-                <button
-                  type="button"
-                  className={`notes-tool-button is-ai${isBriefingOpen ? " is-open" : ""}`}
-                  onClick={() => void openBriefing()}
-                  title={
-                    settings.aiEnabled || isDemo
-                      ? "AI briefing — risks and questions from ticket data"
-                      : "Enable an AI provider in Settings"
-                  }
-                >
-                  {currentBriefing?.status === "loading" ? (
-                    <LoaderCircle className="notes-spinner" size={11} />
-                  ) : (
-                    <Sparkles size={11} />
-                  )}
-                  {currentBriefing?.status === "loading" ? "Analyzing…" : "AI briefing"}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={`notes-tool-button${showArchive ? " is-archive-open" : ""}`}
-                onClick={() => setShowArchive((current) => !current)}
-              >
-                <Archive size={11} />
-                Archive · {counts.archived}
-              </button>
+                  {selectedMeta.jira && !showArchive ? (
+                    <button
+                      type="button"
+                      className={`notes-tool-button is-ai${isBriefingOpen ? " is-open" : ""}`}
+                      onClick={() => void openBriefing()}
+                      title={
+                        settings.aiEnabled || isDemo
+                          ? "AI briefing — risks and questions from ticket data"
+                          : "Enable an AI provider in Settings"
+                      }
+                    >
+                      {currentBriefing?.status === "loading" ? (
+                        <LoaderCircle className="notes-spinner" size={11} />
+                      ) : (
+                        <Sparkles size={11} />
+                      )}
+                      {currentBriefing?.status === "loading" ? "Analyzing…" : "AI briefing"}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`notes-tool-button${showArchive ? " is-archive-open" : ""}`}
+                    onClick={() => setShowArchive((current) => !current)}
+                  >
+                    <Archive size={11} />
+                    Archive · {counts.archived}
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
@@ -1912,8 +2165,50 @@ export const NotesWorkspace = ({
             </div>
           ) : null}
 
-          <div className="notes-editor-scroll">
-            <div className="notes-editor-column">
+          {showScratchpad ? (
+            <div
+              className="notes-editor-scroll notes-scratchpad-scroll"
+              id="general-scratchpad-panel"
+              role="tabpanel"
+              aria-label="General scratchpad"
+            >
+              <div className="notes-editor-column notes-scratchpad-column">
+                <section className="notes-scratchpad-sheet">
+                  <ScratchpadEditor
+                    initialText={scratchpadText}
+                    initialEditorState={scratchpadEditorState}
+                    onChange={scheduleScratchpadSave}
+                    onPlainTextChange={setScratchpadPlainText}
+                    onBlur={flushScratchpad}
+                    onError={(message) =>
+                      onErrorRef.current(`Scratchpad editor: ${message}`)
+                    }
+                  />
+                  <footer>
+                    <span>
+                      <LockKeyhole size={11} />
+                      Local only · never included in Jira or AI briefings
+                    </span>
+                    <span>
+                      {scratchpadWordCount} {scratchpadWordCount === 1 ? "word" : "words"}
+                      {scratchpadLineCount
+                        ? ` · ${scratchpadLineCount} ${scratchpadLineCount === 1 ? "line" : "lines"}`
+                        : ""}
+                    </span>
+                  </footer>
+                </section>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="notes-editor-scroll"
+              id={selectedMeta.isGeneral ? "general-items-panel" : undefined}
+              role={selectedMeta.isGeneral ? "tabpanel" : undefined}
+              aria-label={
+                selectedMeta.isGeneral ? "General notes and to-dos" : undefined
+              }
+            >
+              <div className="notes-editor-column">
               {isPrOpen && prAvailable && !showArchive ? (
                 <section className="notes-panel notes-pr-panel" aria-label="Bitbucket pull request">
                   <header>
@@ -2288,13 +2583,15 @@ export const NotesWorkspace = ({
                   </p>
                 </div>
               )}
+              </div>
             </div>
-          </div>
+          )}
 
-          <footer className="notes-composer-shell">
-            <div className="notes-editor-column">
-              {!showArchive ? (
-                <div className="notes-composer">
+          {!showScratchpad ? (
+            <footer className="notes-composer-shell">
+              <div className="notes-editor-column">
+                {!showArchive ? (
+                  <div className="notes-composer">
                   <button
                     type="button"
                     className={composerTodo ? "is-active" : ""}
@@ -2336,14 +2633,15 @@ export const NotesWorkspace = ({
                   >
                     Add
                   </button>
-                </div>
-              ) : (
-                <p className="notes-archive-caption">
-                  Viewing archived notes — restore one to bring it back.
-                </p>
-              )}
-            </div>
-          </footer>
+                  </div>
+                ) : (
+                  <p className="notes-archive-caption">
+                    Viewing archived notes — restore one to bring it back.
+                  </p>
+                )}
+              </div>
+            </footer>
+          ) : null}
         </main>
       </div>
 
