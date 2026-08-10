@@ -129,9 +129,10 @@ Recap version.
 
 Personal notes, ticket-note items, local notebooks, and the General notes
 Scratchpad never sync to Jira or Bitbucket. The Scratchpad is not counted as
-time and is not included in reports. Notes AI briefings use Jira and optional
-pull-request context; local notes and Scratchpad text are deliberately excluded
-from their prompts.
+time and is not included in reports. Its Markdown fallback and rich formatting
+state are stored only in the local notes database. Notes AI briefings use Jira
+and optional pull-request context; local notes and Scratchpad text are
+deliberately excluded from their prompts.
 
 Reconstruct placements, durations, and AI drafts are cached per day. Recap
 drafts, version histories, trusted CV outcomes, and brag-doc snapshots remain

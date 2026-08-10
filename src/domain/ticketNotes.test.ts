@@ -185,6 +185,25 @@ describe("immutable ticket-note CRUD", () => {
     expect(updated.notes).toBe(original.notes);
   });
 
+  it("keeps rich editor state beside the Markdown fallback", () => {
+    const original = bucket("GENERAL", [note("kept")]);
+    const editorState = JSON.stringify({
+      root: { type: "root", children: [{ type: "paragraph" }] }
+    });
+    const updated = updateWorkspaceNoteDocument(
+      original,
+      "## Heading",
+      "2026-07-24T13:00:00.000Z",
+      editorState
+    );
+
+    expect(updated.document).toEqual({
+      text: "## Heading",
+      editorState,
+      updatedAt: "2026-07-24T13:00:00.000Z"
+    });
+  });
+
   it("adds, edits, checks, archives, restores and deletes without mutating input", () => {
     const originalNote = note("todo", { type: "todo", text: " Original " });
     const original = bucket("TB-1", [originalNote]);

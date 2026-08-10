@@ -68,6 +68,7 @@ import {
   type NoteTicketScope,
   type WorkspaceNote,
   type WorkspaceNoteBucket,
+  type WorkspaceNoteDocument,
   type WorkspaceNoteFilter,
   type WorkspaceNoteJiraScope,
   type WorkspaceNoteType
@@ -83,6 +84,10 @@ import {
   saveWorkspaceNoteBuckets
 } from "../storage/db";
 import { toLocalDateKey } from "../utils/date";
+import {
+  ScratchpadEditor,
+  type ScratchpadEditorValue
+} from "./ScratchpadEditor";
 import type { TicketSearchHandler } from "./TicketPicker";
 
 export interface NotesWorkspaceProps {
@@ -114,7 +119,16 @@ interface BriefingCacheEntry {
 type GeneralNotesSurface = "scratchpad" | "items";
 type ScratchpadSaveState = "saved" | "saving" | "error";
 
+interface ScratchpadDraft {
+  text: string;
+  editorState?: string;
+  plainText: string;
+}
+
 const SCRATCHPAD_SAVE_DELAY_MS = 650;
+
+const scratchpadDraftKey = ({ text, editorState }: ScratchpadDraft) =>
+  `${text}\u0000${editorState ?? ""}`;
 
 interface TargetOption {
   containerId: string;
@@ -454,6 +468,8 @@ export const NotesWorkspace = ({
   const [selectedContainer, setSelectedContainer] = useState(GENERAL_NOTES_CONTAINER_ID);
   const [generalSurface, setGeneralSurface] = useState<GeneralNotesSurface>("scratchpad");
   const [scratchpadText, setScratchpadText] = useState("");
+  const [scratchpadEditorState, setScratchpadEditorState] = useState<string>();
+  const [scratchpadPlainText, setScratchpadPlainText] = useState("");
   const [scratchpadSaveState, setScratchpadSaveState] =
     useState<ScratchpadSaveState>("saved");
   const [scope, setScope] = useState<NoteTicketScope>("today");
@@ -483,9 +499,12 @@ export const NotesWorkspace = ({
   const bucketsRef = useRef<BucketMap>({});
   const notebooksRef = useRef<NoteNotebook[]>([]);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const scratchpadTextRef = useRef("");
-  const scratchpadSavedTextRef = useRef("");
-  const scratchpadQueuedTextRef = useRef("");
+  const scratchpadDraftRef = useRef<ScratchpadDraft>({
+    text: "",
+    plainText: ""
+  });
+  const scratchpadSavedKeyRef = useRef(scratchpadDraftKey(scratchpadDraftRef.current));
+  const scratchpadQueuedKeyRef = useRef(scratchpadDraftKey(scratchpadDraftRef.current));
   const scratchpadRevisionRef = useRef(0);
   const scratchpadSaveTimerRef = useRef<
     ReturnType<typeof setTimeout> | undefined
@@ -525,16 +544,24 @@ export const NotesWorkspace = ({
     [onError]
   );
 
-  const hydrateScratchpad = useCallback((text: string) => {
+  const hydrateScratchpad = useCallback((document?: WorkspaceNoteDocument) => {
     if (scratchpadSaveTimerRef.current) {
       clearTimeout(scratchpadSaveTimerRef.current);
       scratchpadSaveTimerRef.current = undefined;
     }
+    const draft: ScratchpadDraft = {
+      text: document?.text ?? "",
+      editorState: document?.editorState,
+      plainText: document?.text ?? ""
+    };
+    const draftKey = scratchpadDraftKey(draft);
     scratchpadRevisionRef.current += 1;
-    scratchpadTextRef.current = text;
-    scratchpadSavedTextRef.current = text;
-    scratchpadQueuedTextRef.current = text;
-    setScratchpadText(text);
+    scratchpadDraftRef.current = draft;
+    scratchpadSavedKeyRef.current = draftKey;
+    scratchpadQueuedKeyRef.current = draftKey;
+    setScratchpadText(draft.text);
+    setScratchpadEditorState(draft.editorState);
+    setScratchpadPlainText(draft.plainText);
     setScratchpadSaveState("saved");
   }, []);
 
@@ -553,7 +580,7 @@ export const NotesWorkspace = ({
         setLoadedNotesContextKey(undefined);
         setSelectedContainer(GENERAL_NOTES_CONTAINER_ID);
         setGeneralSurface("scratchpad");
-        hydrateScratchpad("");
+        hydrateScratchpad();
         setTypeFilter("all");
         setShowArchive(false);
         setComposerText("");
@@ -588,9 +615,7 @@ export const NotesWorkspace = ({
             demo.buckets.map((bucket) => [bucket.containerId, bucket])
           );
           setBucketState(nextBuckets);
-          hydrateScratchpad(
-            nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document?.text ?? ""
-          );
+          hydrateScratchpad(nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document);
           notebooksRef.current = demo.notebooks;
           setNotebooks(demo.notebooks);
           setStoredActivity(demo.activity);
@@ -625,9 +650,7 @@ export const NotesWorkspace = ({
             savedBuckets.value.map((bucket) => [bucket.containerId, bucket])
           );
           setBucketState(nextBuckets);
-          hydrateScratchpad(
-            nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document?.text ?? ""
-          );
+          hydrateScratchpad(nextBuckets[GENERAL_NOTES_CONTAINER_ID]?.document);
         }
         if (savedNotebooks.status === "fulfilled") {
           notebooksRef.current = savedNotebooks.value;
@@ -1015,27 +1038,29 @@ export const NotesWorkspace = ({
   );
 
   const persistScratchpad = useCallback(
-    (text: string, revision: number) => {
+    (draft: ScratchpadDraft, revision: number) => {
+      const draftKey = scratchpadDraftKey(draft);
       const current = bucketsRef.current[GENERAL_NOTES_CONTAINER_ID] ?? {
         containerId: GENERAL_NOTES_CONTAINER_ID,
         notes: []
       };
       const nextBucket = updateWorkspaceNoteDocument(
         current,
-        text,
-        new Date().toISOString()
+        draft.text,
+        new Date().toISOString(),
+        draft.editorState
       );
-      scratchpadQueuedTextRef.current = text;
+      scratchpadQueuedKeyRef.current = draftKey;
       setBucketState({
         ...bucketsRef.current,
         [GENERAL_NOTES_CONTAINER_ID]: nextBucket
       });
 
       if (isDemo) {
-        scratchpadSavedTextRef.current = text;
+        scratchpadSavedKeyRef.current = draftKey;
         if (
           scratchpadRevisionRef.current === revision &&
-          scratchpadTextRef.current === text
+          scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
         ) {
           setScratchpadSaveState("saved");
         }
@@ -1044,21 +1069,21 @@ export const NotesWorkspace = ({
 
       void enqueueMutation(() => saveWorkspaceNoteBucket(nextBucket, null))
         .then(() => {
-          scratchpadSavedTextRef.current = text;
+          scratchpadSavedKeyRef.current = draftKey;
           if (
             scratchpadRevisionRef.current === revision &&
-            scratchpadTextRef.current === text
+            scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
           ) {
             setScratchpadSaveState("saved");
           }
         })
         .catch(() => {
-          if (scratchpadQueuedTextRef.current === text) {
-            scratchpadQueuedTextRef.current = scratchpadSavedTextRef.current;
+          if (scratchpadQueuedKeyRef.current === draftKey) {
+            scratchpadQueuedKeyRef.current = scratchpadSavedKeyRef.current;
           }
           if (
             scratchpadRevisionRef.current === revision &&
-            scratchpadTextRef.current === text
+            scratchpadDraftKey(scratchpadDraftRef.current) === draftKey
           ) {
             setScratchpadSaveState("error");
           }
@@ -1068,18 +1093,22 @@ export const NotesWorkspace = ({
   );
 
   const scheduleScratchpadSave = useCallback(
-    (text: string) => {
+    (value: ScratchpadEditorValue) => {
+      const draft: ScratchpadDraft = value;
+      const draftKey = scratchpadDraftKey(draft);
       scratchpadRevisionRef.current += 1;
       const revision = scratchpadRevisionRef.current;
-      scratchpadTextRef.current = text;
-      setScratchpadText(text);
+      scratchpadDraftRef.current = draft;
+      setScratchpadText(draft.text);
+      setScratchpadEditorState(draft.editorState);
+      setScratchpadPlainText(draft.plainText);
 
       if (scratchpadSaveTimerRef.current) {
         clearTimeout(scratchpadSaveTimerRef.current);
       }
       if (
-        text === scratchpadSavedTextRef.current &&
-        text === scratchpadQueuedTextRef.current
+        draftKey === scratchpadSavedKeyRef.current &&
+        draftKey === scratchpadQueuedKeyRef.current
       ) {
         scratchpadSaveTimerRef.current = undefined;
         setScratchpadSaveState("saved");
@@ -1089,7 +1118,7 @@ export const NotesWorkspace = ({
       setScratchpadSaveState("saving");
       scratchpadSaveTimerRef.current = setTimeout(() => {
         scratchpadSaveTimerRef.current = undefined;
-        persistScratchpad(text, revision);
+        persistScratchpad(draft, revision);
       }, SCRATCHPAD_SAVE_DELAY_MS);
     },
     [persistScratchpad]
@@ -1100,16 +1129,17 @@ export const NotesWorkspace = ({
       clearTimeout(scratchpadSaveTimerRef.current);
       scratchpadSaveTimerRef.current = undefined;
     }
-    const text = scratchpadTextRef.current;
+    const draft = scratchpadDraftRef.current;
+    const draftKey = scratchpadDraftKey(draft);
     if (
-      text === scratchpadSavedTextRef.current &&
-      text === scratchpadQueuedTextRef.current
+      draftKey === scratchpadSavedKeyRef.current &&
+      draftKey === scratchpadQueuedKeyRef.current
     ) {
       setScratchpadSaveState("saved");
       return;
     }
-    if (text === scratchpadQueuedTextRef.current) return;
-    persistScratchpad(text, scratchpadRevisionRef.current);
+    if (draftKey === scratchpadQueuedKeyRef.current) return;
+    persistScratchpad(draft, scratchpadRevisionRef.current);
   }, [persistScratchpad]);
 
   flushScratchpadRef.current = flushScratchpad;
@@ -1718,10 +1748,12 @@ export const NotesWorkspace = ({
   const counts = getWorkspaceNoteCounts(selectedBucket.notes);
   const progress = getWorkspaceNoteProgress(selectedBucket.notes);
   const showScratchpad = selectedMeta.isGeneral && generalSurface === "scratchpad";
-  const scratchpadWordCount = scratchpadText.trim()
-    ? scratchpadText.trim().split(/\s+/).length
+  const scratchpadWordCount = scratchpadPlainText.trim()
+    ? scratchpadPlainText.trim().split(/\s+/).length
     : 0;
-  const scratchpadLineCount = scratchpadText ? scratchpadText.split("\n").length : 0;
+  const scratchpadLineCount = scratchpadPlainText
+    ? scratchpadPlainText.split("\n").length
+    : 0;
   const currentBriefing = selectedJiraKey ? briefingCache[selectedJiraKey] : undefined;
   const isPrOpen = selectedJiraKey ? Boolean(prOpen[selectedJiraKey]) : false;
   const isBriefingOpen = selectedJiraKey
@@ -2142,22 +2174,15 @@ export const NotesWorkspace = ({
             >
               <div className="notes-editor-column notes-scratchpad-column">
                 <section className="notes-scratchpad-sheet">
-                  <div className="notes-scratchpad-rule" aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <textarea
-                    value={scratchpadText}
-                    onChange={(event) =>
-                      scheduleScratchpadSave(event.target.value)
-                    }
+                  <ScratchpadEditor
+                    initialText={scratchpadText}
+                    initialEditorState={scratchpadEditorState}
+                    onChange={scheduleScratchpadSave}
+                    onPlainTextChange={setScratchpadPlainText}
                     onBlur={flushScratchpad}
-                    placeholder={
-                      "Start anywhere…\n\nWrite a running thought, paste a rough draft, or keep notes across as many lines as you need."
+                    onError={(message) =>
+                      onErrorRef.current(`Scratchpad editor: ${message}`)
                     }
-                    aria-label="General notes scratchpad"
-                    spellCheck
                   />
                   <footer>
                     <span>

@@ -254,11 +254,41 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
     await page.getByRole("button", { name: /^General notes\b/ }).click();
     const scratchpad = page.getByRole("textbox", { name: "General notes scratchpad" });
     await scratchpad.waitFor();
-    await scratchpad.fill("A running thought\n\nA second paragraph");
+    await scratchpad.fill("");
+    await scratchpad.pressSequentially("## ");
+    await scratchpad.pressSequentially("Release notes");
+    assert.equal(await scratchpad.locator("h2").textContent(), "Release notes");
+    await scratchpad.press("End");
+    await scratchpad.press("Enter");
+    await scratchpad.pressSequentially("* ");
+    await scratchpad.pressSequentially("First item");
+    assert.equal(await scratchpad.locator("li").textContent(), "First item");
+
+    await scratchpad.evaluate((element) => {
+      const heading = element.querySelector("h2");
+      if (!heading) throw new Error("Expected Scratchpad heading");
+      const range = document.createRange();
+      range.selectNodeContents(heading);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      document.dispatchEvent(new Event("selectionchange", { bubbles: true }));
+    });
+    await page.getByRole("button", { name: "Underline" }).click();
+    assert.equal(
+      await scratchpad.locator(".notes-rich-underline").textContent(),
+      "Release notes"
+    );
+
     await page.getByRole("tab", { name: /Notes & to-dos/ }).click();
     assert.ok(await page.getByRole("textbox", { name: /Add a note to General/ }).isVisible());
     await page.getByRole("tab", { name: "Scratchpad" }).click();
-    assert.equal(await scratchpad.inputValue(), "A running thought\n\nA second paragraph");
+    assert.equal(await scratchpad.locator("h2").textContent(), "Release notes");
+    assert.equal(await scratchpad.locator("li").textContent(), "First item");
+    assert.equal(
+      await scratchpad.locator(".notes-rich-underline").textContent(),
+      "Release notes"
+    );
 
     await clickNav(page, "REPORTS", "reports");
     assert.ok(await page.getByText("BY TICKET").isVisible());

@@ -108,8 +108,10 @@ details or jump into Add Time with the ticket preselected.
 Use a freeform Scratchpad in General notes for running thoughts, rough drafts,
 and multiline notes. Switch to structured notes and to-dos when something needs
 to become an item, or keep context attached to a Jira ticket or local notebook.
-Scratchpad changes save automatically on the device and are never included in
-Jira writes or AI briefing prompts.
+Type Markdown shortcuts such as `# `, `## `, `* `, or `1. ` to create headings
+and lists as you write, or use the compact toolbar for bold, italic, underline,
+strikethrough, and code. Scratchpad changes save automatically on the device
+and are never included in Jira writes or AI briefing prompts.
 
 <p align="center">
   <img src="./screenshots/v3.1.0/dark-notes.png" alt="Yesterlog Notes workspace with local notebooks, Jira-linked notes, and structured to-dos." width="900" />
@@ -174,7 +176,8 @@ import or export local notes, and use light, dark, or system appearance.
 
 ### Notes workspace
 
-- A multiline General scratchpad with local autosave and visible save status.
+- A rich General scratchpad with Markdown shortcuts, a formatting toolbar,
+  local autosave, and visible save status.
 - Separate structured notes and to-dos with filters, completion, and archive.
 - Local notebooks plus Jira-ticket containers built from recent work activity.
 - Optional live pull-request context and explicit AI briefings that never read

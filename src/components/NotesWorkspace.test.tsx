@@ -46,6 +46,40 @@ const storageMocks = vi.hoisted(() => ({
 
 vi.mock("../storage/db", () => storageMocks);
 
+vi.mock("./ScratchpadEditor", () => ({
+  ScratchpadEditor: ({
+    initialText,
+    onChange,
+    onBlur
+  }: {
+    initialText: string;
+    onChange: (value: {
+      text: string;
+      editorState: string;
+      plainText: string;
+    }) => void;
+    onBlur: () => void;
+  }) => (
+    <textarea
+      aria-label="General notes scratchpad"
+      value={initialText}
+      onChange={(event) =>
+        onChange({
+          text: event.target.value,
+          editorState: JSON.stringify({
+            root: {
+              type: "root",
+              children: [{ type: "paragraph", text: event.target.value }]
+            }
+          }),
+          plainText: event.target.value
+        })
+      }
+      onBlur={onBlur}
+    />
+  )
+}));
+
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
   jiraEmail: "person@example.com",
@@ -273,7 +307,8 @@ describe("NotesWorkspace", () => {
       expect.objectContaining({
         containerId: "GENERAL",
         document: expect.objectContaining({
-          text: "First thought\nSecond thought"
+          text: "First thought\nSecond thought",
+          editorState: expect.stringContaining('"root"')
         }),
         notes: []
       }),

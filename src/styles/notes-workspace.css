@@ -837,32 +837,86 @@
     inset 0 1px rgba(255, 255, 255, 0.018);
 }
 
-.notes-scratchpad-rule {
-  position: absolute;
-  z-index: 1;
-  top: 21px;
-  left: 27px;
+.notes-rich-toolbar {
+  min-width: 0;
+  min-height: 43px;
+  padding: 7px 10px;
+  flex: none;
   display: flex;
-  gap: 5px;
-  pointer-events: none;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  background: rgba(8, 9, 12, 0.38);
+  scrollbar-width: none;
 }
 
-.notes-scratchpad-rule span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(237, 196, 136, 0.42);
+.notes-rich-toolbar::-webkit-scrollbar {
+  display: none;
 }
 
-.notes-scratchpad-sheet textarea {
-  width: 100%;
+.notes-rich-toolbar-group {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.notes-rich-toolbar > i {
+  width: 1px;
+  height: 17px;
+  flex: none;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.notes-rich-toolbar button {
+  width: 27px;
+  height: 27px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nw-faint-2);
+  cursor: pointer;
+}
+
+.notes-rich-toolbar button:hover {
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--nw-text);
+}
+
+.notes-rich-toolbar button.is-active {
+  background: rgba(237, 196, 136, 0.13);
+  color: var(--nw-amber);
+  box-shadow: inset 0 0 0 1px rgba(237, 196, 136, 0.13);
+}
+
+.notes-rich-toolbar-hint {
+  margin-left: auto;
+  padding-right: 3px;
+  flex: none;
+  color: var(--nw-faint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 8.5px;
+  white-space: nowrap;
+}
+
+.notes-rich-editor {
+  position: relative;
   min-height: 0;
   flex: 1;
-  padding: 48px 40px 32px;
-  resize: none;
-  border: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--nw-control) transparent;
+}
+
+.notes-rich-content {
+  width: 100%;
+  min-height: 100%;
+  padding: 33px 40px 54px;
   outline: 0;
-  background: transparent;
   color: var(--nw-text);
   caret-color: var(--nw-amber);
   font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
@@ -870,13 +924,150 @@
   font-weight: 450;
   letter-spacing: 0.002em;
   line-height: 1.75;
-  scrollbar-width: thin;
-  scrollbar-color: var(--nw-control) transparent;
 }
 
-.notes-scratchpad-sheet textarea::placeholder {
+.notes-rich-placeholder {
+  position: absolute;
+  top: 34px;
+  right: 40px;
+  left: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   color: var(--nw-faint-2);
-  opacity: 1;
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  pointer-events: none;
+}
+
+.notes-rich-placeholder span {
+  color: var(--nw-faint);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 9.5px;
+}
+
+.notes-rich-placeholder kbd {
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--nw-secondary);
+  font: inherit;
+}
+
+.notes-rich-paragraph {
+  margin: 0 0 9px;
+}
+
+.notes-rich-heading {
+  margin: 0;
+  color: var(--nw-primary);
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-weight: 730;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.notes-rich-heading-h1 {
+  margin-bottom: 18px;
+  font-size: 29px;
+}
+
+.notes-rich-heading-h2 {
+  margin-top: 11px;
+  margin-bottom: 13px;
+  font-size: 23px;
+}
+
+.notes-rich-heading-h3 {
+  margin-top: 8px;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.notes-rich-list {
+  margin: 3px 0 13px;
+  padding-left: 24px;
+}
+
+.notes-rich-list-item {
+  margin: 2px 0;
+  padding-left: 3px;
+}
+
+.notes-rich-list-item::marker {
+  color: var(--nw-amber);
+}
+
+.notes-rich-list-item-nested {
+  list-style: none;
+}
+
+.notes-rich-quote {
+  margin: 6px 0 14px;
+  padding: 2px 0 2px 15px;
+  border-left: 2px solid rgba(237, 196, 136, 0.48);
+  color: var(--nw-body);
+  font-style: italic;
+}
+
+.notes-rich-code-block {
+  display: block;
+  margin: 8px 0 16px;
+  padding: 13px 15px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  background: rgba(5, 6, 8, 0.62);
+  color: #c8d5ed;
+  font: 12px/1.65 ui-monospace, "SF Mono", Menlo, monospace;
+  tab-size: 2;
+}
+
+.notes-rich-bold {
+  font-weight: 760;
+}
+
+.notes-rich-italic {
+  font-style: italic;
+}
+
+.notes-rich-underline {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.notes-rich-strikethrough {
+  color: var(--nw-secondary);
+  text-decoration: line-through;
+}
+
+.notes-rich-underline-strikethrough {
+  color: var(--nw-secondary);
+  text-decoration: underline line-through;
+  text-underline-offset: 3px;
+}
+
+.notes-rich-inline-code {
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(127, 200, 232, 0.09);
+  color: var(--nw-cyan);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.notes-rich-highlight {
+  border-radius: 2px;
+  background: rgba(237, 196, 136, 0.2);
+  color: var(--nw-primary);
+}
+
+.notes-rich-link {
+  color: #90aaff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .notes-scratchpad-sheet > footer {
@@ -1755,9 +1946,14 @@
     padding-bottom: 16px;
   }
 
-  .notes-scratchpad-sheet textarea {
+  .notes-rich-content {
     padding-right: 26px;
     padding-left: 26px;
+  }
+
+  .notes-rich-placeholder {
+    right: 26px;
+    left: 26px;
   }
 
   .notes-editor-meta {
@@ -1800,13 +1996,33 @@
     padding-left: 7px;
   }
 
-  .notes-scratchpad-sheet textarea {
-    padding: 43px 20px 26px;
+  .notes-rich-content {
+    padding: 27px 20px 42px;
     font-size: 14px;
   }
 
-  .notes-scratchpad-rule {
+  .notes-rich-placeholder {
+    top: 28px;
+    right: 20px;
     left: 20px;
+    font-size: 14px;
+  }
+
+  .notes-rich-toolbar {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+
+  .notes-rich-toolbar-hint {
+    display: none;
+  }
+
+  .notes-rich-heading-h1 {
+    font-size: 25px;
+  }
+
+  .notes-rich-heading-h2 {
+    font-size: 21px;
   }
 
   .notes-scratchpad-sheet > footer > span:first-child {

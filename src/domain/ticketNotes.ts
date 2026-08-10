@@ -24,6 +24,8 @@ export interface WorkspaceNote {
 
 export interface WorkspaceNoteDocument {
   text: string;
+  /** Serialized local rich-text state; `text` remains the portable fallback. */
+  editorState?: string;
   updatedAt: string;
 }
 
@@ -219,10 +221,15 @@ export const addWorkspaceNote = (
 export const updateWorkspaceNoteDocument = (
   bucket: WorkspaceNoteBucket,
   text: string,
-  updatedAt: string
+  updatedAt: string,
+  editorState?: string
 ): WorkspaceNoteBucket => ({
   ...bucket,
-  document: { text, updatedAt }
+  document: {
+    text,
+    ...(editorState ? { editorState } : {}),
+    updatedAt
+  }
 });
 
 export const updateWorkspaceNoteText = (
