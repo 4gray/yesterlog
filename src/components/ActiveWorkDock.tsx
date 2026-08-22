@@ -110,8 +110,12 @@ const DockCard = ({
           </span>
         )}
         <span className="dock-card-spacer" />
-        {loggedHours > 0.01 && <span className="dock-card-logged">{formatHours(loggedHours)} logged</span>}
-        {createdRelative && <span className="dock-card-activity">{createdRelative}</span>}
+        {/* One trailing fact only — both together crowd the project name out. */}
+        {loggedHours > 0.01 ? (
+          <span className="dock-card-logged">{formatHours(loggedHours)} logged</span>
+        ) : (
+          createdRelative && <span className="dock-card-activity">{createdRelative}</span>
+        )}
       </div>
     </div>
   );

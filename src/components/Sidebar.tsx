@@ -48,6 +48,10 @@ const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof
   { id: "recap", label: "RECAP", Icon: Sparkles }
 ];
 
+/** Visible primary-nav views in sidebar order — drives the ⌘1…⌘9 shortcuts. */
+export const getVisibleNavViews = (showReview: boolean) =>
+  NAV.filter((item) => item.id !== "review" || showReview).map(({ id, label }) => ({ id, label }));
+
 /** Reports sub-pages, in sidebar order. Estimates is intentionally deferred. */
 export const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
   { id: "summary", label: "Summary" },
@@ -59,10 +63,8 @@ export const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
 
 interface SidebarProps {
   view: AppView;
-  reportTab: ReportTab;
   collapsed: boolean;
   onViewChange: (view: AppView) => void;
-  onReportTabChange: (tab: ReportTab) => void;
   onToggleCollapse: () => void;
   syncLabel: string;
   syncState: AppSyncState;
@@ -72,10 +74,8 @@ interface SidebarProps {
 
 export const Sidebar = ({
   view,
-  reportTab,
   collapsed,
   onViewChange,
-  onReportTabChange,
   onToggleCollapse,
   syncLabel,
   syncState,
@@ -83,9 +83,6 @@ export const Sidebar = ({
   settingsDirty
 }: SidebarProps) => {
   const visibleNav = NAV.filter((item) => item.id !== "review" || showReview);
-  // The sub-nav sits directly under the (last) REPORTS row while Reports is the
-  // active section and the sidebar is expanded — collapsed hides all labels.
-  const showReportSub = view === "reports" && !collapsed;
 
   // Icon-only rail: labels are invisible, so each control gets a side tooltip.
   const withRailTip = (node: ReactNode, text: string) =>
@@ -114,23 +111,6 @@ export const Sidebar = ({
               </button>,
               label
             )}
-            {id === "reports" && showReportSub ? (
-              <div className="report-subnav" role="tablist" aria-label="Reports pages">
-                {REPORT_TABS.filter((tab) => tab.id !== "reviews" || showReview).map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    className={`report-subnav-item ${reportTab === tab.id ? "active" : ""}`}
-                    aria-selected={reportTab === tab.id}
-                    onClick={() => onReportTabChange(tab.id)}
-                  >
-                    <span className="report-subnav-dot" />
-                    <span className="nav-label">{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </Fragment>
         ))}
       </nav>

@@ -1,7 +1,8 @@
-const loadingViewStyle = { display: "grid", placeItems: "center" } as const;
+import { Loader2 } from "lucide-react";
 
 export const LoadingView = () => (
-  <div className="view" style={loadingViewStyle}>
-    <span className="sync-label">{"LOADING\u2026"}</span>
+  <div className="view loading-view" role="status" aria-label="Loading">
+    <Loader2 className="spin" size={20} strokeWidth={1.9} />
+    <span className="loading-view-label">{"LOADING…"}</span>
   </div>
 );

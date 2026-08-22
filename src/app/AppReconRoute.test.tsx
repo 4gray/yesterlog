@@ -48,7 +48,7 @@ const render = (overrides: Partial<ComponentProps<typeof AppReconRoute>> = {}) =
 describe("AppReconRoute", () => {
   it("renders the Reconstruct view for the current day", () => {
     const markup = render();
-    expect(markup).toContain("RECONSTRUCT —");
+    expect(markup).toContain("RECONSTRUCT");
     expect(markup).toContain("WORKING DAY");
   });
 

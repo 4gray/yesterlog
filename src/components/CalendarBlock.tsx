@@ -85,7 +85,9 @@ const CalendarBlockImpl = ({
   onBlockDrag
 }: CalendarBlockProps) => {
   const durationSeconds = Math.round((labelEndMin - labelStartMin) * 60);
-  const compact = height < 34;
+  // Two stacked rows (head + meta) need ~46px with padding; anything shorter
+  // renders the single-row layout so the meta line never gets half-clipped.
+  const compact = height < 46;
   const title = titleFor(item);
   const detail = detailFor(item);
   const canMove = Boolean(draggable && onBlockDrag);

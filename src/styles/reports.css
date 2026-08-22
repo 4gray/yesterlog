@@ -1,4 +1,37 @@
 /* ============================ REPORTS view ============================ */
+.report-tabs {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px var(--header-pad-x) 0;
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+}
+
+.report-tab {
+  padding: 8px 12px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.report-tab:hover {
+  color: var(--text-strong);
+}
+
+.report-tab.active {
+  color: var(--text-bright);
+  border-bottom-color: var(--blue);
+}
+
 .reports-header {
   flex: none;
   padding: 24px var(--header-pad-x) 22px;
@@ -631,57 +664,6 @@
 }
 
 /* ==================== REPORTS · sidebar sub-nav ==================== */
-.report-subnav {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin: 2px 0 4px 22px;
-  padding-left: 11px;
-  border-left: 1px solid var(--border);
-}
-
-.report-subnav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border: none;
-  background: none;
-  border-radius: var(--radius-sm);
-  color: var(--dim);
-  white-space: nowrap;
-  transition: color 120ms ease, background 120ms ease;
-}
-
-.report-subnav-item .nav-label {
-  font-family: var(--font-sans);
-  font-size: 11.5px;
-  letter-spacing: 0.01em;
-}
-
-.report-subnav-item:hover {
-  color: var(--text-strong);
-  background: var(--bg-hover);
-}
-
-.report-subnav-item.active {
-  color: var(--text-bright);
-  background: var(--bg-active);
-}
-
-.report-subnav-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex: none;
-  background: var(--faint);
-  transition: background 120ms ease;
-}
-
-.report-subnav-item.active .report-subnav-dot {
-  background: var(--blue);
-}
-
 /* ==================== REPORTS · insight page scaffolding ==================== */
 /* Slim summary chart when it is the only panel in its column. */
 .chart-panel.is-only {

@@ -5,7 +5,7 @@ import { formatShortcut } from "./utils/platform";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppShellFrame } from "./app/AppShellFrame";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
-import type { AppView } from "./components/Sidebar";
+import { getVisibleNavViews, type AppView } from "./components/Sidebar";
 import type { SettingsSection } from "./components/SettingsView";
 import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAppConnectionState } from "./app/useAppConnectionState";
@@ -19,6 +19,7 @@ import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
 import { useCommandPalette } from "./app/useCommandPalette";
+import { useViewShortcuts } from "./app/useViewShortcuts";
 import { useOnlineStatus } from "./app/useOnlineStatus";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
@@ -595,8 +596,12 @@ export const App = () => {
   // A time-entry modal owns the screen and its own Esc handler; letting the
   // palette stack on top would leave one Esc closing both and losing the entry.
   const hasOpenTimeEntryModal = Boolean(addModalDate || editingWorklog || editingPersonalNote);
-  const commandPalette = useCommandPalette({
-    enabled: !welcomeFlow.isWelcomeVisible && !isBooting && !hasOpenTimeEntryModal
+  const globalShortcutsEnabled = !welcomeFlow.isWelcomeVisible && !isBooting && !hasOpenTimeEntryModal;
+  const commandPalette = useCommandPalette({ enabled: globalShortcutsEnabled });
+  useViewShortcuts({
+    enabled: globalShortcutsEnabled,
+    showReview: isBitbucketReady,
+    onViewChange: handleShellViewChange
   });
 
   // TODO(nl-parsing): the brief's headline command is free-text ("Log 2h on
@@ -655,16 +660,31 @@ export const App = () => {
           selectWeekViewMode("timeline");
           handleViewChange("week");
         }
+      },
+      ...getVisibleNavViews(isBitbucketReady).map(({ id, label }, index) => ({
+        id: `go-view-${id}`,
+        label: `Go to ${label.charAt(0)}${label.slice(1).toLowerCase()}`,
+        hint: formatShortcut(String(index + 1)),
+        run: () => handleShellViewChange(id)
+      })),
+      {
+        id: "toggle-theme",
+        label: effectiveTheme === "dark" ? "Switch to light theme" : "Switch to dark theme",
+        run: () => selectTheme(effectiveTheme === "dark" ? "light" : "dark")
       }
     ],
     [
       addTimeModalActions.openTrackingShortcut,
+      effectiveTheme,
       goToCurrentWeek,
       goToNextWeek,
       goToPreviousWeek,
+      handleShellViewChange,
       handleSync,
       handleViewChange,
+      isBitbucketReady,
       isConfigured,
+      selectTheme,
       selectWeekViewMode,
       syncState,
       weekViewMode
@@ -692,10 +712,8 @@ export const App = () => {
       isBooting={isBooting}
       theme={effectiveTheme}
       view={view}
-      reportTab={reportTab}
       sidebarCollapsed={sidebarCollapsed}
       onViewChange={handleShellViewChange}
-      onReportTabChange={setReportTab}
       onToggleSidebarCollapsed={toggleSidebarCollapsed}
       syncLabel={syncLabel}
       syncState={syncState}

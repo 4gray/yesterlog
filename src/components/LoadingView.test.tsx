@@ -29,8 +29,8 @@ describe("LoadingView", () => {
     const view = container.querySelector<HTMLElement>(".view");
 
     expect(view).not.toBeNull();
-    expect(view?.style.display).toBe("grid");
-    expect(view?.style.placeItems).toBe("center");
-    expect(container.querySelector(".sync-label")?.textContent).toBe("LOADING\u2026");
+    expect(view?.classList.contains("loading-view")).toBe(true);
+    expect(view?.getAttribute("role")).toBe("status");
+    expect(container.querySelector(".loading-view-label")?.textContent).toBe("LOADING\u2026");
   });
 });
