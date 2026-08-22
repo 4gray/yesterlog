@@ -3,6 +3,7 @@ import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings, JiraTicket, JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import type { RunJiraSync } from "./backgroundJiraRefresh";
 import { useJiraWorklogs, type JiraWorklogPayload, type JiraWorklogsClient } from "./useJiraWorklogs";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -66,6 +67,16 @@ const payload: JiraWorklogPayload = {
   comment: "Added through the modal"
 };
 
+const deferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
 const syncResult = (overrides: Partial<SyncResult> = {}): SyncResult => ({
   weekKey: "2026-06-15",
   weekStartISO: "2026-06-15T00:00:00.000Z",
@@ -118,7 +129,7 @@ let saveWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: Worklo
 let deleteWorklogAllocationPreference: ReturnType<typeof vi.fn<(preferenceKey: string) => Promise<void>>>;
 let onWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => void>>;
 let onWorklogAllocationPreferenceRemoved: ReturnType<typeof vi.fn<(preferenceKey: string) => void>>;
-let runSync: ReturnType<typeof vi.fn<(settingsForSync?: AppSettings, options?: { queueAfterCurrent?: boolean }) => Promise<SyncResult | undefined>>>;
+let runSync: ReturnType<typeof vi.fn<RunJiraSync>>;
 let loadTickets: ReturnType<typeof vi.fn<(settingsForLoad?: AppSettings) => Promise<void>>>;
 let onSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => void>>;
 let showSuccess: ReturnType<typeof vi.fn<(message: string) => void>>;
@@ -222,6 +233,40 @@ describe("useJiraWorklogs", () => {
     expect(getApi().isLogging).toBe(false);
   });
 
+  it("finishes logging as soon as Jira accepts while reconciliation stays pending", async () => {
+    const pendingSync = deferred<SyncResult | undefined>();
+    const pendingTickets = deferred<void>();
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "20002",
+      issueKey: "TB-22",
+      timeSpentSeconds: 1800
+    });
+    runSync.mockReturnValue(pendingSync.promise);
+    loadTickets.mockReturnValue(pendingTickets.promise);
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(getApi().handleAddWorklog(payload)).resolves.toBe(true);
+    });
+
+    expect(getApi().isLogging).toBe(false);
+    expect(showSuccess).toHaveBeenCalledWith("Logged 0h 30m to TB-22.");
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
+    expect(loadTickets).toHaveBeenCalledWith(settings);
+
+    pendingSync.resolve(syncResult());
+    pendingTickets.resolve(undefined);
+    await act(async () => {
+      await Promise.all([pendingSync.promise, pendingTickets.promise]);
+    });
+  });
+
   it("creates a Jira worklog, queues sync, saves an optimistic merge, and refreshes tickets", async () => {
     const baseSync = syncResult();
     const freshSync = syncResult({ syncedAt: "2026-06-18T11:00:00.000Z" });
@@ -246,7 +291,11 @@ describe("useJiraWorklogs", () => {
       comment: "Added through the modal"
     });
     expect(showSuccess).toHaveBeenCalledWith("Logged 0h 30m to TB-22.");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
     expect(saveSyncResult).toHaveBeenCalledTimes(1);
     expect(onSyncResult).toHaveBeenCalledTimes(1);
     expect(onSyncResult.mock.calls[0][0]).toMatchObject({
@@ -260,12 +309,14 @@ describe("useJiraWorklogs", () => {
       timeSpentSeconds: 1800,
       comment: "Added through the modal"
     });
+    const reconciled = await runSync.mock.calls[0]?.[1]?.reconcile?.(freshSync);
+    expect(reconciled?.daySummaries["2026-06-18"].worklogs[0]).toMatchObject({ id: "20002" });
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().logError).toBeUndefined();
     expect(getApi().isLogging).toBe(false);
   });
 
-  it("does not save an optimistic merge when the fresh sync already contains the created worklog", async () => {
+  it("keeps the optimistic cache without reapplying when the fresh sync already contains the worklog", async () => {
     const freshSync = syncResult({
       trackedSeconds: 1800,
       issueCount: 1,
@@ -291,8 +342,9 @@ describe("useJiraWorklogs", () => {
       await expect(getApi().handleAddWorklog(payload)).resolves.toBe(true);
     });
 
-    expect(saveSyncResult).not.toHaveBeenCalled();
-    expect(onSyncResult).not.toHaveBeenCalled();
+    await expect(runSync.mock.calls[0]?.[1]?.reconcile?.(freshSync)).resolves.toBe(freshSync);
+    expect(saveSyncResult).toHaveBeenCalledTimes(1);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
     expect(loadTickets).toHaveBeenCalledTimes(1);
   });
 
@@ -343,7 +395,10 @@ describe("useJiraWorklogs", () => {
       issueKey: "TB-22",
       timeSpentSeconds: 80 * 3600
     });
-    runSync.mockResolvedValue(syncResult());
+    runSync.mockImplementation(async (_settings, options) => {
+      const fresh = syncResult();
+      return options?.reconcile ? options.reconcile(fresh) : fresh;
+    });
     renderHarness({
       currentEditingWorklog: null,
       currentSyncResult: syncResult({
@@ -452,14 +507,14 @@ describe("useJiraWorklogs", () => {
     expect(getApi().isLogging).toBe(false);
   });
 
-  it("updates the editing worklog issue and refreshes after sync", async () => {
+  it("updates the cached worklog immediately and refreshes in the background", async () => {
     updateWorklog.mockResolvedValue({
       ok: true,
       worklogId: "20001",
       issueKey: "TB-22",
       timeSpentSeconds: 3600
     });
-    renderHarness();
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
 
     await act(async () => {
       await expect(getApi().handleUpdateWorklog({ ...payload, timeSpentSeconds: 3600 })).resolves.toBe(true);
@@ -474,9 +529,46 @@ describe("useJiraWorklogs", () => {
       comment: payload.comment
     });
     expect(showSuccess).toHaveBeenCalledWith("Updated 1h on TB-22.");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(onSyncResult.mock.calls[0][0].daySummaries["2026-06-18"].worklogs[0]).toMatchObject({
+      id: editingWorklog.id,
+      started: payload.startedISO,
+      timeSpentSeconds: 3600,
+      comment: payload.comment
+    });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isLogging).toBe(false);
+  });
+
+  it("finishes an update while its background refresh is still pending", async () => {
+    const pendingSync = deferred<SyncResult | undefined>();
+    const pendingTickets = deferred<void>();
+    updateWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      issueKey: editingWorklog.issueKey,
+      timeSpentSeconds: 3600
+    });
+    runSync.mockReturnValue(pendingSync.promise);
+    loadTickets.mockReturnValue(pendingTickets.promise);
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
+
+    await act(async () => {
+      await expect(getApi().handleUpdateWorklog({ ...payload, timeSpentSeconds: 3600 })).resolves.toBe(true);
+    });
+
+    expect(getApi().isLogging).toBe(false);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+
+    pendingSync.resolve(syncResultWithEditingWorklog());
+    pendingTickets.resolve(undefined);
+    await act(async () => {
+      await Promise.all([pendingSync.promise, pendingTickets.promise]);
+    });
   });
 
   it("moves an editing worklog to the selected ticket and updates the cached week immediately", async () => {
@@ -524,8 +616,46 @@ describe("useJiraWorklogs", () => {
     });
     expect(saveSyncResult).toHaveBeenCalledTimes(1);
     expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("finishes an issue move while its background refresh is still pending", async () => {
+    const pendingSync = deferred<SyncResult | undefined>();
+    const pendingTickets = deferred<void>();
+    moveWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      sourceIssueKey: editingWorklog.issueKey,
+      targetIssueKey: targetTicket.key,
+      adjustEstimate: "auto"
+    });
+    runSync.mockReturnValue(pendingSync.promise);
+    loadTickets.mockReturnValue(pendingTickets.promise);
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleUpdateWorklog({
+          ...payload,
+          issueKey: targetTicket.key,
+          ticket: targetTicket
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(getApi().isLogging).toBe(false);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+
+    pendingSync.resolve(syncResultWithEditingWorklog());
+    pendingTickets.resolve(undefined);
+    await act(async () => {
+      await Promise.all([pendingSync.promise, pendingTickets.promise]);
+    });
   });
 
   it("keeps an accepted Jira move successful when local persistence and refresh fail", async () => {
@@ -554,7 +684,11 @@ describe("useJiraWorklogs", () => {
 
     expect(onSyncResult).toHaveBeenCalledTimes(1);
     expect(saveSyncResult).toHaveBeenCalledTimes(1);
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(showSuccess).toHaveBeenCalledWith("Moved worklog from TB-22 to TB-23.");
     expect(showError).not.toHaveBeenCalled();
@@ -606,13 +740,13 @@ describe("useJiraWorklogs", () => {
     expect(getApi().isDeletingWorklog).toBe(false);
   });
 
-  it("deletes a Jira worklog and refreshes after sync", async () => {
+  it("deletes the cached Jira worklog immediately and refreshes in the background", async () => {
     deleteWorklog.mockResolvedValue({
       ok: true,
       worklogId: "20001",
       issueKey: "TB-22"
     });
-    renderHarness();
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
 
     await act(async () => {
       await expect(getApi().handleDeleteWorklog()).resolves.toBe(true);
@@ -624,9 +758,45 @@ describe("useJiraWorklogs", () => {
       worklogId: "20001"
     });
     expect(showSuccess).toHaveBeenCalledWith("Deleted worklog from TB-22.");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(onSyncResult.mock.calls[0][0]).toMatchObject({
+      trackedSeconds: 0,
+      worklogCount: 0,
+      issueCount: 0
+    });
+    expect(onSyncResult.mock.calls[0][0].daySummaries["2026-06-18"].worklogs).toEqual([]);
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: expect.any(Function)
+    }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isDeletingWorklog).toBe(false);
+  });
+
+  it("finishes a deletion while its background refresh is still pending", async () => {
+    const pendingSync = deferred<SyncResult | undefined>();
+    const pendingTickets = deferred<void>();
+    deleteWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: editingWorklog.id,
+      issueKey: editingWorklog.issueKey
+    });
+    runSync.mockReturnValue(pendingSync.promise);
+    loadTickets.mockReturnValue(pendingTickets.promise);
+    renderHarness({ currentSyncResult: syncResultWithEditingWorklog() });
+
+    await act(async () => {
+      await expect(getApi().handleDeleteWorklog()).resolves.toBe(true);
+    });
+
+    expect(getApi().isDeletingWorklog).toBe(false);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+
+    pendingSync.resolve(syncResultWithEditingWorklog());
+    pendingTickets.resolve(undefined);
+    await act(async () => {
+      await Promise.all([pendingSync.promise, pendingTickets.promise]);
+    });
   });
 
   it("reports delete failures", async () => {

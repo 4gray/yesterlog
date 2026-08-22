@@ -463,7 +463,8 @@ const syncResult = (
   daySummaries: {},
   sourceWorklogs,
   scanStartISO: "2026-04-01T00:00:00.000Z",
-  scanEndExclusiveISO: "2026-08-10T00:00:00.000Z"
+  scanEndExclusiveISO: "2026-08-10T00:00:00.000Z",
+  worklogSyncCursorMs: new Date(syncedAt).getTime() - 60_000
 });
 
 const putRawSyncResult = async (result: SyncResult) => {
@@ -548,7 +549,8 @@ describe("Jira worklog ledger", () => {
     expect(synthesizedLatestWeek?.sourceWorklogs).toEqual([b2]);
     expect(synthesizedLatestWeek).toMatchObject({
       scanStartISO: "2026-04-01T00:00:00.000Z",
-      scanEndExclusiveISO: "2026-08-10T00:00:00.000Z"
+      scanEndExclusiveISO: "2026-08-10T00:00:00.000Z",
+      worklogSyncCursorMs: new Date("2026-07-28T11:59:00.000Z").getTime()
     });
 
     const outsidePersistedScan = await getSyncResult("2026-08-17");

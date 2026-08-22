@@ -34,6 +34,12 @@ export const DEFAULT_TICKET_FILTERS: TicketFilters = {
   sortMode: "updatedDesc"
 };
 
+interface QueuedTicketLoad {
+  settings: AppSettings;
+  promise: Promise<TicketsResult | undefined>;
+  resolve: (result: TicketsResult | undefined) => void;
+}
+
 const jiraIdentityKey = (settings: AppSettings) =>
   `${settings.jiraBaseUrl.trim().toLowerCase()}|${settings.jiraEmail.trim().toLowerCase()}`;
 
@@ -85,6 +91,9 @@ export const useTickets = ({
     demoScenario ? "demo" : jiraIdentityKey(settings)
   );
   const allAccessibleRequestIdRef = useRef(0);
+  const ticketLoadsInFlightRef = useRef(new Map<string, Promise<TicketsResult | undefined>>());
+  const queuedTicketLoadsRef = useRef(new Map<string, QueuedTicketLoad>());
+  const beginTicketLoadRef = useRef<(settingsForLoad: AppSettings) => Promise<TicketsResult | undefined>>();
 
   const ticketOptions = useMemo(() => {
     const map = new Map<string, JiraTicket>();
@@ -159,7 +168,7 @@ export const useTickets = ({
     [client, settings]
   );
 
-  const loadTickets = useCallback(
+  const performTicketLoad = useCallback(
     async (settingsForLoad: AppSettings = settings) => {
       const requestId = ticketsRequestIdRef.current + 1;
       ticketsRequestIdRef.current = requestId;
@@ -214,6 +223,56 @@ export const useTickets = ({
       }
     },
     [client, loadAllAccessibleTickets, settings]
+  );
+
+  const beginTicketLoad = useCallback(
+    (settingsForLoad: AppSettings): Promise<TicketsResult | undefined> => {
+      const identity = jiraIdentityKey(settingsForLoad);
+      let managedTask!: Promise<TicketsResult | undefined>;
+      managedTask = (async () => {
+        try {
+          return await performTicketLoad(settingsForLoad);
+        } finally {
+          if (ticketLoadsInFlightRef.current.get(identity) !== managedTask) return;
+          ticketLoadsInFlightRef.current.delete(identity);
+          const queued = queuedTicketLoadsRef.current.get(identity);
+          queuedTicketLoadsRef.current.delete(identity);
+          if (queued) {
+            const next = beginTicketLoadRef.current!(queued.settings);
+            void next.then(queued.resolve);
+          }
+        }
+      })();
+      ticketLoadsInFlightRef.current.set(identity, managedTask);
+      return managedTask;
+    },
+    [performTicketLoad]
+  );
+
+  beginTicketLoadRef.current = beginTicketLoad;
+
+  const loadTickets = useCallback(
+    (settingsForLoad: AppSettings = settings): Promise<TicketsResult | undefined> => {
+      const identity = jiraIdentityKey(settingsForLoad);
+      const current = ticketLoadsInFlightRef.current.get(identity);
+      if (!current) {
+        return beginTicketLoad(settingsForLoad);
+      }
+
+      const queued = queuedTicketLoadsRef.current.get(identity);
+      if (queued) {
+        queued.settings = settingsForLoad;
+        return queued.promise;
+      }
+
+      let resolve!: (result: TicketsResult | undefined) => void;
+      const promise = new Promise<TicketsResult | undefined>((promiseResolve) => {
+        resolve = promiseResolve;
+      });
+      queuedTicketLoadsRef.current.set(identity, { settings: settingsForLoad, promise, resolve });
+      return promise;
+    },
+    [beginTicketLoad, settings]
   );
 
   const setTicketFilters = useCallback(

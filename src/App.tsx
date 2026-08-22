@@ -421,6 +421,7 @@ export const App = () => {
     weekKey: weekState.weekKey,
     weekStartISO: weekState.weekStartISO,
     weekEndExclusiveISO: weekState.weekEndExclusiveISO,
+    syncResult,
     demoSyncResult: demoScenario?.syncResult,
     onSyncResult: setSyncResult,
     showSuccess,

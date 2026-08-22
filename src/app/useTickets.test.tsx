@@ -157,6 +157,42 @@ describe("useTickets", () => {
     expect(getApi().ticketsError).toBeUndefined();
   });
 
+  it("coalesces repeated ticket refreshes into one trailing request per Jira identity", async () => {
+    let resolveFirst!: (result: TicketsResult) => void;
+    let resolveTrailing!: (result: TicketsResult) => void;
+    fetchAssignedTickets
+      .mockReturnValueOnce(new Promise<TicketsResult>((resolve) => {
+        resolveFirst = resolve;
+      }))
+      .mockReturnValueOnce(new Promise<TicketsResult>((resolve) => {
+        resolveTrailing = resolve;
+      }));
+    const firstResult = makeTicketsResult({ inProgress: [buildTicket("FIRST-1")] });
+    const trailingResult = makeTicketsResult({ inProgress: [buildTicket("TRAILING-1")] });
+    renderHarness();
+
+    const first = getApi().loadTickets();
+    const second = getApi().loadTickets();
+    const third = getApi().loadTickets();
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(1);
+
+    resolveFirst(firstResult);
+    await act(async () => {
+      await first;
+      await Promise.resolve();
+    });
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(2);
+
+    resolveTrailing(trailingResult);
+    await act(async () => {
+      await expect(second).resolves.toBe(trailingResult);
+      await expect(third).resolves.toBe(trailingResult);
+    });
+
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(2);
+    expect(getApi().tickets?.inProgress[0].key).toBe("TRAILING-1");
+  });
+
   it("ignores an assigned-ticket response from a previous Jira identity", async () => {
     let resolveFirst!: (result: TicketsResult) => void;
     let resolveSecond!: (result: TicketsResult) => void;

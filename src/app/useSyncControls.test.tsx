@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings, SyncResult } from "../../shared/types";
 import { useSyncControls } from "./useSyncControls";
+import type { RunJiraSyncOptions } from "./useJiraSync";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -52,7 +53,7 @@ type SyncControlsApi = ReturnType<typeof useSyncControls>;
 let container: HTMLDivElement;
 let root: Root;
 let api: SyncControlsApi | undefined;
-let runSync: ReturnType<typeof vi.fn<() => Promise<void>>>;
+let runSync: ReturnType<typeof vi.fn<(settings?: AppSettings, options?: RunJiraSyncOptions) => Promise<void>>>;
 let refreshTickets: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 let runJiraActivitySync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 let runReviewSync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
@@ -177,6 +178,7 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledWith(settings, { mode: "full", queueAfterCurrent: true });
     expect(refreshTickets).toHaveBeenCalledTimes(1);
     expect(refreshTickets).toHaveBeenCalledWith(settings);
     expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
@@ -198,6 +200,7 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledWith(jiraOnlySettings, { mode: "full", queueAfterCurrent: true });
     expect(refreshTickets).toHaveBeenCalledTimes(1);
     expect(refreshTickets).toHaveBeenCalledWith(jiraOnlySettings);
     expect(runJiraActivitySync).toHaveBeenCalledTimes(1);

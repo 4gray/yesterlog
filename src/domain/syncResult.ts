@@ -25,6 +25,11 @@ interface MovedWorklogPayload {
   syncedAtISO?: string;
 }
 
+interface DeletedWorklogPayload {
+  worklogId: string;
+  syncedAtISO?: string;
+}
+
 const cloneIssue = (issue: JiraIssueSummary): JiraIssueSummary => ({
   ...issue,
   comments: issue.comments ? [...issue.comments] : undefined
@@ -64,6 +69,20 @@ const issueFromWorklog = (worklog: JiraWorklog, loggedSeconds: number): JiraIssu
   loggedSeconds,
   comments: worklog.comment ? [worklog.comment] : []
 });
+
+const worklogDisplaySeconds = (worklog: JiraWorklog) =>
+  worklog.allocation?.timeSpentSeconds ?? worklog.timeSpentSeconds;
+
+const summarizeIssues = (worklogs: JiraWorklog[]) => {
+  const issues: JiraIssueSummary[] = [];
+  const summaryBucket: SyncDayBucket = { trackedSeconds: 0, worklogs: [], issues };
+
+  for (const worklog of worklogs) {
+    mergeIssue(summaryBucket, issueFromWorklog(worklog, worklogDisplaySeconds(worklog)));
+  }
+
+  return issues;
+};
 
 const moveWorklogToTicket = (
   worklog: JiraWorklog,
@@ -232,25 +251,45 @@ export const mergeUpdatedWorklogIntoSyncResult = (
   const oldSeconds = existing.timeSpentSeconds;
   const newSeconds = payload.timeSpentSeconds;
   const targetDateKey = toLocalDateKey(started);
+  const nextComment = payload.comment !== undefined ? payload.comment : existing.comment;
+  if (
+    existing.started === payload.startedISO &&
+    oldSeconds === newSeconds &&
+    existing.comment === nextComment
+  ) {
+    return syncResult;
+  }
   const updated: JiraWorklog = {
     ...existing,
     started: payload.startedISO,
     timeSpentSeconds: newSeconds,
-    comment: payload.comment !== undefined ? payload.comment : existing.comment
+    comment: nextComment,
+    updated: payload.syncedAtISO ?? existing.updated
   };
 
   const daySummaries = { ...syncResult.daySummaries };
 
   // 1) Remove the old worklog from its bucket and back out its logged time.
   const sourceSrc = syncResult.daySummaries[sourceDateKey];
+  const sourceWorklogs = sourceSrc.worklogs.filter((worklog) => worklog.id !== payload.worklogId);
   daySummaries[sourceDateKey] = {
     trackedSeconds: sourceSrc.trackedSeconds - oldSeconds,
     issues: sourceSrc.issues.map((issue) =>
       issue.key === existing!.issueKey
-        ? { ...cloneIssue(issue), loggedSeconds: Math.max(0, issue.loggedSeconds - oldSeconds) }
+        ? {
+            ...cloneIssue(issue),
+            loggedSeconds: Math.max(0, issue.loggedSeconds - oldSeconds),
+            comments: Array.from(
+              new Set(
+                sourceWorklogs
+                  .filter((worklog) => worklog.issueKey === issue.key)
+                  .flatMap((worklog) => (worklog.comment ? [worklog.comment] : []))
+              )
+            )
+          }
         : cloneIssue(issue)
     ),
-    worklogs: sourceSrc.worklogs.filter((worklog) => worklog.id !== payload.worklogId)
+    worklogs: sourceWorklogs
   };
 
   // 2) Insert the updated worklog into its (possibly same) target bucket. Read from
@@ -259,9 +298,17 @@ export const mergeUpdatedWorklogIntoSyncResult = (
   const targetIssues = targetSrc.issues.map(cloneIssue);
   const issueIndex = targetIssues.findIndex((issue) => issue.key === updated.issueKey);
   if (issueIndex >= 0) {
+    const targetComments = Array.from(
+      new Set(
+        [...targetSrc.worklogs, updated]
+          .filter((worklog) => worklog.issueKey === updated.issueKey)
+          .flatMap((worklog) => (worklog.comment ? [worklog.comment] : []))
+      )
+    );
     targetIssues[issueIndex] = {
       ...targetIssues[issueIndex],
-      loggedSeconds: targetIssues[issueIndex].loggedSeconds + newSeconds
+      loggedSeconds: targetIssues[issueIndex].loggedSeconds + newSeconds,
+      comments: targetComments
     };
   } else {
     targetIssues.push({
@@ -367,5 +414,56 @@ export const mergeMovedWorklogIntoSyncResult = (
     issueCount,
     daySummaries,
     sourceWorklogs
+  };
+};
+
+/** Remove a Jira-confirmed deletion from the cached raw week immediately. */
+export const removeWorklogFromSyncResult = (
+  syncResult: SyncResult | undefined,
+  payload: DeletedWorklogPayload
+) => {
+  if (!syncResult) {
+    return undefined;
+  }
+
+  const sourceContainsWorklog = syncResult.sourceWorklogs?.some(
+    (worklog) => worklog.id === payload.worklogId
+  );
+  const visibleContainsWorklog = Object.values(syncResult.daySummaries).some((bucket) =>
+    bucket.worklogs.some((worklog) => worklog.id === payload.worklogId)
+  );
+  if (!sourceContainsWorklog && !visibleContainsWorklog) {
+    return syncResult;
+  }
+
+  const daySummaries = Object.fromEntries(
+    Object.entries(syncResult.daySummaries).map(([dateKey, bucket]) => {
+      const worklogs = bucket.worklogs.filter((worklog) => worklog.id !== payload.worklogId);
+      if (worklogs.length === bucket.worklogs.length) {
+        return [dateKey, bucket];
+      }
+
+      return [
+        dateKey,
+        {
+          trackedSeconds: worklogs.reduce((sum, worklog) => sum + worklogDisplaySeconds(worklog), 0),
+          issues: summarizeIssues(worklogs),
+          worklogs
+        }
+      ];
+    })
+  );
+  const visibleWorklogs = Object.values(daySummaries).flatMap((bucket) => bucket.worklogs);
+
+  return {
+    ...syncResult,
+    syncedAt: payload.syncedAtISO ?? syncResult.syncedAt,
+    trackedSeconds: Object.values(daySummaries).reduce((sum, bucket) => sum + bucket.trackedSeconds, 0),
+    issueCount: new Set(visibleWorklogs.map((worklog) => worklog.issueKey)).size,
+    worklogCount: new Set(visibleWorklogs.map((worklog) => worklog.id)).size,
+    daySummaries,
+    sourceWorklogs: syncResult.sourceWorklogs?.filter(
+      (worklog) => worklog.id !== payload.worklogId
+    )
   };
 };

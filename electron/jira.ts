@@ -138,6 +138,7 @@ interface JiraWorklogResponse {
   total: number;
   worklogs?: Array<{
     id: string;
+    issueId?: string;
     author?: {
       accountId?: string;
       displayName?: string;
@@ -147,6 +148,28 @@ interface JiraWorklogResponse {
     comment?: unknown;
     created?: string;
     updated?: string;
+  }>;
+}
+
+interface JiraChangedWorklogsResponse {
+  since: number;
+  until: number;
+  lastPage: boolean;
+  nextPage?: string;
+  values?: Array<{
+    worklogId: number;
+    updatedTime: number;
+  }>;
+}
+
+interface JiraDeletedWorklogsResponse {
+  since: number;
+  until: number;
+  lastPage: boolean;
+  nextPage?: string;
+  values?: Array<{
+    worklogId: number;
+    updatedTime: number;
   }>;
 }
 
@@ -231,17 +254,114 @@ const parseJiraError = async (response: Response) => {
   }
 };
 
-const jiraFetch = async (settings: AppSettings, path: string, init: RequestInit = {}) => {
+const JIRA_REQUEST_TIMEOUT_MS = 30_000;
+const JIRA_REQUEST_ATTEMPTS = 3;
+const MAX_BACKOFF_DELAY_MS = 60_000;
+
+const retryAfterMs = (response: Response, attempt: number) => {
+  const raw = response.headers.get("Retry-After")?.trim();
+  if (raw) {
+    const seconds = Number(raw);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return seconds * 1_000;
+    }
+    const date = new Date(raw).getTime();
+    if (Number.isFinite(date)) {
+      return Math.max(0, date - Date.now());
+    }
+  }
+
+  const exponential = 500 * 2 ** attempt;
+  return Math.min(exponential + Math.floor(Math.random() * 250), MAX_BACKOFF_DELAY_MS);
+};
+
+const waitForRetry = (delayMs: number) => new Promise<void>((resolve) => {
+  setTimeout(resolve, delayMs);
+});
+
+const fetchWithTimeout = async (
+  url: string,
+  init: RequestInit,
+  safeRead: boolean
+) => {
+  const controller = new AbortController();
+  const upstreamSignal = init.signal;
+  const forwardAbort = () => controller.abort(upstreamSignal?.reason);
+  if (upstreamSignal?.aborted) {
+    forwardAbort();
+  } else {
+    upstreamSignal?.addEventListener("abort", forwardAbort, { once: true });
+  }
+  const timeout = setTimeout(() => controller.abort(), JIRA_REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted && !upstreamSignal?.aborted) {
+      throw new JiraApiError(
+        safeRead
+          ? `Jira request timed out after ${JIRA_REQUEST_TIMEOUT_MS / 1_000}s.`
+          : `Jira write timed out after ${JIRA_REQUEST_TIMEOUT_MS / 1_000}s. Jira may have accepted it; check Jira before retrying.`
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    upstreamSignal?.removeEventListener("abort", forwardAbort);
+  }
+};
+
+interface JiraRequestInit extends RequestInit {
+  /** Some Jira read APIs use POST for a non-mutating bulk lookup. */
+  retryableRead?: boolean;
+}
+
+const jiraFetch = async (settings: AppSettings, path: string, init: JiraRequestInit = {}) => {
   ensureSettings(settings);
   const baseUrl = normalizeBaseUrl(settings.jiraBaseUrl);
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
+  const { retryableRead = false, ...fetchInit } = init;
+  const requestInit: RequestInit = {
+    ...fetchInit,
     headers: {
       Accept: "application/json",
       Authorization: authHeader(settings),
-      ...(init.headers ?? {})
+      ...(fetchInit.headers ?? {})
     }
-  });
+  };
+  const method = (requestInit.method ?? "GET").toUpperCase();
+  const safeRead = method === "GET" || retryableRead;
+  let response: Response | undefined;
+
+  for (let attempt = 0; attempt < JIRA_REQUEST_ATTEMPTS; attempt += 1) {
+    try {
+      response = await fetchWithTimeout(`${baseUrl}${path}`, requestInit, safeRead);
+    } catch (error) {
+      if (error instanceof JiraApiError || !safeRead || attempt === JIRA_REQUEST_ATTEMPTS - 1) {
+        throw error;
+      }
+      const delayMs = retryAfterMs(new Response(null), attempt);
+      console.warn(`Retrying Jira ${method} ${path} after a network failure in ${delayMs}ms.`);
+      await waitForRetry(delayMs);
+      continue;
+    }
+
+    const shouldRetry =
+      response.status === 429 ||
+      (safeRead && [502, 503, 504].includes(response.status));
+    if (!shouldRetry || attempt === JIRA_REQUEST_ATTEMPTS - 1) {
+      break;
+    }
+
+    const delayMs = retryAfterMs(response, attempt);
+    const reason = response.headers.get("RateLimit-Reason") ?? response.statusText ?? String(response.status);
+    console.warn(`Retrying Jira ${method} ${path} after ${response.status} (${reason}) in ${delayMs}ms.`);
+    await response.body?.cancel().catch(() => undefined);
+    await waitForRetry(delayMs);
+  }
+
+  if (!response) {
+    throw new JiraApiError("Jira request failed before receiving a response.");
+  }
 
   if (!response.ok) {
     const message = await parseJiraError(response);
@@ -256,7 +376,7 @@ const jiraFetch = async (settings: AppSettings, path: string, init: RequestInit 
   return response;
 };
 
-const jiraRequest = async <T>(settings: AppSettings, path: string, init: RequestInit = {}) => {
+const jiraRequest = async <T>(settings: AppSettings, path: string, init: JiraRequestInit = {}) => {
   const response = await jiraFetch(settings, path, init);
 
   if (response.status === 204) {
@@ -637,7 +757,7 @@ const searchCandidateIssues = async (settings: AppSettings, weekStart: Date, wee
     }
   } while (nextPageToken && guard < 50);
 
-  return issues;
+  return { issues, pageCount: guard };
 };
 
 // A selected week can be affected by a bulk worklog whose Jira `started` date
@@ -669,6 +789,7 @@ const fetchIssueWorklogs = async (
   const worklogs: JiraWorklogResponse["worklogs"] = [];
   let startAt = 0;
   let total = 0;
+  let pageCount = 0;
 
   do {
     const params = new URLSearchParams({
@@ -686,112 +807,460 @@ const fetchIssueWorklogs = async (
     worklogs.push(...(page.worklogs ?? []));
     total = page.total;
     startAt = page.startAt + page.maxResults;
-  } while (startAt < total);
+    pageCount += 1;
+  } while (startAt < total && pageCount < 50);
 
-  return worklogs;
+  return { worklogs, pageCount };
 };
 
-export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult> => {
-  const { settings, weekStartISO, weekEndExclusiveISO, weekKey } = request;
-  const weekStart = new Date(weekStartISO);
-  const weekEndExclusive = new Date(weekEndExclusiveISO);
-  const { scanStart, scanEndExclusive } = bulkWorklogScanBounds(weekStart, weekEndExclusive);
-  const currentUser = await fetchCurrentUser(settings);
-  const candidateIssues = await searchCandidateIssues(settings, scanStart, scanEndExclusive);
-  const daySummaries: SyncResult["daySummaries"] = {};
+const normalizeWorklog = (
+  settings: AppSettings,
+  issue: JiraSearchIssue,
+  worklog: NonNullable<JiraWorklogResponse["worklogs"]>[number],
+  authorAccountId: string
+): JiraWorklog => {
+  const summary = issue.fields?.summary ?? "Untitled Jira issue";
+  return {
+    id: worklog.id,
+    issueId: issue.id,
+    issueKey: issue.key,
+    issueSummary: summary,
+    issueUrl: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`,
+    issueType: normalizeIssueType(issue.fields?.issuetype),
+    epic: normalizeEpic(settings, issue.fields?.parent),
+    ...issueProductContext(issue),
+    authorAccountId,
+    started: worklog.started,
+    timeSpentSeconds: worklog.timeSpentSeconds,
+    comment: adfToPlainText(worklog.comment) || undefined,
+    created: worklog.created,
+    updated: worklog.updated
+  };
+};
+
+const scanWorklogRange = async (
+  settings: AppSettings,
+  currentUser: JiraUserResponse,
+  scanStart: Date,
+  scanEndExclusive: Date
+) => {
+  const candidateSearch = await searchCandidateIssues(settings, scanStart, scanEndExclusive);
   const sourceWorklogs: JiraWorklog[] = [];
-  const visibleWorklogIds = new Set<string>();
-  const visibleIssueKeys = new Set<string>();
+  let requestCount = candidateSearch.pageCount;
 
-  for (const issue of candidateIssues) {
-    const summary = issue.fields?.summary ?? "Untitled Jira issue";
-    const issueType = normalizeIssueType(issue.fields?.issuetype);
-    const epic = normalizeEpic(settings, issue.fields?.parent);
-    const worklogs = await fetchIssueWorklogs(settings, issue.key, scanStart, scanEndExclusive);
+  for (const issue of candidateSearch.issues) {
+    const fetched = await fetchIssueWorklogs(settings, issue.key, scanStart, scanEndExclusive);
+    requestCount += fetched.pageCount;
 
-    for (const worklog of worklogs) {
-      const authorAccountId = worklog.author?.accountId;
+    for (const worklog of fetched.worklogs) {
       const startedDate = new Date(worklog.started);
-
       if (
-        authorAccountId !== currentUser.accountId ||
+        worklog.author?.accountId !== currentUser.accountId ||
         Number.isNaN(startedDate.getTime()) ||
         startedDate < scanStart ||
         startedDate >= scanEndExclusive
       ) {
         continue;
       }
-
-      const comment = adfToPlainText(worklog.comment);
-      const issueUrl = `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`;
-      const normalized: JiraWorklog = {
-        id: worklog.id,
-        issueId: issue.id,
-        issueKey: issue.key,
-        issueSummary: summary,
-        issueUrl,
-        issueType,
-        epic,
-        ...issueProductContext(issue),
-        authorAccountId,
-        started: worklog.started,
-        timeSpentSeconds: worklog.timeSpentSeconds,
-        comment: comment || undefined,
-        created: worklog.created,
-        updated: worklog.updated
-      };
-      sourceWorklogs.push(normalized);
-
-      if (startedDate < weekStart || startedDate >= weekEndExclusive) {
-        continue;
-      }
-
-      const dateKey = toDateKey(startedDate);
-
-      if (!daySummaries[dateKey]) {
-        daySummaries[dateKey] = {
-          trackedSeconds: 0,
-          issues: [],
-          worklogs: []
-        };
-      }
-
-      const bucket = daySummaries[dateKey];
-      bucket.trackedSeconds += worklog.timeSpentSeconds;
-      bucket.worklogs.push(normalized);
-      mergeIssue(bucket, {
-        id: issue.id,
-        key: issue.key,
-        summary,
-        url: issueUrl,
-        issueType,
-        epic,
-        loggedSeconds: worklog.timeSpentSeconds,
-        comments: comment ? [comment] : []
-      });
-      visibleWorklogIds.add(normalized.id);
-      visibleIssueKeys.add(normalized.issueKey);
+      sourceWorklogs.push(normalizeWorklog(settings, issue, worklog, currentUser.accountId));
     }
+  }
+
+  return {
+    sourceWorklogs,
+    candidateIssueCount: candidateSearch.issues.length,
+    requestCount
+  };
+};
+
+const summarizeWorklogs = (
+  sourceWorklogs: JiraWorklog[],
+  weekStart: Date,
+  weekEndExclusive: Date
+) => {
+  const daySummaries: SyncResult["daySummaries"] = {};
+  const visibleWorklogIds = new Set<string>();
+  const visibleIssueKeys = new Set<string>();
+
+  for (const worklog of sourceWorklogs) {
+    const startedDate = new Date(worklog.started);
+    if (Number.isNaN(startedDate.getTime()) || startedDate < weekStart || startedDate >= weekEndExclusive) {
+      continue;
+    }
+
+    const dateKey = toDateKey(startedDate);
+    const bucket = daySummaries[dateKey] ?? {
+      trackedSeconds: 0,
+      issues: [],
+      worklogs: []
+    };
+    bucket.trackedSeconds += worklog.timeSpentSeconds;
+    bucket.worklogs.push(worklog);
+    mergeIssue(bucket, {
+      id: worklog.issueId,
+      key: worklog.issueKey,
+      summary: worklog.issueSummary,
+      url: worklog.issueUrl,
+      issueType: worklog.issueType,
+      epic: worklog.epic,
+      loggedSeconds: worklog.timeSpentSeconds,
+      comments: worklog.comment ? [worklog.comment] : []
+    });
+    daySummaries[dateKey] = bucket;
+    visibleWorklogIds.add(worklog.id);
+    visibleIssueKeys.add(worklog.issueKey);
+  }
+
+  for (const bucket of Object.values(daySummaries)) {
+    bucket.worklogs.sort((left, right) => new Date(left.started).getTime() - new Date(right.started).getTime());
   }
 
   const trackedSeconds = Object.values(daySummaries).reduce((sum, bucket) => sum + bucket.trackedSeconds, 0);
 
   return {
-    weekKey,
-    weekStartISO,
-    weekEndExclusiveISO,
-    syncedAt: new Date().toISOString(),
-    accountId: currentUser.accountId,
-    jiraSite: normalizeBaseUrl(settings.jiraBaseUrl),
-    displayName: currentUser.displayName,
     trackedSeconds,
     issueCount: visibleIssueKeys.size,
     worklogCount: visibleWorklogIds.size,
-    daySummaries,
+    daySummaries
+  };
+};
+
+const buildWorklogSyncResult = ({
+  request,
+  currentUser,
+  sourceWorklogs,
+  scanStart,
+  scanEndExclusive,
+  worklogSyncCursorMs,
+  diagnostics
+}: {
+  request: SyncRequest;
+  currentUser: JiraUserResponse;
+  sourceWorklogs: JiraWorklog[];
+  scanStart: Date;
+  scanEndExclusive: Date;
+  worklogSyncCursorMs: number;
+  diagnostics: NonNullable<SyncResult["diagnostics"]>;
+}): SyncResult => {
+  const weekStart = new Date(request.weekStartISO);
+  const weekEndExclusive = new Date(request.weekEndExclusiveISO);
+  const summary = summarizeWorklogs(sourceWorklogs, weekStart, weekEndExclusive);
+
+  return {
+    weekKey: request.weekKey,
+    weekStartISO: request.weekStartISO,
+    weekEndExclusiveISO: request.weekEndExclusiveISO,
+    syncedAt: new Date().toISOString(),
+    accountId: currentUser.accountId,
+    jiraSite: normalizeBaseUrl(request.settings.jiraBaseUrl),
+    displayName: currentUser.displayName,
+    ...summary,
     sourceWorklogs,
     scanStartISO: scanStart.toISOString(),
-    scanEndExclusiveISO: scanEndExclusive.toISOString()
+    scanEndExclusiveISO: scanEndExclusive.toISOString(),
+    worklogSyncCursorMs,
+    diagnostics
   };
+};
+
+const changedWorklogIds = async (
+  settings: AppSettings,
+  kind: "updated" | "deleted",
+  since: number
+) => {
+  const ids = new Set<string>();
+  let cursor = since;
+  let safeUntil = since;
+  let pageCount = 0;
+  let path = `/rest/api/3/worklog/${kind}?${new URLSearchParams({ since: String(since) }).toString()}`;
+
+  while (pageCount < 50) {
+    const page = await jiraRequest<JiraChangedWorklogsResponse | JiraDeletedWorklogsResponse>(
+      settings,
+      path
+    );
+    for (const value of page.values ?? []) {
+      ids.add(String(value.worklogId));
+    }
+    pageCount += 1;
+    safeUntil = Math.max(safeUntil, page.until ?? cursor);
+    if (page.lastPage || !Number.isFinite(page.until) || page.until <= cursor) {
+      break;
+    }
+    cursor = page.until;
+    if (page.nextPage) {
+      const jiraOrigin = normalizeBaseUrl(settings.jiraBaseUrl);
+      const next = new URL(page.nextPage, jiraOrigin);
+      if (next.origin !== jiraOrigin) {
+        throw new JiraApiError("Jira returned an invalid worklog pagination URL.");
+      }
+      path = `${next.pathname}${next.search}`;
+    } else {
+      path = `/rest/api/3/worklog/${kind}?${new URLSearchParams({ since: String(cursor) }).toString()}`;
+    }
+  }
+
+  return { ids: [...ids], safeUntil, pageCount };
+};
+
+const WORKLOG_LIST_BATCH_SIZE = 1_000;
+
+const fetchWorklogsByIds = async (settings: AppSettings, ids: string[]) => {
+  const worklogs: NonNullable<JiraWorklogResponse["worklogs"]> = [];
+  let requestCount = 0;
+
+  for (let index = 0; index < ids.length; index += WORKLOG_LIST_BATCH_SIZE) {
+    const batch = ids.slice(index, index + WORKLOG_LIST_BATCH_SIZE).map(Number).filter(Number.isFinite);
+    if (batch.length === 0) {
+      continue;
+    }
+    const response = await jiraRequest<NonNullable<JiraWorklogResponse["worklogs"]>>(
+      settings,
+      "/rest/api/3/worklog/list",
+      {
+        method: "POST",
+        retryableRead: true,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: batch })
+      }
+    );
+    worklogs.push(...response);
+    requestCount += 1;
+  }
+
+  return { worklogs, requestCount };
+};
+
+const fetchIssuesByIds = async (settings: AppSettings, issueIds: string[]) => {
+  const uniqueIds = [...new Set(issueIds)];
+  const issues = await mapWithConcurrency(uniqueIds, 4, async (issueId) => {
+    const params = new URLSearchParams({ fields: "summary,issuetype,parent,project,components" });
+    return jiraRequest<JiraSearchIssue>(
+      settings,
+      `/rest/api/3/issue/${encodeURIComponent(issueId)}?${params.toString()}`
+    );
+  });
+  return { issues, requestCount: uniqueIds.length };
+};
+
+const logWorklogSyncDiagnostics = (result: SyncResult) => {
+  const diagnostics = result.diagnostics;
+  if (!diagnostics) return;
+  console.info(
+    `[Jira worklog sync] ${diagnostics.mode} completed in ${diagnostics.durationMs}ms ` +
+    `with ${diagnostics.requestCount} requests, ${result.worklogCount} visible worklogs.`
+  );
+};
+
+const fullWorklogSync = async (
+  request: SyncRequest,
+  currentUser: JiraUserResponse,
+  startedAtMs: number,
+  fallbackReason?: string
+) => {
+  const weekStart = new Date(request.weekStartISO);
+  const weekEndExclusive = new Date(request.weekEndExclusiveISO);
+  const { scanStart, scanEndExclusive } = bulkWorklogScanBounds(weekStart, weekEndExclusive);
+  const scan = await scanWorklogRange(request.settings, currentUser, scanStart, scanEndExclusive);
+  const result = buildWorklogSyncResult({
+    request,
+    currentUser,
+    sourceWorklogs: scan.sourceWorklogs,
+    scanStart,
+    scanEndExclusive,
+    // The feeds omit approximately the most recent minute. Overlap the next
+    // delta with the start of this scan so concurrent changes are reconciled.
+    worklogSyncCursorMs: Math.max(0, startedAtMs - 120_000),
+    diagnostics: {
+      mode: "full",
+      durationMs: Date.now() - startedAtMs,
+      requestCount: 1 + scan.requestCount,
+      candidateIssueCount: scan.candidateIssueCount,
+      fallbackReason
+    }
+  });
+  logWorklogSyncDiagnostics(result);
+  return result;
+};
+
+const baselineProblem = (
+  request: SyncRequest,
+  currentUser: JiraUserResponse,
+  expectedScanStart: Date
+) => {
+  const baseline = request.baseline;
+  if (!baseline) return "missing baseline";
+  if (baseline.weekKey !== request.weekKey) return "baseline belongs to another week";
+  if (baseline.accountId !== currentUser.accountId) return "baseline belongs to another Jira user";
+  if (baseline.jiraSite && baseline.jiraSite !== normalizeBaseUrl(request.settings.jiraBaseUrl)) {
+    return "baseline belongs to another Jira site";
+  }
+  if (baseline.sourceWorklogs === undefined) return "baseline has no raw worklog cache";
+  if (!Number.isFinite(baseline.worklogSyncCursorMs)) return "baseline has no delta cursor";
+  const scanStart = baseline.scanStartISO ? new Date(baseline.scanStartISO) : undefined;
+  const scanEnd = baseline.scanEndExclusiveISO ? new Date(baseline.scanEndExclusiveISO) : undefined;
+  if (!scanStart || !scanEnd || Number.isNaN(scanStart.getTime()) || Number.isNaN(scanEnd.getTime())) {
+    return "baseline has no valid scan range";
+  }
+  if (scanStart > expectedScanStart) return "baseline does not cover the bulk-worklog lookback";
+  return undefined;
+};
+
+const deltaWorklogSync = async (
+  request: SyncRequest,
+  currentUser: JiraUserResponse,
+  startedAtMs: number
+) => {
+  const baseline = request.baseline!;
+  const weekStart = new Date(request.weekStartISO);
+  const weekEndExclusive = new Date(request.weekEndExclusiveISO);
+  const { scanStart, scanEndExclusive } = bulkWorklogScanBounds(weekStart, weekEndExclusive);
+  const previousScanEnd = new Date(baseline.scanEndExclusiveISO!);
+  const previousCursor = baseline.worklogSyncCursorMs!;
+  const [updatedFeed, deletedFeed] = await Promise.all([
+    changedWorklogIds(request.settings, "updated", previousCursor),
+    changedWorklogIds(request.settings, "deleted", previousCursor)
+  ]);
+  const changed = await fetchWorklogsByIds(request.settings, updatedFeed.ids);
+
+  const cachedById = new Map((baseline.sourceWorklogs ?? []).map((worklog) => [worklog.id, worklog]));
+  const cachedIssueIds = new Set(
+    [...cachedById.values()].map((worklog) => worklog.issueId).filter((value): value is string => Boolean(value))
+  );
+  const missingIssueIds = changed.worklogs
+    .filter((worklog) => {
+      const started = new Date(worklog.started);
+      return (
+        worklog.author?.accountId === currentUser.accountId &&
+        !Number.isNaN(started.getTime()) &&
+        started >= scanStart &&
+        started < scanEndExclusive
+      );
+    })
+    .map((worklog) => worklog.issueId)
+    .filter((issueId): issueId is string => Boolean(issueId && !cachedIssueIds.has(issueId)));
+  const issueFetch = await fetchIssuesByIds(request.settings, missingIssueIds);
+  const issuesById = new Map(issueFetch.issues.map((issue) => [issue.id, issue]));
+  const cachedIssueById = new Map<string, JiraSearchIssue>();
+  for (const worklog of cachedById.values()) {
+    if (!worklog.issueId || cachedIssueById.has(worklog.issueId)) continue;
+    cachedIssueById.set(worklog.issueId, {
+      id: worklog.issueId,
+      key: worklog.issueKey,
+      fields: {
+        summary: worklog.issueSummary,
+        issuetype: worklog.issueType,
+        parent: worklog.epic ? {
+          id: worklog.epic.id,
+          key: worklog.epic.key,
+          fields: {
+            summary: worklog.epic.summary,
+            issuetype: { name: "Epic", hierarchyLevel: 1 }
+          }
+        } : undefined,
+        project: worklog.projectKey ? { key: worklog.projectKey, name: worklog.projectName } : undefined,
+        components: worklog.components?.map((name) => ({ name }))
+      }
+    });
+  }
+
+  const sourceById = new Map<string, JiraWorklog>();
+  for (const worklog of baseline.sourceWorklogs ?? []) {
+    const started = new Date(worklog.started);
+    if (!Number.isNaN(started.getTime()) && started >= scanStart && started < scanEndExclusive) {
+      sourceById.set(worklog.id, worklog);
+    }
+  }
+
+  let extension = { sourceWorklogs: [] as JiraWorklog[], candidateIssueCount: 0, requestCount: 0 };
+  if (previousScanEnd < scanEndExclusive) {
+    extension = await scanWorklogRange(request.settings, currentUser, previousScanEnd, scanEndExclusive);
+    for (const worklog of extension.sourceWorklogs) {
+      sourceById.set(worklog.id, worklog);
+    }
+  }
+
+  for (const raw of changed.worklogs) {
+    sourceById.delete(raw.id);
+    const started = new Date(raw.started);
+    if (
+      raw.author?.accountId !== currentUser.accountId ||
+      Number.isNaN(started.getTime()) ||
+      started < scanStart ||
+      started >= scanEndExclusive
+    ) {
+      continue;
+    }
+    const issue = raw.issueId
+      ? issuesById.get(raw.issueId) ?? cachedIssueById.get(raw.issueId)
+      : undefined;
+    if (issue) {
+      sourceById.set(raw.id, normalizeWorklog(request.settings, issue, raw, currentUser.accountId));
+    }
+  }
+
+  for (const deletedId of deletedFeed.ids) {
+    sourceById.delete(deletedId);
+  }
+
+  const sourceWorklogs = [...sourceById.values()].sort(
+    (left, right) => new Date(left.started).getTime() - new Date(right.started).getTime() || left.id.localeCompare(right.id)
+  );
+  const feedUntil = Math.min(updatedFeed.safeUntil, deletedFeed.safeUntil);
+  const worklogSyncCursorMs = Math.max(previousCursor, feedUntil - 1_000);
+  const result = buildWorklogSyncResult({
+    request,
+    currentUser,
+    sourceWorklogs,
+    scanStart,
+    scanEndExclusive,
+    worklogSyncCursorMs,
+    diagnostics: {
+      mode: "delta",
+      durationMs: Date.now() - startedAtMs,
+      requestCount:
+        1 +
+        updatedFeed.pageCount +
+        deletedFeed.pageCount +
+        changed.requestCount +
+        issueFetch.requestCount +
+        extension.requestCount,
+      changedWorklogCount: updatedFeed.ids.length,
+      deletedWorklogCount: deletedFeed.ids.length,
+      extendedRangeIssueCount: extension.candidateIssueCount || undefined
+    }
+  });
+  logWorklogSyncDiagnostics(result);
+  return result;
+};
+
+export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult> => {
+  const startedAtMs = Date.now();
+  const currentUser = await fetchCurrentUser(request.settings);
+  const weekStart = new Date(request.weekStartISO);
+  const { scanStart } = bulkWorklogScanBounds(weekStart, new Date(request.weekEndExclusiveISO));
+
+  if (request.mode === "delta") {
+    const problem = baselineProblem(request, currentUser, scanStart);
+    if (!problem) {
+      try {
+        return await deltaWorklogSync(request, currentUser, startedAtMs);
+      } catch (error) {
+        if (!(error instanceof JiraApiError) || ![400, 403, 404].includes(error.status ?? 0)) {
+          throw error;
+        }
+        return fullWorklogSync(
+          request,
+          currentUser,
+          startedAtMs,
+          `delta API unavailable (${error.status})`
+        );
+      }
+    }
+    return fullWorklogSync(request, currentUser, startedAtMs, problem);
+  }
+
+  return fullWorklogSync(request, currentUser, startedAtMs);
 };
 
 const ACTIVITY_ISSUE_FIELDS = "summary,issuetype,parent,project,components,created,creator";

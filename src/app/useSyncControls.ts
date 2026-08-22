@@ -3,6 +3,7 @@ import type { AppSettings, SyncResult } from "../../shared/types";
 import { isBitbucketConfigured } from "../domain/bitbucketReview";
 import { formatSyncTime } from "./appHelpers";
 import { OFFLINE_LABEL, SYNCING_LABEL, type AppSyncState } from "./syncStatus";
+import type { RunJiraSyncOptions } from "./useJiraSync";
 
 export type { AppSyncState };
 
@@ -14,7 +15,7 @@ interface UseSyncControlsOptions {
   isSyncingReviews: boolean;
   /** Browser connectivity; offline outranks every state except an in-flight sync. */
   isOnline?: boolean;
-  runSync: () => Promise<unknown>;
+  runSync: (settings?: AppSettings, options?: RunJiraSyncOptions) => Promise<unknown>;
   refreshTickets?: (settings?: AppSettings) => Promise<unknown>;
   runJiraActivitySync: (settings?: AppSettings) => Promise<unknown>;
   runReviewSync: (settings?: AppSettings) => Promise<unknown>;
@@ -58,7 +59,7 @@ export const useSyncControls = ({
   const handleSync = useCallback(async () => {
     setIsManualSyncing(true);
     try {
-      await runSync();
+      await runSync(settings, { mode: "full", queueAfterCurrent: true });
       await refreshTickets?.(settings);
       await runJiraActivitySync(settings);
       if (isBitbucketConfigured(settings)) {

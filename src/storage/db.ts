@@ -757,7 +757,9 @@ export const getSyncResult = async (weekKey: string) => {
       sourceWorklogs,
       ...(coveringScan ? {
         scanStartISO: coveringScan.scanStartISO,
-        scanEndExclusiveISO: coveringScan.scanEndExclusiveISO
+        scanEndExclusiveISO: coveringScan.scanEndExclusiveISO,
+        worklogSyncCursorMs: coveringScan.worklogSyncCursorMs ?? stored.worklogSyncCursorMs,
+        diagnostics: coveringScan.diagnostics ?? stored.diagnostics
       } : {})
     };
   }
@@ -788,7 +790,9 @@ export const getSyncResult = async (weekKey: string) => {
     sourceWorklogs,
     ...(coveringScan ? {
       scanStartISO: coveringScan.scanStartISO,
-      scanEndExclusiveISO: coveringScan.scanEndExclusiveISO
+      scanEndExclusiveISO: coveringScan.scanEndExclusiveISO,
+      worklogSyncCursorMs: coveringScan.worklogSyncCursorMs,
+      diagnostics: coveringScan.diagnostics
     } : {})
   } satisfies SyncResult;
 };

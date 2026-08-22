@@ -148,6 +148,35 @@ export interface SyncResult {
   sourceWorklogs?: JiraWorklog[];
   scanStartISO?: string;
   scanEndExclusiveISO?: string;
+  /** Safe cursor for Jira's updated/deleted worklog feeds. */
+  worklogSyncCursorMs?: number;
+  /** Local-only performance details. Never transmitted outside the Jira IPC request. */
+  diagnostics?: JiraWorklogSyncDiagnostics;
+}
+
+export type JiraWorklogSyncMode = "full" | "delta";
+
+export interface JiraWorklogSyncDiagnostics {
+  mode: JiraWorklogSyncMode;
+  durationMs: number;
+  requestCount: number;
+  candidateIssueCount?: number;
+  changedWorklogCount?: number;
+  deletedWorklogCount?: number;
+  extendedRangeIssueCount?: number;
+  fallbackReason?: string;
+}
+
+export interface JiraWorklogSyncBaseline {
+  weekKey: string;
+  weekStartISO: string;
+  weekEndExclusiveISO: string;
+  accountId: string;
+  jiraSite?: string;
+  sourceWorklogs?: JiraWorklog[];
+  scanStartISO?: string;
+  scanEndExclusiveISO?: string;
+  worklogSyncCursorMs?: number;
 }
 
 export type JiraActivityKind = "issue-created" | "comment" | "status-change" | "field-change";
@@ -743,6 +772,10 @@ export interface SyncRequest {
   weekStartISO: string;
   weekEndExclusiveISO: string;
   weekKey: string;
+  /** Defaults to a full scan for backward compatibility. */
+  mode?: JiraWorklogSyncMode;
+  /** Required for a delta request; invalid or stale baselines fall back to full. */
+  baseline?: JiraWorklogSyncBaseline;
 }
 
 export type JiraActivitySyncRequest = SyncRequest;

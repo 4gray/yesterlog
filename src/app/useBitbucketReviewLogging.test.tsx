@@ -12,6 +12,7 @@ import {
   useBitbucketReviewLogging,
   type BitbucketReviewLoggingClient
 } from "./useBitbucketReviewLogging";
+import type { RunJiraSync } from "./backgroundJiraRefresh";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -81,6 +82,16 @@ const buildResult = (sessions: BitbucketReviewSession[] = [buildSession("s1")]):
   sessions
 });
 
+const deferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
 type ReviewLoggingApi = ReturnType<typeof useBitbucketReviewLogging>;
 
 let container: HTMLDivElement;
@@ -88,7 +99,7 @@ let root: Root;
 let api: ReviewLoggingApi | undefined;
 let addWorklog: ReturnType<typeof vi.fn<BitbucketReviewLoggingClient["addWorklog"]>>;
 let saveBitbucketReviewResult: ReturnType<typeof vi.fn<(result: BitbucketReviewSyncResult) => Promise<void>>>;
-let runSync: ReturnType<typeof vi.fn<(settingsForSync?: AppSettings, options?: { queueAfterCurrent?: boolean }) => Promise<SyncResult | undefined>>>;
+let runSync: ReturnType<typeof vi.fn<RunJiraSync>>;
 let loadTickets: ReturnType<typeof vi.fn<(settingsForLoad?: AppSettings) => Promise<void>>>;
 let onReviewResult: ReturnType<typeof vi.fn<(result: BitbucketReviewSyncResult) => void>>;
 let setLogError: ReturnType<typeof vi.fn<(message: string | undefined) => void>>;
@@ -267,9 +278,42 @@ describe("useBitbucketReviewLogging", () => {
       2400
     ]);
     expect(showSuccess).toHaveBeenCalledWith("Logged 2 review sessions to Jira.");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({ queueAfterCurrent: true, mode: "delta" }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isLoggingReview).toBe(false);
+  });
+
+  it("finishes review logging after the Jira writes while local save and refresh stay pending", async () => {
+    const pendingSave = deferred<void>();
+    const pendingSync = deferred<SyncResult | undefined>();
+    const pendingTickets = deferred<void>();
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "wl-1",
+      issueKey: "TB-22",
+      timeSpentSeconds: 1800
+    });
+    saveBitbucketReviewResult.mockReturnValue(pendingSave.promise);
+    runSync.mockReturnValue(pendingSync.promise);
+    loadTickets.mockReturnValue(pendingTickets.promise);
+    renderHarness();
+
+    await act(async () => {
+      await expect(getApi().handleLogReviewSessions(["s1"], "reviewed-ticket")).resolves.toBe(true);
+    });
+
+    expect(getApi().isLoggingReview).toBe(false);
+    expect(onReviewResult).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledWith("Logged 1 review session to Jira.");
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({ queueAfterCurrent: true, mode: "delta" }));
+    expect(loadTickets).toHaveBeenCalledWith(settings);
+
+    pendingSave.resolve(undefined);
+    pendingSync.resolve(syncResult());
+    pendingTickets.resolve(undefined);
+    await act(async () => {
+      await Promise.all([pendingSave.promise, pendingSync.promise, pendingTickets.promise]);
+    });
   });
 
   it("uses the review bucket target when selected", async () => {
@@ -327,7 +371,7 @@ describe("useBitbucketReviewLogging", () => {
     expect(showSuccess).toHaveBeenCalledWith("Logged 1 review session to Jira.");
     expect(setLogError).toHaveBeenCalledWith("Jira failed on the second session");
     expect(showError).toHaveBeenCalledWith("Jira failed on the second session");
-    expect(runSync).toHaveBeenCalledWith(settings, { queueAfterCurrent: true });
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({ queueAfterCurrent: true, mode: "delta" }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isLoggingReview).toBe(false);
   });

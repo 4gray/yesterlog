@@ -20,7 +20,8 @@ import { nativeApi } from "../api/native";
 import {
   mergeCreatedWorklogIntoSyncResult,
   mergeMovedWorklogIntoSyncResult,
-  mergeUpdatedWorklogIntoSyncResult
+  mergeUpdatedWorklogIntoSyncResult,
+  removeWorklogFromSyncResult
 } from "../domain/syncResult";
 import {
   deleteWorklogAllocationPreference as deleteWorklogAllocationPreferenceFromStorage,
@@ -29,6 +30,11 @@ import {
 } from "../storage/db";
 import { formatDuration } from "../utils/date";
 import { normalizeJiraSiteInput } from "./appHelpers";
+import {
+  queueBackgroundJiraRefresh,
+  runBackgroundTask,
+  type RunJiraSync
+} from "./backgroundJiraRefresh";
 
 export interface JiraWorklogsClient {
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult>;
@@ -58,10 +64,7 @@ interface UseJiraWorklogsOptions {
   deleteWorklogAllocationPreference?: (preferenceKey: string) => Promise<void>;
   onWorklogAllocationPreference?: (preference: WorklogAllocationPreference) => void;
   onWorklogAllocationPreferenceRemoved?: (preferenceKey: string) => void;
-  runSync: (
-    settingsForSync?: AppSettings,
-    options?: { queueAfterCurrent?: boolean }
-  ) => Promise<SyncResult | undefined>;
+  runSync: RunJiraSync;
   loadTickets: (settingsForLoad?: AppSettings) => Promise<unknown>;
   onSyncResult: (result: SyncResult) => void;
   setEditingWorklog: Dispatch<SetStateAction<JiraWorklog | undefined>>;
@@ -178,30 +181,40 @@ export const useJiraWorklogs = ({
 
         const { ticket, allocationDirection, ...worklogPayload } = payload;
         const result = await client.addWorklog({ settings, ...worklogPayload });
-        const preferenceHandled = await rememberAllocationPreference(
+        const preferenceHandled = rememberAllocationPreference(
           result.worklogId,
           allocationDirection,
           syncResult
         );
-        showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
-        const syncedResult = await runSync(settings, { queueAfterCurrent: true });
-        if (!preferenceHandled) {
-          await rememberAllocationPreference(result.worklogId, allocationDirection, syncedResult);
-        }
-        const mergedSyncResult = mergeCreatedWorklogIntoSyncResult(syncedResult ?? syncResult, {
+        const createdWorklog = {
           ticket,
           worklogId: result.worklogId,
           startedISO: payload.startedISO,
           timeSpentSeconds: result.timeSpentSeconds,
           comment: payload.comment,
           syncedAtISO: new Date().toISOString()
-        });
-
-        if (mergedSyncResult && mergedSyncResult !== syncedResult && mergedSyncResult !== syncResult) {
-          await saveSyncResult(mergedSyncResult);
-          onSyncResult(mergedSyncResult);
+        };
+        const optimistic = mergeCreatedWorklogIntoSyncResult(syncResult, createdWorklog);
+        if (optimistic && optimistic !== syncResult) {
+          onSyncResult(optimistic);
+          runBackgroundTask("cache the newly created Jira worklog", () => saveSyncResult(optimistic));
         }
-        await loadTickets();
+        runBackgroundTask("save the new worklog allocation preference", async () => {
+          await preferenceHandled;
+        });
+        showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
+        queueBackgroundJiraRefresh({
+          settings,
+          runSync,
+          loadTickets,
+          context: "creating a worklog",
+          reconcile: async (syncedResult) => {
+            if (!(await preferenceHandled)) {
+              await rememberAllocationPreference(result.worklogId, allocationDirection, syncedResult);
+            }
+            return mergeCreatedWorklogIntoSyncResult(syncedResult, createdWorklog) ?? syncedResult;
+          }
+        });
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to log time to Jira.";
@@ -243,16 +256,24 @@ export const useJiraWorklogs = ({
             targetTicket: payload.ticket,
             syncedAtISO: new Date().toISOString()
           });
-          const postMoveTasks: Array<() => Promise<unknown>> = [
-            () => runSync(settings, { queueAfterCurrent: true }),
-            () => loadTickets()
-          ];
           if (optimistic && optimistic !== syncResult) {
             onSyncResult(optimistic);
-            postMoveTasks.unshift(() => saveSyncResult(optimistic));
+            runBackgroundTask("cache the moved Jira worklog", () => saveSyncResult(optimistic));
           }
           showSuccess(`Moved worklog from ${result.sourceIssueKey} to ${result.targetIssueKey}.`);
-          await Promise.allSettled(postMoveTasks.map((task) => Promise.resolve().then(task)));
+          queueBackgroundJiraRefresh({
+            settings,
+            runSync,
+            loadTickets,
+            context: "moving a worklog",
+            reconcile: async (syncedResult) => {
+              return mergeMovedWorklogIntoSyncResult(syncedResult, {
+                worklogId: result.worklogId,
+                targetTicket: payload.ticket,
+                syncedAtISO: new Date().toISOString()
+              }) ?? syncedResult;
+            }
+          });
           return true;
         }
 
@@ -269,23 +290,43 @@ export const useJiraWorklogs = ({
           startedISO: payload.startedISO,
           comment: payload.comment
         });
-        if (payload.allocationDirection) {
-          await rememberAllocationPreference(
+        const preferenceTask = payload.allocationDirection
+          ? rememberAllocationPreference(
             result.worklogId,
             payload.allocationDirection,
             syncResult,
             editingWorklog.authorAccountId
-          );
-        } else {
-          await forgetAllocationPreference(
+          )
+          : forgetAllocationPreference(
             result.worklogId,
             syncResult,
             editingWorklog.authorAccountId
           );
+        runBackgroundTask("update the worklog allocation preference", async () => {
+          await preferenceTask;
+        });
+        const updatedWorklog = {
+          worklogId: result.worklogId,
+          startedISO: payload.startedISO,
+          timeSpentSeconds: result.timeSpentSeconds,
+          comment: payload.comment ?? "",
+          syncedAtISO: new Date().toISOString()
+        };
+        const optimistic = mergeUpdatedWorklogIntoSyncResult(syncResult, updatedWorklog);
+        if (optimistic && optimistic !== syncResult) {
+          onSyncResult(optimistic);
+          runBackgroundTask("cache the updated Jira worklog", () => saveSyncResult(optimistic));
         }
         showSuccess(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
-        await runSync(settings, { queueAfterCurrent: true });
-        await loadTickets();
+        queueBackgroundJiraRefresh({
+          settings,
+          runSync,
+          loadTickets,
+          context: "updating a worklog",
+          reconcile: async (syncedResult) => {
+            return mergeUpdatedWorklogIntoSyncResult(syncedResult, updatedWorklog) ?? syncedResult;
+          }
+        });
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to update Jira worklog.";
@@ -342,7 +383,7 @@ export const useJiraWorklogs = ({
         // time — a concurrent drag may have applied newer optimistic state that a stale
         // snapshot would clobber. If the reconcile also fails, the next sync corrects it.
         try {
-          const fresh = await runSync(settings, { queueAfterCurrent: true });
+          const fresh = await runSync(settings, { queueAfterCurrent: true, mode: "full" });
           if (fresh) {
             onSyncResult(fresh);
             await saveSyncResult(fresh);
@@ -376,14 +417,33 @@ export const useJiraWorklogs = ({
         issueKey: editingWorklog.issueKey,
         worklogId: editingWorklog.id
       });
-      await forgetAllocationPreference(
+      const preferenceTask = forgetAllocationPreference(
         editingWorklog.id,
         syncResult,
         editingWorklog.authorAccountId
       );
+      runBackgroundTask("remove the deleted worklog allocation preference", async () => {
+        await preferenceTask;
+      });
+      const deletedWorklog = {
+        worklogId: result.worklogId,
+        syncedAtISO: new Date().toISOString()
+      };
+      const optimistic = removeWorklogFromSyncResult(syncResult, deletedWorklog);
+      if (optimistic && optimistic !== syncResult) {
+        onSyncResult(optimistic);
+        runBackgroundTask("cache the deleted Jira worklog", () => saveSyncResult(optimistic));
+      }
       showSuccess(`Deleted worklog from ${result.issueKey}.`);
-      await runSync(settings, { queueAfterCurrent: true });
-      await loadTickets();
+      queueBackgroundJiraRefresh({
+        settings,
+        runSync,
+        loadTickets,
+        context: "deleting a worklog",
+        reconcile: async (syncedResult) => {
+          return removeWorklogFromSyncResult(syncedResult, deletedWorklog) ?? syncedResult;
+        }
+      });
       return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete Jira worklog.";
@@ -393,7 +453,7 @@ export const useJiraWorklogs = ({
     } finally {
       setIsDeletingWorklog(false);
     }
-  }, [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, runSync, setEditingWorklog, settings, showError, showSuccess, syncResult]);
+  }, [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, onSyncResult, runSync, saveSyncResult, setEditingWorklog, settings, showError, showSuccess, syncResult]);
 
   return {
     isLogging,

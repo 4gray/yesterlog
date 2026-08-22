@@ -63,9 +63,11 @@ function deferred<T>() {
 
 function Harness({
   currentSettings = settings,
+  currentSyncResult,
   demoSyncResult
 }: {
   currentSettings?: AppSettings;
+  currentSyncResult?: SyncResult;
   demoSyncResult?: SyncResult;
 }) {
   api = useJiraSync({
@@ -73,6 +75,7 @@ function Harness({
     weekKey: "2026-06-15",
     weekStartISO: "2026-06-15T00:00:00.000Z",
     weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+    syncResult: currentSyncResult,
     demoSyncResult,
     client,
     saveSyncResult,
@@ -157,12 +160,53 @@ describe("useJiraSync", () => {
       settings,
       weekKey: "2026-06-15",
       weekStartISO: "2026-06-15T00:00:00.000Z",
-      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+      mode: "full"
     });
     expect(saveSyncResult).toHaveBeenCalledWith(result);
     expect(onSyncResult).toHaveBeenCalledWith(result);
     expect(showSuccess).toHaveBeenCalledWith("Synced 7 worklogs across 4 candidate issues.");
     expect(getApi().isSyncing).toBe(false);
+  });
+
+  it("uses Jira's delta feeds when a cached baseline has a cursor", async () => {
+    const baseline = syncResult({
+      jiraSite: "https://example.atlassian.net",
+      sourceWorklogs: [],
+      scanStartISO: "2026-03-17T00:00:00.000Z",
+      scanEndExclusiveISO: "2026-06-18T00:00:00.000Z",
+      worklogSyncCursorMs: 123_000
+    });
+    const result = syncResult({
+      ...baseline,
+      syncedAt: "2026-06-17T10:02:00.000Z",
+      worklogSyncCursorMs: 124_000
+    });
+    syncJiraWorklogs.mockResolvedValue(result);
+    renderHarness({ currentSyncResult: baseline });
+
+    await act(async () => {
+      await expect(getApi().runSync()).resolves.toBe(result);
+    });
+
+    expect(syncJiraWorklogs).toHaveBeenCalledWith({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+      mode: "delta",
+      baseline: {
+        weekKey: baseline.weekKey,
+        weekStartISO: baseline.weekStartISO,
+        weekEndExclusiveISO: baseline.weekEndExclusiveISO,
+        accountId: baseline.accountId,
+        jiraSite: baseline.jiraSite,
+        sourceWorklogs: [],
+        scanStartISO: baseline.scanStartISO,
+        scanEndExclusiveISO: baseline.scanEndExclusiveISO,
+        worklogSyncCursorMs: baseline.worklogSyncCursorMs
+      }
+    });
   });
 
   it("reports sync failures and resets the syncing flag", async () => {
@@ -231,6 +275,54 @@ describe("useJiraSync", () => {
     expect(saveSyncResult).toHaveBeenNthCalledWith(2, secondResult);
     expect(onSyncResult).toHaveBeenNthCalledWith(1, firstResult);
     expect(onSyncResult).toHaveBeenNthCalledWith(2, secondResult);
+    expect(getApi().isSyncing).toBe(false);
+  });
+
+  it("coalesces repeated trailing refreshes and preserves a requested full sync", async () => {
+    const firstSync = deferred<SyncResult>();
+    const trailingSync = deferred<SyncResult>();
+    const firstResult = syncResult({ worklogCount: 1 });
+    const trailingResult = syncResult({ worklogCount: 2 });
+    syncJiraWorklogs.mockReturnValueOnce(firstSync.promise).mockReturnValueOnce(trailingSync.promise);
+    renderHarness();
+
+    const first = getApi().runSync();
+    const queuedDelta = getApi().runSync(settings, {
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: (result) => ({ ...result, worklogCount: result.worklogCount + 1 })
+    });
+    const queuedFull = getApi().runSync(settings, {
+      queueAfterCurrent: true,
+      mode: "full",
+      reconcile: (result) => ({ ...result, worklogCount: result.worklogCount + 10 })
+    });
+    const anotherDelta = getApi().runSync(settings, {
+      queueAfterCurrent: true,
+      mode: "delta",
+      reconcile: (result) => ({ ...result, worklogCount: result.worklogCount + 100 })
+    });
+
+    expect(syncJiraWorklogs).toHaveBeenCalledTimes(1);
+    firstSync.resolve(firstResult);
+    await act(async () => {
+      await first;
+      await Promise.resolve();
+    });
+
+    expect(syncJiraWorklogs).toHaveBeenCalledTimes(2);
+    expect(syncJiraWorklogs.mock.calls[1]?.[0]).toMatchObject({ mode: "full" });
+    trailingSync.resolve(trailingResult);
+
+    await act(async () => {
+      await expect(queuedDelta).resolves.toMatchObject({ worklogCount: 113 });
+      await expect(queuedFull).resolves.toMatchObject({ worklogCount: 113 });
+      await expect(anotherDelta).resolves.toMatchObject({ worklogCount: 113 });
+    });
+
+    expect(syncJiraWorklogs).toHaveBeenCalledTimes(2);
+    expect(saveSyncResult).toHaveBeenNthCalledWith(2, expect.objectContaining({ worklogCount: 113 }));
+    expect(onSyncResult).toHaveBeenNthCalledWith(2, expect.objectContaining({ worklogCount: 113 }));
     expect(getApi().isSyncing).toBe(false);
   });
 });

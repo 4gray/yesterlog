@@ -3,7 +3,8 @@ import type { JiraTicket, SyncResult } from "../../shared/types";
 import {
   mergeCreatedWorklogIntoSyncResult,
   mergeMovedWorklogIntoSyncResult,
-  mergeUpdatedWorklogIntoSyncResult
+  mergeUpdatedWorklogIntoSyncResult,
+  removeWorklogFromSyncResult
 } from "./syncResult";
 
 const ticket: JiraTicket = {
@@ -204,6 +205,30 @@ describe("mergeUpdatedWorklogIntoSyncResult", () => {
     expect(merged?.daySummaries[dayKey].worklogs[0].started).toBe(at(10));
   });
 
+  it("updates the issue comment summary with an edited worklog comment", () => {
+    const merged = mergeUpdatedWorklogIntoSyncResult(base(), {
+      worklogId: "20001",
+      startedISO: at(8),
+      timeSpentSeconds: 3600,
+      comment: "updated note"
+    });
+
+    expect(merged?.daySummaries[dayKey].worklogs[0].comment).toBe("updated note");
+    expect(merged?.daySummaries[dayKey].issues[0].comments).toEqual(["updated note"]);
+  });
+
+  it("returns the input unchanged when the requested update is already present", () => {
+    const input = base();
+    expect(
+      mergeUpdatedWorklogIntoSyncResult(input, {
+        worklogId: "20001",
+        startedISO: at(8),
+        timeSpentSeconds: 3600,
+        comment: "kept"
+      })
+    ).toBe(input);
+  });
+
   it("shifts a worklog across midnight between day buckets", () => {
     const nextDay = new Date(2026, 5, 19, 10, 0).toISOString();
     const merged = mergeUpdatedWorklogIntoSyncResult(base(), {
@@ -273,5 +298,38 @@ describe("mergeMovedWorklogIntoSyncResult", () => {
     expect(
       mergeMovedWorklogIntoSyncResult(syncResult, { worklogId: "missing", targetTicket: ticket })
     ).toBe(syncResult);
+  });
+});
+
+describe("removeWorklogFromSyncResult", () => {
+  it("removes the worklog from visible and raw data while rebuilding totals", () => {
+    const removable = syncResult.daySummaries["2026-06-18"].worklogs[0];
+    const source = {
+      ...syncResult,
+      sourceWorklogs: [removable]
+    };
+
+    const removed = removeWorklogFromSyncResult(source, {
+      worklogId: removable.id,
+      syncedAtISO: "2026-06-18T12:00:00.000Z"
+    });
+
+    expect(removed).not.toBe(source);
+    expect(removed).toMatchObject({
+      syncedAt: "2026-06-18T12:00:00.000Z",
+      trackedSeconds: 0,
+      issueCount: 0,
+      worklogCount: 0
+    });
+    expect(removed?.daySummaries["2026-06-18"]).toEqual({
+      trackedSeconds: 0,
+      issues: [],
+      worklogs: []
+    });
+    expect(removed?.sourceWorklogs).toEqual([]);
+  });
+
+  it("returns the input unchanged when the worklog is already absent", () => {
+    expect(removeWorklogFromSyncResult(syncResult, { worklogId: "missing" })).toBe(syncResult);
   });
 });

@@ -16,6 +16,11 @@ import {
   markReviewSessionsLogged
 } from "../domain/bitbucketReview";
 import { saveBitbucketReviewResult as saveBitbucketReviewResultToStorage } from "../storage/db";
+import {
+  queueBackgroundJiraRefresh,
+  runBackgroundTask,
+  type RunJiraSync
+} from "./backgroundJiraRefresh";
 
 export interface BitbucketReviewLoggingClient {
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult>;
@@ -27,10 +32,7 @@ interface UseBitbucketReviewLoggingOptions {
   isDemo: boolean;
   client?: BitbucketReviewLoggingClient;
   saveBitbucketReviewResult?: (result: BitbucketReviewSyncResult) => Promise<void>;
-  runSync: (
-    settingsForSync?: AppSettings,
-    options?: { queueAfterCurrent?: boolean }
-  ) => Promise<SyncResult | undefined>;
+  runSync: RunJiraSync;
   loadTickets: (settingsForLoad?: AppSettings) => Promise<unknown>;
   onReviewResult: (result: BitbucketReviewSyncResult) => void;
   setLogError: (message: string | undefined) => void;
@@ -156,11 +158,15 @@ export const useBitbucketReviewLogging = ({
 
         if (loggedSessions.length > 0) {
           const updated = markReviewSessionsLogged(sourceResult, loggedSessions);
-          await saveBitbucketReviewResult(updated);
           onReviewResult(updated);
+          runBackgroundTask("save the logged review sessions", () => saveBitbucketReviewResult(updated));
           showSuccess(`Logged ${loggedSessions.length} review ${loggedSessions.length === 1 ? "session" : "sessions"} to Jira.`);
-          await runSync(settings, { queueAfterCurrent: true });
-          await loadTickets();
+          queueBackgroundJiraRefresh({
+            settings,
+            runSync,
+            loadTickets,
+            context: "logging review sessions"
+          });
         }
 
         if (failure) {

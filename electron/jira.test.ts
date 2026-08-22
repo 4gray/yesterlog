@@ -6,7 +6,8 @@ import {
   moveWorklog,
   searchJiraTickets,
   syncJiraActivity,
-  syncJiraWorklogs
+  syncJiraWorklogs,
+  testJiraConnection
 } from "./jira";
 
 const settings: AppSettings = {
@@ -52,6 +53,8 @@ const jsonResponse = (body: unknown) =>
 describe("syncJiraWorklogs", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("keeps the visible week raw while retaining earlier worklogs for bulk projection", async () => {
@@ -122,6 +125,275 @@ describe("syncJiraWorklogs", () => {
     });
     expect(result.daySummaries["2026-07-14"].worklogs.map((worklog) => worklog.id)).toEqual(["visible"]);
     expect(result.trackedSeconds).toBe(3600);
+    expect(result.worklogSyncCursorMs).toEqual(expect.any(Number));
+    expect(result.diagnostics).toMatchObject({
+      mode: "full",
+      requestCount: 3,
+      candidateIssueCount: 1
+    });
+  });
+
+  it("applies updated and deleted worklog feeds without repeating the expanded issue scan", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let worklogListAttempts = 0;
+    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const requestedUrl = new URL(String(url));
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me" });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/worklog/updated") {
+        expect(requestedUrl.searchParams.get("since")).toBe("1000");
+        return jsonResponse({
+          since: 1000,
+          until: 5000,
+          lastPage: true,
+          values: [
+            { worklogId: 20001, updatedTime: 4000 },
+            { worklogId: 20003, updatedTime: 4500 }
+          ]
+        });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/worklog/deleted") {
+        return jsonResponse({
+          since: 1000,
+          until: 4500,
+          lastPage: true,
+          values: [{ worklogId: 20002, updatedTime: 4200 }]
+        });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/worklog/list") {
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(String(init?.body))).toEqual({ ids: [20001, 20003] });
+        worklogListAttempts += 1;
+        if (worklogListAttempts === 1) {
+          return new Response(null, { status: 503, headers: { "Retry-After": "0" } });
+        }
+        return jsonResponse([
+          {
+            id: "20001",
+            issueId: "10001",
+            author: { accountId: "me" },
+            started: "2026-07-14T09:00:00.000+0000",
+            timeSpentSeconds: 7200,
+            updated: "2026-07-15T09:00:00.000+0000"
+          },
+          {
+            id: "20003",
+            issueId: "10003",
+            author: { accountId: "me" },
+            started: "2026-07-15T11:00:00.000+0000",
+            timeSpentSeconds: 1800,
+            updated: "2026-07-15T11:30:00.000+0000"
+          }
+        ]);
+      }
+      if (requestedUrl.pathname === "/rest/api/3/issue/10003") {
+        return jsonResponse({
+          id: "10003",
+          key: "OPS-88",
+          fields: { summary: "New delta issue", project: { key: "OPS", name: "Operations" } }
+        });
+      }
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraWorklogs({
+      settings,
+      weekKey: "2026-07-13",
+      weekStartISO: "2026-07-13T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+      mode: "delta",
+      baseline: {
+        weekKey: "2026-07-13",
+        weekStartISO: "2026-07-13T00:00:00.000Z",
+        weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+        accountId: "me",
+        jiraSite: "https://example.atlassian.net",
+        scanStartISO: "2026-04-14T00:00:00.000Z",
+        scanEndExclusiveISO: "2026-12-31T00:00:00.000Z",
+        worklogSyncCursorMs: 1000,
+        sourceWorklogs: [
+          {
+            id: "20001",
+            issueId: "10001",
+            issueKey: "OPS-77",
+            issueSummary: "Existing issue",
+            issueUrl: "https://example.atlassian.net/browse/OPS-77",
+            authorAccountId: "me",
+            started: "2026-07-14T09:00:00.000+0000",
+            timeSpentSeconds: 3600
+          },
+          {
+            id: "20002",
+            issueId: "10002",
+            issueKey: "OPS-79",
+            issueSummary: "Deleted issue",
+            issueUrl: "https://example.atlassian.net/browse/OPS-79",
+            authorAccountId: "me",
+            started: "2026-07-14T12:00:00.000+0000",
+            timeSpentSeconds: 1800
+          }
+        ]
+      }
+    });
+
+    expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).not.toContain("/rest/api/3/search/jql");
+    expect(result.sourceWorklogs?.map((worklog) => worklog.id)).toEqual(["20001", "20003"]);
+    expect(worklogListAttempts).toBe(2);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("after 503"));
+    expect(result.sourceWorklogs?.[0]).toMatchObject({ timeSpentSeconds: 7200 });
+    expect(result.sourceWorklogs?.[1]).toMatchObject({ issueKey: "OPS-88", issueSummary: "New delta issue" });
+    expect(result.worklogSyncCursorMs).toBe(3500);
+    expect(result.diagnostics).toMatchObject({
+      mode: "delta",
+      requestCount: 5,
+      changedWorklogCount: 2,
+      deletedWorklogCount: 1
+    });
+  });
+
+  it("falls back to a bounded full scan when a delta baseline has no cursor", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me" });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        return jiraSearchResponse();
+      }
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraWorklogs({
+      settings,
+      weekKey: "2026-07-13",
+      weekStartISO: "2026-07-13T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+      mode: "delta",
+      baseline: {
+        weekKey: "2026-07-13",
+        weekStartISO: "2026-07-13T00:00:00.000Z",
+        weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+        accountId: "me",
+        sourceWorklogs: [],
+        scanStartISO: "2026-04-14T00:00:00.000Z",
+        scanEndExclusiveISO: "2026-07-20T00:00:00.000Z"
+      }
+    });
+
+    expect(result.diagnostics).toMatchObject({
+      mode: "full",
+      fallbackReason: "baseline has no delta cursor"
+    });
+  });
+
+  it("extends an advancing current-week scan with only the newly uncovered date range", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-16T12:00:00.000Z"));
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me" });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/worklog/updated" || requestedUrl.pathname === "/rest/api/3/worklog/deleted") {
+        return jsonResponse({ since: 1000, until: 5000, lastPage: true, values: [] });
+      }
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        expect(requestedUrl.searchParams.get("jql")).toContain('worklogDate >= "2026-07-16"');
+        return jiraSearchResponse([
+          { id: "10004", key: "OPS-91", fields: { summary: "Newly uncovered worklog" } }
+        ]);
+      }
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-91/worklog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 1,
+          worklogs: [
+            {
+              id: "20004",
+              author: { accountId: "me" },
+              started: "2026-07-16T10:00:00.000+0000",
+              timeSpentSeconds: 1800
+            }
+          ]
+        });
+      }
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraWorklogs({
+      settings,
+      weekKey: "2026-07-13",
+      weekStartISO: "2026-07-13T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+      mode: "delta",
+      baseline: {
+        weekKey: "2026-07-13",
+        weekStartISO: "2026-07-13T00:00:00.000Z",
+        weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
+        accountId: "me",
+        jiraSite: "https://example.atlassian.net",
+        scanStartISO: "2026-04-01T00:00:00.000Z",
+        scanEndExclusiveISO: "2026-07-16T00:00:00.000Z",
+        worklogSyncCursorMs: 1000,
+        sourceWorklogs: []
+      }
+    });
+
+    expect(result.sourceWorklogs?.map((worklog) => worklog.id)).toEqual(["20004"]);
+    expect(result.diagnostics).toMatchObject({
+      mode: "delta",
+      requestCount: 5,
+      changedWorklogCount: 0,
+      deletedWorklogCount: 0,
+      extendedRangeIssueCount: 1
+    });
+  });
+});
+
+describe("Jira request resilience", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("honors Retry-After and retries a rate-limited read", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 429, headers: { "Retry-After": "0" } }))
+      .mockResolvedValueOnce(jsonResponse({ accountId: "me", displayName: "Me" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(testJiraConnection(settings)).resolves.toMatchObject({ ok: true, accountId: "me" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("after 429"));
+  });
+
+  it("bounds a stalled Jira request with a 30 second timeout", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+        })
+      )
+    );
+
+    const pending = testJiraConnection(settings);
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    await expect(pending).resolves.toMatchObject({
+      ok: false,
+      message: "Jira request timed out after 30s."
+    });
   });
 });
 
@@ -181,6 +453,29 @@ describe("moveWorklog", () => {
         adjustEstimate: "leave"
       })
     ).rejects.toThrow("Delete all worklogs permissions");
+  });
+
+  it("does not retry an ambiguous failed write response", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ errorMessages: ["Temporarily unavailable"] }), {
+        status: 503,
+        statusText: "Service Unavailable",
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      moveWorklog({
+        settings,
+        sourceIssueKey: "OLD-1",
+        targetIssueKey: "NEW-2",
+        worklogId: "20001",
+        adjustEstimate: "auto"
+      })
+    ).rejects.toThrow("Temporarily unavailable");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
