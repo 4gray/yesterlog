@@ -122,8 +122,11 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   (primary/secondary/ghost/icon, type="button" default) adopted at all 19 primary/secondary
   <button> call sites (anchors styled as .secondary-button stay anchors); `EmptyState`
   adopted in ReviewView (4 states) and ReportsSummary; button styles moved from settings.css
-  to new `styles/primitives.css`. Remaining: Tooltip (92 native title=""), Card, QuickLogSheet
-  + Recap/Notes scrims onto Modal, migrate the 12 bespoke view-local button classes and the
+  to new `styles/primitives.css`; QuickLogSheet folded onto Modal (its overlay/scrim CSS
+  deleted). Decision: no generic `Card` primitive — the five *-card classes are distinct
+  components (dock card is draggable, welcome card is a landing tile), folding them would be
+  artificial. Remaining: Tooltip (92 native title="", needs its own visual-QA pass),
+  Recap/Notes scrims onto Modal, migrate the 12 bespoke view-local button classes and the
   4 view-local icon buttons, remaining ~20 *-empty classes.
 - [ ] Phase 3 — copy pass
 - [ ] Phase 4 — header simplification

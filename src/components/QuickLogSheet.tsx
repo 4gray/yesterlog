@@ -5,6 +5,7 @@ import type { Range } from "../domain/dayCalendar";
 import { formatDuration, jiraUnitDurationToSeconds } from "../utils/date";
 import type { JiraDurationUnit } from "../utils/date";
 import { AddTimeTimelineEditor } from "./AddTimeTimelineEditor";
+import { Modal } from "./Modal";
 import type { DockColor } from "./activeWork";
 
 export interface QuickLogContext {
@@ -120,12 +121,10 @@ export const QuickLogSheet = ({
     return () => window.clearTimeout(id);
   }, []);
 
+  // Escape is handled by the Modal shell; this only owns ⌘/Ctrl+Enter confirm.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCancel();
-      } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
         event.preventDefault();
         if (!isLogging && context.hours > 0 && !validationMessage) {
           onConfirm();
@@ -137,9 +136,7 @@ export const QuickLogSheet = ({
   }, [context.hours, isLogging, onCancel, onConfirm, validationMessage]);
 
   return (
-    <div className="quicklog-overlay" role="dialog" aria-modal="true" aria-label="Log time">
-      <div className="quicklog-scrim" onClick={onCancel} />
-      <div className={`quicklog-sheet${timeline ? " has-side-timeline" : ""}`}>
+    <Modal label="Log time" onClose={onCancel} panelClassName={`quicklog-sheet${timeline ? " has-side-timeline" : ""}`}>
         <div className="quicklog-head">
           <div className="quicklog-title-row">
             <span className="quicklog-title">Log time</span>
@@ -266,7 +263,6 @@ export const QuickLogSheet = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
