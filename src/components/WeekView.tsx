@@ -80,6 +80,10 @@ interface WeekViewProps {
   onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
   onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
+  onResizePersonalNote?: (
+    note: PersonalNote,
+    patch: { startedISO: string; timeSpentSeconds: number }
+  ) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
@@ -605,6 +609,7 @@ export const WeekView = ({
   onAddTime,
   onMoveWorklog,
   onMoveRecurring,
+  onResizePersonalNote,
   onEditWorklog,
   onEditPersonalNote,
   onToggleSkipped,
@@ -866,6 +871,7 @@ export const WeekView = ({
           onAddTime={onAddTime}
           onMoveWorklog={onMoveWorklog}
           onMoveRecurring={onMoveRecurring}
+          onResizePersonalNote={onResizePersonalNote}
           onEditWorklog={onEditWorklog}
           onEditPersonalNote={onEditPersonalNote}
           onToggleSkipped={onToggleSkipped}

@@ -70,6 +70,12 @@ const setTextAreaValue = (textarea: HTMLTextAreaElement, value: string) => {
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const setInputValue = (input: HTMLInputElement, value: string) => {
+  const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  valueSetter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
 beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -99,6 +105,7 @@ describe("AddTimeRecurringForm", () => {
     expect(options[0].getAttribute("aria-checked")).toBe("false");
     expect(options[1].getAttribute("aria-checked")).toBe("true");
     expect(container.querySelector<HTMLTextAreaElement>(".note-textarea")?.value).toBe("Planning");
+    expect(container.querySelector<HTMLInputElement>("[aria-label='Exact recurring duration in minutes']")?.value).toBe("75");
   });
 
   it("passes event, minute, and note changes through", () => {
@@ -121,6 +128,20 @@ describe("AddTimeRecurringForm", () => {
     expect(onSelect).toHaveBeenCalledWith(recurringEvents[1]);
     expect(onMinutesChange).toHaveBeenCalledWith(45);
     expect(onNoteChange).toHaveBeenCalledWith("Updated note");
+  });
+
+  it("accepts an exact meeting duration outside the presets", () => {
+    const onMinutesChange = vi.fn();
+    renderForm({ onMinutesChange });
+
+    act(() => {
+      const input = container.querySelector<HTMLInputElement>("[aria-label='Exact recurring duration in minutes']");
+      if (input) {
+        setInputValue(input, "35");
+      }
+    });
+
+    expect(onMinutesChange).toHaveBeenCalledWith(35);
   });
 
   it("renders an empty state when no candidate is available", () => {

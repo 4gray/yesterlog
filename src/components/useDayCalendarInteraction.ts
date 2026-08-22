@@ -201,10 +201,14 @@ export const useDayCalendarInteraction = ({
         }
       } else if (drag.kind === "resize-end" && drag.item) {
         const pointer = readMinute(event.clientY);
-        drag.range = fitResizeEnd(drag.item.startMin, pointer, sourceItems, drag.item.id, currentSnap, sourceLayout.endMin);
+        const isLocalOverlay = drag.item.kind === "note" || drag.item.kind === "recurring";
+        const blockers = isLocalOverlay ? [drag.item] : sourceItems;
+        drag.range = fitResizeEnd(drag.item.startMin, pointer, blockers, drag.item.id, currentSnap, sourceLayout.endMin);
       } else if (drag.kind === "resize-start" && drag.item) {
         const pointer = readMinute(event.clientY);
-        drag.range = fitResizeStart(pointer, drag.item.endMin, sourceItems, drag.item.id, currentSnap, sourceLayout.startMin);
+        const isLocalOverlay = drag.item.kind === "note" || drag.item.kind === "recurring";
+        const blockers = isLocalOverlay ? [drag.item] : sourceItems;
+        drag.range = fitResizeStart(pointer, drag.item.endMin, blockers, drag.item.id, currentSnap, sourceLayout.startMin);
       }
 
       setDraft({ kind: drag.kind, itemId: drag.item?.id, range: drag.range });

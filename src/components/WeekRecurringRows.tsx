@@ -20,6 +20,22 @@ export const formatWeekRecurringMinutes = (minutes: number) => {
   return rest === 0 ? `${hours}h` : `${hours}h ${String(rest).padStart(2, "0")}m`;
 };
 
+const ExactRecurringMinutes = ({ minutes, onChange }: { minutes: number; onChange: (minutes: number) => void }) => (
+  <label className="rec-custom-minutes is-compact">
+    <span>Exact</span>
+    <input
+      type="number"
+      min={5}
+      max={24 * 60}
+      step={5}
+      value={minutes}
+      onChange={(event) => onChange(Math.max(5, Number(event.target.value) || 0))}
+      aria-label="Exact recurring duration in minutes"
+    />
+    <em>min</em>
+  </label>
+);
+
 interface PendingRecurringCardProps {
   pending: PendingRecurringOccurrence;
   onConfirm: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
@@ -62,6 +78,7 @@ export const PendingRecurringCard = ({ pending, onConfirm, onSkip }: PendingRecu
                 {formatWeekRecurringMinutes(value)}
               </button>
             ))}
+            <ExactRecurringMinutes minutes={minutes} onChange={setMinutes} />
           </div>
           <textarea
             className="rec-pending-note"
@@ -180,6 +197,7 @@ export const RecurringEntryRow = ({ entry, onSave, onDelete }: RecurringEntryRow
               {formatWeekRecurringMinutes(value)}
             </button>
           ))}
+          <ExactRecurringMinutes minutes={minutes} onChange={setMinutes} />
         </div>
         <textarea
           className="rec-pending-note"

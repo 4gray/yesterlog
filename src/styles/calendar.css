@@ -339,6 +339,10 @@
   touch-action: none;
 }
 
+.cal-block.is-resizable {
+  touch-action: none;
+}
+
 .cal-block.is-dragging {
   cursor: grabbing;
   z-index: 6;
@@ -388,7 +392,8 @@
   bottom: 0;
 }
 
-.cal-block.is-draggable:hover .cal-resize::after {
+.cal-block.is-resizable:hover .cal-resize::after,
+.cal-block.is-resizable:focus-visible .cal-resize::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -397,6 +402,16 @@
   height: 3px;
   border-radius: 2px;
   background: var(--border-strong);
+}
+
+.cal-block--meeting.is-resizable:hover .cal-resize::after,
+.cal-block--meeting.is-resizable:focus-visible .cal-resize::after {
+  background: color-mix(in srgb, var(--ring-meeting) 72%, var(--text-bright));
+}
+
+.cal-block--fire.is-resizable:hover .cal-resize::after,
+.cal-block--fire.is-resizable:focus-visible .cal-resize::after {
+  background: color-mix(in srgb, var(--ring-fire) 72%, var(--text-bright));
 }
 
 .cal-resize--top::after {

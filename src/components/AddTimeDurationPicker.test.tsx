@@ -123,4 +123,32 @@ describe("AddTimeDurationPicker", () => {
     expect(onCustomAmountBlur).toHaveBeenCalledTimes(1);
     expect(onCustomUnitChange).toHaveBeenCalledWith("w");
   });
+
+  it("uses an exact-minute control instead of decimal custom units when supplied", () => {
+    const onChange = vi.fn();
+    renderPicker({
+      seconds: 35 * 60,
+      customMode: "custom",
+      exactMinutes: {
+        value: 35,
+        label: "Exact personal note duration in minutes",
+        onChange
+      }
+    });
+
+    const input = container.querySelector<HTMLInputElement>(".exact-duration-control input");
+    expect(input?.value).toBe("35");
+    expect(input?.getAttribute("aria-label")).toBe("Exact personal note duration in minutes");
+    expect(container.querySelector(".exact-duration-control.active")).not.toBeNull();
+    expect(container.querySelector(".custom-duration")).toBeNull();
+    expect(Array.from(container.querySelectorAll("button")).some((button) => button.textContent === "Custom")).toBe(false);
+
+    act(() => {
+      if (input) {
+        setInputValue(input, "50");
+      }
+    });
+
+    expect(onChange).toHaveBeenCalledWith(50);
+  });
 });

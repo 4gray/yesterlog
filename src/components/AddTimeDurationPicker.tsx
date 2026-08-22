@@ -9,6 +9,12 @@ export interface DurationPreset {
   seconds: number;
 }
 
+export interface ExactDurationMinutes {
+  value: number;
+  label: string;
+  onChange: (minutes: number) => void;
+}
+
 const CUSTOM_UNITS: Array<{ unit: DurationUnit; label: string }> = [
   { unit: "h", label: "H" },
   { unit: "d", label: "D" },
@@ -23,6 +29,7 @@ export interface AddTimeDurationPickerProps {
   customAmount: string;
   customUnit: DurationUnit;
   customAmountLabel: string;
+  exactMinutes?: ExactDurationMinutes;
   onPreset: (seconds: number) => void;
   onCustomOpen: () => void;
   onCustomAmountChange: (amount: string) => void;
@@ -38,6 +45,7 @@ export const AddTimeDurationPicker = ({
   customAmount,
   customUnit,
   customAmountLabel,
+  exactMinutes,
   onPreset,
   onCustomOpen,
   onCustomAmountChange,
@@ -57,11 +65,27 @@ export const AddTimeDurationPicker = ({
           {preset.label}
         </button>
       ))}
-      <button type="button" className={`preset ${customMode === "custom" ? "active" : ""}`} onClick={onCustomOpen}>
-        Custom
-      </button>
+      {exactMinutes ? (
+        <label className={`exact-duration-control ${customMode === "custom" ? "active" : ""}`}>
+          <span>Exact</span>
+          <input
+            type="number"
+            min={5}
+            step={5}
+            inputMode="numeric"
+            value={exactMinutes.value}
+            onChange={(event) => exactMinutes.onChange(Math.max(5, Number(event.target.value) || 0))}
+            aria-label={exactMinutes.label}
+          />
+          <em>min</em>
+        </label>
+      ) : (
+        <button type="button" className={`preset ${customMode === "custom" ? "active" : ""}`} onClick={onCustomOpen}>
+          Custom
+        </button>
+      )}
     </div>
-    {customMode === "custom" && (
+    {!exactMinutes && customMode === "custom" && (
       <div className="custom-duration">
         <input
           className="custom-duration-input"

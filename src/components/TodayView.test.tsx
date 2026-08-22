@@ -138,6 +138,8 @@ describe("TodayView calendar", () => {
     // Blocks are colored by role: worklog = accent, note = firefighting.
     expect(markup).toContain("cal-block--accent");
     expect(markup).toContain("cal-block--fire");
+    expect(markup).toMatch(/cal-block--note[^\"]*is-resizable/);
+    expect(markup.match(/cal-resize--top/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("keeps the rail's touched-today tickets with their Jira links", () => {
@@ -186,6 +188,8 @@ describe("TodayView calendar", () => {
     expect(markup).toContain("cal-block--meeting");
     expect(markup).toContain("is-draggable");
     expect(markup).toContain("Daily Standup");
+    expect(markup).toMatch(/cal-block--recurring[^\"]*is-resizable/);
+    expect(markup).toContain("cal-resize--bottom");
     // It is not part of the ghost layer.
     expect(markup).not.toContain("cal-block--ghost");
   });

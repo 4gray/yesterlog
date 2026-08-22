@@ -43,6 +43,7 @@ export interface AppMainViewProps {
   issueTypesByKey: AppReviewRouteProps["issueTypesByKey"];
   todayTrackedHours: AppTodayRouteProps["todayTrackedHours"];
   todayDailyTargetHours: AppTodayRouteProps["dailyTargetHours"];
+  handleResizePersonalNote?: AppTodayRouteProps["handleResizePersonalNote"];
   touchedNotLogged: AppTodayRouteProps["touchedNotLogged"];
   recapDaySummary: AppTodayRouteProps["recapDaySummary"];
   settings: AppReviewRouteProps["settings"];
@@ -159,6 +160,7 @@ export const AppMainView = ({
   issueTypesByKey,
   todayTrackedHours,
   todayDailyTargetHours,
+  handleResizePersonalNote,
   touchedNotLogged,
   recapDaySummary,
   settings,
@@ -271,6 +273,7 @@ export const AppMainView = ({
         todayPendingRecurring={todayPendingRecurring}
         todayTrackedHours={todayTrackedHours}
         dailyTargetHours={todayDailyTargetHours}
+        handleResizePersonalNote={handleResizePersonalNote}
         touchedNotLogged={touchedNotLogged}
         dockTickets={dockTickets}
         activeTicketCount={activeTicketCount}
@@ -312,6 +315,7 @@ export const AppMainView = ({
         openAddTime={openAddTime}
         handleMoveWorklog={handleMoveWorklog}
         handleMoveRecurring={handleMoveRecurring}
+        handleResizePersonalNote={handleResizePersonalNote}
         openEditWorklog={openEditWorklog}
         openEditPersonalNote={openEditPersonalNote}
         handleToggleSkipped={handleToggleSkipped}

@@ -40,6 +40,10 @@ interface TodayViewProps {
   touchedNotLogged: JiraTicket[];
   dockTickets?: JiraTicket[];
   activeTicketCount?: number;
+  onResizePersonalNote?: (
+    note: PersonalNote,
+    patch: { startedISO: string; timeSpentSeconds: number }
+  ) => Promise<boolean>;
   /** Previous working day's summary, for the rail recap card. */
   recapDaySummary?: DayTrackingSummary;
   /** App settings — the recap card reads the optional AI-polish config. */
@@ -75,6 +79,7 @@ export const TodayView = ({
   touchedNotLogged,
   dockTickets = [],
   activeTicketCount,
+  onResizePersonalNote,
   recapDaySummary,
   settings,
   reminderTime,
@@ -217,6 +222,7 @@ export const TodayView = ({
           onCreateAt={onCreateAt}
           onMoveWorklog={onMoveWorklog}
           onMoveRecurring={onMoveRecurring}
+          onResizePersonalNote={onResizePersonalNote}
           onPromoteGhost={promoteGhost}
           onConfirmRecurring={onConfirmRecurring}
           onSkipRecurring={onSkipRecurring}

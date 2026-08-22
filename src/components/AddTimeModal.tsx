@@ -679,6 +679,14 @@ export const AddTimeModal = ({
     updatePersonalDuration(customDurationToSeconds("1", personalCustomUnit));
   };
 
+  const applyPersonalExactMinutes = (minutes: number) => {
+    const seconds = Math.max(5, minutes) * 60;
+    setPersonalDurationMode("custom");
+    setPersonalCustomAmount(customHoursAmount(seconds));
+    setPersonalCustomUnit("h");
+    updatePersonalDuration(seconds);
+  };
+
   return (
     <div
       className="modal-overlay"
@@ -1015,6 +1023,11 @@ export const AddTimeModal = ({
                   customAmount={personalCustomAmount}
                   customUnit={personalCustomUnit}
                   customAmountLabel="Custom personal note duration amount"
+                  exactMinutes={{
+                    value: Math.max(5, Math.round(personalNoteSeconds / 60)),
+                    label: "Exact personal note duration in minutes",
+                    onChange: applyPersonalExactMinutes
+                  }}
                   onPreset={applyPersonalPreset}
                   onCustomOpen={() => applyPersonalCustom(personalCustomAmount)}
                   onCustomAmountChange={(amount) => applyPersonalCustom(amount)}

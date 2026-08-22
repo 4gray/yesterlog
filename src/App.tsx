@@ -485,6 +485,7 @@ export const App = () => {
     handleImportPersonalNotes,
     handleAddPersonalNote,
     handleUpdatePersonalNote,
+    handleResizePersonalNote,
     handleDeletePersonalNote
   } = usePersonalNotes({
     personalNotes,
@@ -781,6 +782,7 @@ export const App = () => {
         issueTypesByKey={issueTypesByKey}
         todayTrackedHours={todayTrackedHours}
         todayDailyTargetHours={todaySummary?.targetHours ?? 0}
+        handleResizePersonalNote={handleResizePersonalNote}
         touchedNotLogged={touchedNotLogged}
         recapDaySummary={recapDaySummary}
         settings={settings}

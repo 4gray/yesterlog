@@ -81,6 +81,19 @@ export const AddTimeRecurringForm = ({
                 </button>
               ))}
             </div>
+            <label className="rec-custom-minutes">
+              <span>Exact</span>
+              <input
+                type="number"
+                min={5}
+                max={24 * 60}
+                step={5}
+                value={minutes}
+                onChange={(event) => onMinutesChange(Math.max(5, Number(event.target.value) || 0))}
+                aria-label="Exact recurring duration in minutes"
+              />
+              <em>min</em>
+            </label>
           </div>
         </div>
 

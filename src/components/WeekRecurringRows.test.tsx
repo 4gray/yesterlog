@@ -44,6 +44,12 @@ const setTextareaValue = (textarea: HTMLTextAreaElement, value: string) => {
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
 };
 
+const setInputValue = (input: HTMLInputElement, value: string) => {
+  const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+  valueSetter?.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
 beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -92,20 +98,21 @@ describe("WeekRecurringRows", () => {
       container.querySelector<HTMLButtonElement>("[aria-label='Adjust duration and note']")?.click();
     });
     act(() => {
-      Array.from(container.querySelectorAll<HTMLButtonElement>(".rec-chip"))
-        .find((button) => button.textContent === "45m")
-        ?.click();
+      const exactMinutes = container.querySelector<HTMLInputElement>("[aria-label='Exact recurring duration in minutes']");
+      if (exactMinutes) {
+        setInputValue(exactMinutes, "35");
+      }
       const textarea = container.querySelector<HTMLTextAreaElement>(".rec-pending-note");
       if (textarea) {
         setTextareaValue(textarea, "  Updated sync note  ");
       }
-      container.querySelector<HTMLButtonElement>("[aria-label='Log 45m locally']")?.click();
+      container.querySelector<HTMLButtonElement>("[aria-label='Log 35m locally']")?.click();
     });
 
     expect(onConfirm).toHaveBeenCalledWith({
       eventId: "rec-standup",
       dateKey: "2026-06-17",
-      timeSpentSeconds: 45 * 60,
+      timeSpentSeconds: 35 * 60,
       note: "Updated sync note"
     });
   });

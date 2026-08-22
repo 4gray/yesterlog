@@ -19,6 +19,22 @@ const item: CalendarItem = {
   colorRole: "accent",
   layer: "committed"
 };
+const noteItem: CalendarItem = {
+  id: "note:1",
+  kind: "note",
+  startMin: 9 * 60,
+  endMin: 10 * 60,
+  colorRole: "meeting",
+  layer: "committed"
+};
+const overlappingWorklog: CalendarItem = {
+  id: "wl:overlap",
+  kind: "worklog",
+  startMin: 9 * 60 + 30,
+  endMin: 10 * 60 + 30,
+  colorRole: "accent",
+  layer: "committed"
+};
 
 const rect = (left: number, top: number, width: number, height: number) =>
   ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON() {} }) as DOMRect;
@@ -56,6 +72,33 @@ function Harness({
     >
       <button type="button" onPointerDown={(event) => startBlockDrag(event, item, "move")}>
         Move
+      </button>
+    </div>
+  );
+}
+
+function ResizeHarness({ onCommitMove }: { onCommitMove: (movedItem: CalendarItem, range: Range) => void }) {
+  const trackRef = { current: null as HTMLDivElement | null };
+  const { startBlockDrag } = useDayCalendarInteraction({
+    layout,
+    items: [noteItem, overlappingWorklog],
+    trackRef,
+    onCreate: () => undefined,
+    onCommitMove,
+    onSelect: () => undefined
+  });
+
+  return (
+    <div
+      ref={(node) => {
+        trackRef.current = node;
+        if (node) {
+          node.getBoundingClientRect = () => rect(0, 0, 160, 1440);
+        }
+      }}
+    >
+      <button type="button" onPointerDown={(event) => startBlockDrag(event, noteItem, "resize-end")}>
+        Resize note
       </button>
     </div>
   );
@@ -142,5 +185,21 @@ describe("useDayCalendarInteraction cross-day moves", () => {
 
     expect(resolveMoveTarget).not.toHaveBeenCalled();
     expect(onCommitMove).toHaveBeenCalledWith(item, { startMin: 660, endMin: 720 }, undefined);
+  });
+
+  it("allows a local note to resize through unrelated calendar blocks", async () => {
+    const onCommitMove = vi.fn();
+    await act(async () => {
+      root.render(<ResizeHarness onCommitMove={onCommitMove} />);
+    });
+
+    const button = container.querySelector("button")!;
+    await act(async () => {
+      pointer(button, "pointerdown", 20, 600);
+      pointer(window, "pointermove", 20, 660);
+      pointer(window, "pointerup", 20, 660);
+    });
+
+    expect(onCommitMove).toHaveBeenCalledWith(noteItem, { startMin: 540, endMin: 660 }, undefined);
   });
 });

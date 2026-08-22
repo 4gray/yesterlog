@@ -16,7 +16,11 @@ interface CalendarBlockProps {
   dragging?: boolean;
   relocating?: boolean;
   preview?: boolean;
+  /** The whole block can be moved by dragging its body. */
   draggable?: boolean;
+  /** The corresponding edge can be dragged without making the body movable. */
+  resizeStart?: boolean;
+  resizeEnd?: boolean;
   /** Week's narrow overlap columns show only the strongest identifier. */
   minimal?: boolean;
   onSelect: (item: CalendarItem) => void;
@@ -74,6 +78,8 @@ const CalendarBlockImpl = ({
   relocating,
   preview,
   draggable,
+  resizeStart,
+  resizeEnd,
   minimal,
   onSelect,
   onBlockDrag
@@ -82,7 +88,10 @@ const CalendarBlockImpl = ({
   const compact = height < 34;
   const title = titleFor(item);
   const detail = detailFor(item);
-  const canDrag = Boolean(draggable && onBlockDrag);
+  const canMove = Boolean(draggable && onBlockDrag);
+  const canResizeStart = Boolean(resizeStart && onBlockDrag);
+  const canResizeEnd = Boolean(resizeEnd && onBlockDrag);
+  const canResize = canResizeStart || canResizeEnd;
   const allocation = item.worklog?.allocation;
 
   return (
@@ -90,7 +99,7 @@ const CalendarBlockImpl = ({
       role="button"
       tabIndex={preview ? -1 : 0}
       aria-hidden={preview || undefined}
-      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}${relocating ? " is-relocating" : ""}${preview ? " is-cross-day-preview" : ""}`}
+      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canMove ? " is-draggable" : ""}${canResize ? " is-resizable" : ""}${dragging ? " is-dragging" : ""}${relocating ? " is-relocating" : ""}${preview ? " is-cross-day-preview" : ""}`}
       style={{ top: `${top}px`, height: `${Math.max(height, 1)}px`, left, width }}
       title={
         allocation
@@ -101,8 +110,8 @@ const CalendarBlockImpl = ({
       }
       // Draggable blocks start a move on pointerdown; static blocks (notes/ghosts) still
       // stop propagation so the pointerdown doesn't reach the track and start a create.
-      onPointerDown={canDrag ? (event) => onBlockDrag!(event, item, "move") : (event) => event.stopPropagation()}
-      onClick={canDrag ? undefined : () => onSelect(item)}
+      onPointerDown={canMove ? (event) => onBlockDrag!(event, item, "move") : (event) => event.stopPropagation()}
+      onClick={canMove ? undefined : () => onSelect(item)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -110,7 +119,7 @@ const CalendarBlockImpl = ({
         }
       }}
     >
-      {canDrag && (
+      {canResizeStart && (
         <span
           className="cal-resize cal-resize--top"
           aria-hidden="true"
@@ -129,7 +138,7 @@ const CalendarBlockImpl = ({
       <span className="cal-block-meta">
         {minuteToLabel(labelStartMin)}–{minuteToLabel(labelEndMin)} · {formatClock(durationSeconds)}
       </span>
-      {canDrag && (
+      {canResizeEnd && (
         <span
           className="cal-resize cal-resize--bottom"
           aria-hidden="true"

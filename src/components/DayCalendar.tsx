@@ -68,6 +68,11 @@ interface DayCalendarProps {
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a drag move/resize of an existing worklog (optimistic). */
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Commit a local note edge resize directly to IndexedDB. */
+  onResizePersonalNote?: (
+    note: PersonalNote,
+    patch: { startedISO: string; timeSpentSeconds: number }
+  ) => Promise<boolean>;
   /** Commit a local per-day move/resize of a confirmed recurring event. */
   onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   /** Promote a ghost to a real worklog (opens the prefilled popup). */
@@ -119,6 +124,7 @@ export const DayCalendar = ({
   relocatingItemId,
   onCreateAt,
   onMoveWorklog,
+  onResizePersonalNote,
   onMoveRecurring,
   onPromoteGhost,
   onConfirmRecurring,
@@ -240,6 +246,14 @@ export const DayCalendar = ({
     onCreate: (range) =>
       onCreateAt({ startedISO: startedISOForMinute(date, range.startMin), timeSpentSeconds: rangeToSeconds(range) }),
     onCommitMove: (item, range, target) => {
+      if (item.note) {
+        const startUnchanged = range.startMin === item.startMin;
+        void onResizePersonalNote?.(item.note, {
+          startedISO: startUnchanged ? item.note.startedISO : startedISOForMinute(date, range.startMin),
+          timeSpentSeconds: Math.max(60, Math.round((range.endMin - range.startMin) * 60))
+        });
+        return;
+      }
       if (item.recurring) {
         void onMoveRecurring(item.recurring, {
           localTime: minutesToClockTime(range.startMin),
@@ -358,11 +372,24 @@ export const DayCalendar = ({
                     ((item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)) ||
                       (item.kind === "recurring" && Boolean(item.recurring)))
                   }
+                  resizeStart={
+                    !readOnly &&
+                    ((item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)) ||
+                      (item.kind === "note" && Boolean(item.note)) ||
+                      (item.kind === "recurring" && Boolean(item.recurring)))
+                  }
+                  resizeEnd={
+                    !readOnly &&
+                    ((item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)) ||
+                      (item.kind === "note" && Boolean(item.note)) ||
+                      (item.kind === "recurring" && Boolean(item.recurring)))
+                  }
                   minimal={embedded && columns > 1}
                   onSelect={selectItem}
                   onBlockDrag={
                     !readOnly &&
                     ((item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)) ||
+                      (item.kind === "note" && item.note) ||
                       (item.kind === "recurring" && item.recurring))
                       ? startBlockDrag
                       : undefined

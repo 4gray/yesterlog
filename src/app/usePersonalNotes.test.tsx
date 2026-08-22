@@ -228,6 +228,36 @@ describe("usePersonalNotes", () => {
     expect(showSuccess).toHaveBeenCalledWith("Updated 1h 30m local note.");
   });
 
+  it("resizes a stored note from the calendar without opening the editor", async () => {
+    const original = buildNote({ category: "meeting" });
+    renderHarness({ initialNotes: [original] });
+
+    await act(async () => {
+      await expect(
+        getApi().handleResizePersonalNote(original, {
+          startedISO: "2026-06-18T09:45:00.000Z",
+          timeSpentSeconds: 45 * 60
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(savePersonalNotes).toHaveBeenCalledWith(visibleWeekKey, [
+      expect.objectContaining({
+        id: original.id,
+        title: "Focus",
+        text: "Deep work",
+        category: "meeting",
+        startedISO: "2026-06-18T09:45:00.000Z",
+        timeSpentSeconds: 45 * 60
+      })
+    ]);
+    expect(getApi().notes[0]).toMatchObject({
+      startedISO: "2026-06-18T09:45:00.000Z",
+      timeSpentSeconds: 45 * 60
+    });
+    expect(showSuccess).not.toHaveBeenCalled();
+  });
+
   it("deletes a stored visible note", async () => {
     const original = buildNote();
     const other = buildNote({ id: "note-2", text: "Keep me", startedISO: "2026-06-18T12:00:00.000Z" });

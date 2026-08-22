@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JiraTicket } from "../../shared/types";
 import { AddTimeModal } from "./AddTimeModal";
 
@@ -257,5 +257,54 @@ describe("AddTimeModal retrospective start", () => {
     expect(timeInput?.value).toBe("00:00");
     expect(selectedDate?.textContent).toContain("13 JUL");
     expect(submitButton).toBeDefined();
+  });
+
+  it("saves an exact personal-note duration in minutes", async () => {
+    const onAddPersonalNote = vi.fn(async () => true);
+    act(() => {
+      root.render(
+        <AddTimeModal
+          date={new Date(2026, 5, 17, 10)}
+          dateOptions={["2026-06-17"]}
+          ticketOptions={[ticket]}
+          isConfigured={true}
+          isLogging={false}
+          onClose={() => undefined}
+          onLog={async () => true}
+          onAddPersonalNote={onAddPersonalNote}
+        />
+      );
+    });
+
+    const personalNoteButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent?.trim() === "Personal note"
+    );
+    act(() => personalNoteButton?.click());
+
+    const textarea = container.querySelector<HTMLTextAreaElement>(".note-textarea");
+    const durationInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Exact personal note duration in minutes"]'
+    );
+    expect([...container.querySelectorAll("input")].map((input) => input.getAttribute("aria-label"))).toContain(
+      "Exact personal note duration in minutes"
+    );
+    const inputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    const textareaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+    act(() => {
+      textareaValueSetter?.call(textarea, "Customer interview");
+      textarea?.dispatchEvent(new Event("input", { bubbles: true }));
+      inputValueSetter?.call(durationInput, "35");
+      durationInput?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+
+    expect(container.querySelector(".personal-note-time")?.textContent).toBe("35m");
+    const saveButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent?.trim() === "Save note"
+    );
+    await act(async () => saveButton?.click());
+
+    expect(onAddPersonalNote).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Customer interview", timeSpentSeconds: 35 * 60 })
+    );
   });
 });

@@ -17,6 +17,7 @@ export interface AppTodayRouteProps {
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
   dockTickets: TodayViewProps["dockTickets"];
   activeTicketCount: TodayViewProps["activeTicketCount"];
+  handleResizePersonalNote?: TodayViewProps["onResizePersonalNote"];
   recapDaySummary: TodayViewProps["recapDaySummary"];
   settings: TodayViewProps["settings"];
   reminderTime: TodayViewProps["reminderTime"];
@@ -43,6 +44,7 @@ export const AppTodayRoute = ({
   touchedNotLogged,
   dockTickets,
   activeTicketCount,
+  handleResizePersonalNote,
   recapDaySummary,
   settings,
   reminderTime,
@@ -65,6 +67,7 @@ export const AppTodayRoute = ({
     pendingRecurring={todayPendingRecurring}
     todayTrackedHours={todayTrackedHours}
     dailyTargetHours={dailyTargetHours}
+    onResizePersonalNote={handleResizePersonalNote}
     touchedNotLogged={touchedNotLogged}
     dockTickets={dockTickets}
     activeTicketCount={activeTicketCount}

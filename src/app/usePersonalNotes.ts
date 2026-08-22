@@ -23,6 +23,11 @@ export interface PersonalNotePayload {
   category?: PersonalNoteCategory;
 }
 
+export interface PersonalNoteCalendarPatch {
+  startedISO: string;
+  timeSpentSeconds: number;
+}
+
 interface UsePersonalNotesOptions {
   personalNotes: PersonalNote[];
   setPersonalNotes: Dispatch<SetStateAction<PersonalNote[]>>;
@@ -191,6 +196,54 @@ export const usePersonalNotes = ({
     ]
   );
 
+  const persistPersonalNoteUpdate = useCallback(
+    async (previousNote: PersonalNote, nextNote: PersonalNote) => {
+      if (isDemo) {
+        setPersonalNotes((current) => updateVisiblePersonalNotes(current, previousNote, nextNote, visibleWeekKey));
+        return;
+      }
+
+      if (previousNote.weekKey === nextNote.weekKey) {
+        const currentNotes =
+          nextNote.weekKey === visibleWeekKey ? personalNotes : await getPersonalNotes(previousNote.weekKey);
+        const nextNotes = sortPersonalNotes([
+          ...currentNotes.filter((note) => note.id !== previousNote.id),
+          nextNote
+        ]);
+
+        await savePersonalNotes(nextNote.weekKey, nextNotes);
+        if (nextNote.weekKey === visibleWeekKey) {
+          setPersonalNotes(nextNotes);
+        }
+        return;
+      }
+
+      const [previousWeekNotes, nextWeekNotes] = await Promise.all([
+        previousNote.weekKey === visibleWeekKey
+          ? Promise.resolve(personalNotes)
+          : getPersonalNotes(previousNote.weekKey),
+        nextNote.weekKey === visibleWeekKey ? Promise.resolve(personalNotes) : getPersonalNotes(nextNote.weekKey)
+      ]);
+      const previousWeekNextNotes = previousWeekNotes.filter((note) => note.id !== previousNote.id);
+      const nextWeekNextNotes = sortPersonalNotes([
+        ...nextWeekNotes.filter((note) => note.id !== previousNote.id),
+        nextNote
+      ]);
+
+      await Promise.all([
+        savePersonalNotes(previousNote.weekKey, previousWeekNextNotes),
+        savePersonalNotes(nextNote.weekKey, nextWeekNextNotes)
+      ]);
+
+      if (previousNote.weekKey === visibleWeekKey) {
+        setPersonalNotes(previousWeekNextNotes);
+      } else if (nextNote.weekKey === visibleWeekKey) {
+        setPersonalNotes(nextWeekNextNotes);
+      }
+    },
+    [getPersonalNotes, isDemo, personalNotes, savePersonalNotes, setPersonalNotes, visibleWeekKey]
+  );
+
   const handleUpdatePersonalNote = useCallback(
     async (payload: PersonalNotePayload) => {
       if (!editingPersonalNote) {
@@ -222,52 +275,10 @@ export const usePersonalNotes = ({
       setLogError(undefined);
 
       try {
-        if (isDemo) {
-          setPersonalNotes((current) =>
-            updateVisiblePersonalNotes(current, editingPersonalNote, nextNote, visibleWeekKey)
-          );
-          showSuccess(`Demo updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
-          return true;
-        }
-
-        if (editingPersonalNote.weekKey === noteWeekKey) {
-          const currentNotes =
-            noteWeekKey === visibleWeekKey ? personalNotes : await getPersonalNotes(editingPersonalNote.weekKey);
-          const nextNotes = sortPersonalNotes([
-            ...currentNotes.filter((note) => note.id !== editingPersonalNote.id),
-            nextNote
-          ]);
-
-          await savePersonalNotes(noteWeekKey, nextNotes);
-          if (noteWeekKey === visibleWeekKey) {
-            setPersonalNotes(nextNotes);
-          }
-        } else {
-          const [previousWeekNotes, nextWeekNotes] = await Promise.all([
-            editingPersonalNote.weekKey === visibleWeekKey
-              ? Promise.resolve(personalNotes)
-              : getPersonalNotes(editingPersonalNote.weekKey),
-            noteWeekKey === visibleWeekKey ? Promise.resolve(personalNotes) : getPersonalNotes(noteWeekKey)
-          ]);
-          const previousWeekNextNotes = previousWeekNotes.filter((note) => note.id !== editingPersonalNote.id);
-          const nextWeekNextNotes = sortPersonalNotes([
-            ...nextWeekNotes.filter((note) => note.id !== editingPersonalNote.id),
-            nextNote
-          ]);
-
-          await Promise.all([
-            savePersonalNotes(editingPersonalNote.weekKey, previousWeekNextNotes),
-            savePersonalNotes(noteWeekKey, nextWeekNextNotes)
-          ]);
-
-          if (editingPersonalNote.weekKey === visibleWeekKey) {
-            setPersonalNotes(previousWeekNextNotes);
-          } else if (noteWeekKey === visibleWeekKey) {
-            setPersonalNotes(nextWeekNextNotes);
-          }
-        }
-
-        showSuccess(`Updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
+        await persistPersonalNoteUpdate(editingPersonalNote, nextNote);
+        showSuccess(
+          `${isDemo ? "Demo updated" : "Updated"} ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`
+        );
         return true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to update the personal note locally.";
@@ -280,17 +291,45 @@ export const usePersonalNotes = ({
     },
     [
       editingPersonalNote,
-      getPersonalNotes,
       isDemo,
-      personalNotes,
-      savePersonalNotes,
+      persistPersonalNoteUpdate,
       setIsLogging,
       setLogError,
-      setPersonalNotes,
       showError,
-      showSuccess,
-      visibleWeekKey
+      showSuccess
     ]
+  );
+
+  /** Persist a timeline edge drag without opening the note editor or showing a noisy success toast. */
+  const handleResizePersonalNote = useCallback(
+    async (note: PersonalNote, patch: PersonalNoteCalendarPatch) => {
+      const started = new Date(patch.startedISO);
+      const timeSpentSeconds = Math.round(patch.timeSpentSeconds);
+      if (Number.isNaN(started.getTime()) || timeSpentSeconds <= 0) {
+        return false;
+      }
+
+      const nextNote: PersonalNote = {
+        ...note,
+        weekKey: toLocalDateKey(getWeekBounds(started).weekStart),
+        dateKey: toLocalDateKey(started),
+        startedISO: patch.startedISO,
+        timeSpentSeconds,
+        updatedAt: new Date().toISOString()
+      };
+
+      setLogError(undefined);
+      try {
+        await persistPersonalNoteUpdate(note, nextNote);
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to resize the personal note locally.";
+        setLogError(message);
+        showError(message);
+        return false;
+      }
+    },
+    [persistPersonalNoteUpdate, setLogError, showError]
   );
 
   const handleDeletePersonalNote = useCallback(async () => {
@@ -341,6 +380,7 @@ export const usePersonalNotes = ({
     handleImportPersonalNotes,
     handleAddPersonalNote,
     handleUpdatePersonalNote,
+    handleResizePersonalNote,
     handleDeletePersonalNote
   };
 };
