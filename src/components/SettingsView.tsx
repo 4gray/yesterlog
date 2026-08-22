@@ -1433,7 +1433,7 @@ export const SettingsView = ({
           <div className="settings-subtitle">{active.subtitle}</div>
         </div>
 
-        {SAVEABLE_SECTIONS.has(activeSection) && (
+        {SAVEABLE_SECTIONS.has(activeSection) ? (
           <div className="settings-save">
             <Button variant="primary" onClick={onSave} disabled={!isDirty}>
               <Save size={16} />
@@ -1443,7 +1443,11 @@ export const SettingsView = ({
               {isDirty ? "Unsaved changes" : "All changes saved"}
             </span>
           </div>
-        )}
+        ) : activeSection !== "about" ? (
+          <div className="settings-save">
+            <span className="settings-save-hint">Changes apply immediately</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="settings-body">
