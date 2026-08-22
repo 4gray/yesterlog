@@ -192,14 +192,13 @@ export const ReconstructView = ({
     <div className="view recon-view">
       {/* ---- header ---- */}
       <header className="recon-header">
-        <div className="recon-headline">
-          <div className="eyebrow">RECONSTRUCT — {dateLabels.longLabel}</div>
-          <div className="recon-total">
-            <span className="recon-total-num">
-              {summary.bigLabel} <span className="recon-total-word">{summary.bigWord}</span>
-            </span>
-            <span className="recon-total-sub">{summary.sub}</span>
-          </div>
+        {/* The stepper's day pill already carries the date, so the eyebrow stays short. */}
+        <div className="compact-header-row">
+          <div className="eyebrow">RECONSTRUCT</div>
+          <span className="compact-figure">
+            {summary.bigLabel} {summary.bigWord}
+          </span>
+          <span className="sub">{summary.sub}</span>
         </div>
 
         <div className="recon-controls">

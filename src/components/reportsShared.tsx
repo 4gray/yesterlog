@@ -1,16 +1,14 @@
 import type { ReactNode } from "react";
 import { formatDuration } from "../utils/date";
-import { TimeSplit } from "./TimeSplit";
 
 /** Minutes → "1h 50m" / "45m", reusing the app's duration formatter. */
 export const formatMinutes = (minutes: number) => formatDuration(minutes / 60);
 
 /**
- * Shared page header for the insight sub-pages (Composition / Focus / Trends):
- * an uppercase eyebrow, a big display figure with a muted unit, a mono caption,
- * and a right-aligned controls slot (the week navigator). When week billable/local
- * hours are supplied it renders the same billable-vs-"to log" split as the Today
- * and Summary headers, directly under the figure row.
+ * Shared compact page header for the insight sub-pages (Composition / Focus /
+ * Trends / Code review): one line of eyebrow + small figure + mono caption,
+ * with a right-aligned controls slot (the week navigator). Hero figures stay
+ * on the calendar views; Summary keeps its own dashboard header.
  */
 export const ReportPageHeader = ({
   eyebrow,
@@ -18,8 +16,6 @@ export const ReportPageHeader = ({
   unit,
   accent,
   caption,
-  billableHours,
-  localHours,
   controls
 }: {
   eyebrow: string;
@@ -28,32 +24,20 @@ export const ReportPageHeader = ({
   /** Colour token for the figure, e.g. "var(--purple)". Defaults to bright. */
   accent?: string;
   caption?: ReactNode;
-  /** Jira-synced (billable) week hours; pair with `localHours` to show the split. */
-  billableHours?: number;
-  /** Local (notes + recurring) week hours not yet in Jira. */
-  localHours?: number;
   controls?: ReactNode;
-}) => {
-  const hasSplit = billableHours !== undefined && billableHours + (localHours ?? 0) > 0.01;
-  return (
-    <div className={`reports-header report-page-header${hasSplit ? " has-split" : ""}`}>
-      <div className="report-head-lead">
-        <div className="eyebrow">{eyebrow}</div>
-        <div className="report-figure-row">
-          <div className="big-figure" style={accent ? { color: accent } : undefined}>
-            {figure}
-            {unit ? <span className="unit"> {unit}</span> : null}
-          </div>
-          {caption ? <span className="report-caption">{caption}</span> : null}
-        </div>
-        {hasSplit && (
-          <TimeSplit billableHours={billableHours} localHours={localHours ?? 0} size="lg" className="reports-split" />
-        )}
-      </div>
-      {controls ? <div className="reports-actions">{controls}</div> : null}
+}) => (
+  <div className="reports-header report-page-header">
+    <div className="compact-header-row">
+      <div className="eyebrow">{eyebrow}</div>
+      <span className="compact-figure" style={accent ? { color: accent } : undefined}>
+        {figure}
+        {unit ? <span className="unit"> {unit}</span> : null}
+      </span>
+      {caption ? <span className="sub">{caption}</span> : null}
     </div>
-  );
-};
+    {controls ? <div className="reports-actions">{controls}</div> : null}
+  </div>
+);
 
 /** A raised card panel used across the insight pages. */
 export const ReportPanel = ({

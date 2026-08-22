@@ -187,7 +187,7 @@ describe("ReportsView", () => {
     expect(markup).toContain("Next week");
   });
 
-  it("renders the billable / to-log split in an insight sub-page header", () => {
+  it("renders the compact one-line header on an insight sub-page", () => {
     const markup = renderToStaticMarkup(
       <ReportsView
         reportTab="composition"
@@ -198,11 +198,11 @@ describe("ReportsView", () => {
       />
     );
 
-    // Same billable-vs-"to log" readout as Today/Summary, driven off week totals
-    // (5h Jira billable, 5.5 tracked − 5 = 0.5h local still to log).
-    expect(markup).toContain("reports-split");
-    expect(markup).toContain("5h billable");
-    expect(markup).toContain("0h 30m to log");
+    // Insight sub-pages use the compact header: eyebrow + small figure + caption
+    // on one line. The billable/to-log split stays on Today and Summary.
+    expect(markup).toContain("compact-header-row");
+    expect(markup).toContain("REPORTS — COMPOSITION");
+    expect(markup).not.toContain("reports-split");
   });
 
   it("uses the configured day count in the days-on-target KPI", () => {

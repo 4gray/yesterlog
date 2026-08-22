@@ -1,33 +1,8 @@
 /* ============================ TICKETS view ============================ */
 .tickets-header {
   flex: none;
-  padding: 28px var(--header-pad-x) 24px;
+  padding: 22px var(--header-pad-x) 16px;
   border-bottom: 1px solid var(--line);
-}
-
-.tickets-figure-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  margin-top: 10px;
-}
-
-.tickets-header .big-figure {
-  font-size: var(--figure-compact);
-  line-height: 1;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
-}
-
-.tickets-header .big-figure .unit {
-  font-size: 20px;
-}
-
-.tickets-figure-row .sub {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--dim);
-  padding-bottom: 6px;
 }
 
 .ticket-filter-rail {
@@ -35,7 +10,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 24px;
+  margin-top: 14px;
   padding: 10px;
   width: fit-content;
   max-width: 100%;

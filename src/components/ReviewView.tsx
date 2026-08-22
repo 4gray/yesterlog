@@ -602,18 +602,12 @@ export const ReviewView = ({
   return (
     <div className="view view-scroll">
       <div className="review-header">
-        <div>
+        <div className="compact-header-row">
           <div className="eyebrow">REVIEW — WEEK {weekNumber}</div>
-          <div className="review-figure-row">
-            <div className="big-figure">
-              {formatDuration(stats.unloggedSeconds / 3600)}
-              <span className="unit"> review</span>
-            </div>
-            <span className="sub">
-              · {stats.unloggedCount} of {stats.sessionCount} sessions not yet logged
-            </span>
-          </div>
-          <div className="review-meta">{rangeLabel}</div>
+          <span className="compact-figure">{formatDuration(stats.unloggedSeconds / 3600)} to log</span>
+          <span className="sub">
+            {stats.unloggedCount} of {stats.sessionCount} sessions · {rangeLabel}
+          </span>
         </div>
 
         <div className="review-actions">
