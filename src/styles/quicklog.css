@@ -19,8 +19,8 @@
   max-width: calc(100vw - 32px);
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
   overflow: hidden;
 }
 
@@ -66,7 +66,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -128,7 +128,7 @@
   gap: 11px;
   padding: 11px 13px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--bg);
 }
 
@@ -190,7 +190,7 @@
   color: var(--muted);
   background: none;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   padding: 6px 11px;
   cursor: pointer;
   transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
@@ -202,7 +202,7 @@
 }
 
 .quicklog-chip.active {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--blue);
   border-color: var(--blue);
   font-weight: 700;
@@ -218,7 +218,7 @@
   padding: 9px 11px;
   border: 1px solid rgba(255, 95, 87, 0.36);
   background: rgba(255, 95, 87, 0.08);
-  color: #ff8b84;
+  color: var(--red-soft);
   font-family: var(--font-sans);
   font-size: 11px;
   line-height: 1.4;
@@ -230,7 +230,7 @@
   min-height: 70px;
   resize: none;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   padding: 12px 14px;
   background: var(--bg);
   color: var(--text-bright);
@@ -243,7 +243,7 @@
 
 .quicklog-comment:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.16);
+  box-shadow: var(--focus-ring);
 }
 
 .quicklog-foot {
@@ -275,7 +275,7 @@
   color: var(--muted);
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 16px;
   cursor: pointer;
   transition: color 150ms ease, border-color 150ms ease;
@@ -294,10 +294,10 @@
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--blue);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 11px 18px;
   cursor: pointer;
   transition: filter 150ms ease;

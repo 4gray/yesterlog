@@ -95,7 +95,7 @@
 .notes-panel-empty button {
   padding: 5px 10px;
   border: 1px solid rgba(124, 157, 255, 0.34);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: rgba(124, 157, 255, 0.1);
   color: #9db4ff;
   cursor: pointer;
@@ -172,7 +172,7 @@
   display: grid;
   place-items: center;
   border: 1px solid rgba(237, 196, 136, 0.3);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(237, 196, 136, 0.13);
   color: var(--nw-amber);
 }
@@ -184,7 +184,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-muted);
   cursor: pointer;
@@ -214,12 +214,12 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 2px;
   border: 1px solid var(--nw-line);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: #101218;
 }
 
 .notes-scope button {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-muted);
   font-size: 11px;
@@ -278,7 +278,7 @@
   height: 18px;
   display: grid;
   place-items: center;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--nw-faint);
   cursor: pointer;
@@ -300,7 +300,7 @@
   min-height: 38px;
   display: flex;
   align-items: center;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -351,7 +351,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--nw-line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--nw-card);
   color: var(--nw-secondary);
 }
@@ -362,7 +362,7 @@
   margin: 3px 5px 0 !important;
   padding: 0 9px;
   border: 1px solid #33406a;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   outline: 0;
   background: var(--nw-card);
   color: var(--nw-text);
@@ -450,7 +450,7 @@
 .notes-type-badge {
   flex: none;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: #1b1e26;
   color: var(--nw-slate);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -519,7 +519,7 @@
   max-width: 190px;
   overflow: hidden;
   padding: 2px 7px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(79, 124, 255, 0.13);
   color: #7c9dff;
   font-size: 10px;
@@ -598,7 +598,7 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid var(--nw-line);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: #101218;
 }
 
@@ -609,7 +609,7 @@
   justify-content: center;
   gap: 6px;
   padding: 0 9px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-muted);
   font-size: 10.5px;
@@ -635,7 +635,7 @@
   place-items: center;
   margin-left: 1px;
   padding: 0 4px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(255, 255, 255, 0.055);
   color: var(--nw-faint);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -694,7 +694,7 @@
   gap: 5px;
   padding: 0 9px;
   border: 1px solid var(--nw-control);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-muted);
   font-size: 10.5px;
@@ -763,7 +763,7 @@
   align-items: center;
   gap: 12px;
   border: 1px solid rgba(237, 196, 136, 0.16);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: rgba(237, 196, 136, 0.06);
   color: var(--nw-secondary);
   font-size: 11.5px;
@@ -780,7 +780,7 @@
 .notes-mark-all button {
   height: 26px;
   padding: 0 10px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--nw-amber);
   color: #241c0e;
   font-size: 10.5px;
@@ -828,7 +828,7 @@
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(237, 196, 136, 0.1);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background:
     linear-gradient(180deg, rgba(237, 196, 136, 0.025), transparent 24%),
     var(--nw-card);
@@ -875,7 +875,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-faint-2);
   cursor: pointer;
@@ -950,7 +950,7 @@
 .notes-rich-placeholder kbd {
   padding: 1px 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: rgba(255, 255, 255, 0.035);
   color: var(--nw-secondary);
   font: inherit;
@@ -1018,7 +1018,7 @@
   padding: 13px 15px;
   overflow-x: auto;
   border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(5, 6, 8, 0.62);
   color: #c8d5ed;
   font: 12px/1.65 ui-monospace, "SF Mono", Menlo, monospace;
@@ -1051,7 +1051,7 @@
 
 .notes-rich-inline-code {
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: rgba(127, 200, 232, 0.09);
   color: var(--nw-cyan);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -1099,7 +1099,7 @@
 .notes-panel {
   margin-bottom: 12px;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 .notes-panel > header {
@@ -1151,7 +1151,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-faint-2);
   cursor: pointer;
@@ -1170,7 +1170,7 @@
 
 .notes-pr-status {
   padding: 2px 6px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(107, 168, 255, 0.13);
   color: var(--nw-bitbucket);
   font-size: 9px;
@@ -1215,7 +1215,7 @@
   align-items: flex-start;
   gap: 9px;
   padding: 7px 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .notes-pr-task:hover,
@@ -1265,7 +1265,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--nw-control-hover) !important;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: #12201d;
   cursor: pointer;
@@ -1311,7 +1311,7 @@
   flex: none;
   padding: 0 8px;
   border: 1px solid var(--nw-control);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-secondary);
   font-size: 9.5px;
@@ -1386,7 +1386,7 @@
   align-items: flex-start;
   gap: 9px;
   padding: 7px 5px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .notes-ai-suggestion:hover {
@@ -1397,7 +1397,7 @@
   min-width: 58px;
   margin-top: 1px;
   padding: 3px 5px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(240, 138, 138, 0.12);
   color: var(--nw-red);
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -1439,7 +1439,7 @@
   display: flex;
   align-items: flex-start;
   gap: 11px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
 }
 
 .notes-row:hover {
@@ -1514,7 +1514,7 @@
   height: 22px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-faint-2);
   cursor: pointer;
@@ -1541,7 +1541,7 @@
   display: grid;
   place-items: center;
   border: 1px dashed var(--nw-control-hover);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   color: var(--nw-faint-2);
 }
 
@@ -1574,7 +1574,7 @@
   align-items: center;
   gap: 7px;
   border: 1px solid var(--nw-control);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   background: var(--nw-card);
 }
 
@@ -1589,7 +1589,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-faint-3);
   cursor: pointer;
@@ -1633,7 +1633,7 @@
   height: 32px;
   padding: 0 14px;
   flex: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--nw-blue);
   color: #fff;
   font-size: 12px;
@@ -1681,9 +1681,9 @@
   gap: 12px;
   overflow: auto;
   border: 1px solid var(--nw-control-strong);
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   background: #12141c;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-modal);
 }
 
 .notes-new-modal > header {
@@ -1704,7 +1704,7 @@
   height: 24px;
   display: grid;
   place-items: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-muted);
   cursor: pointer;
@@ -1717,7 +1717,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--nw-control-strong);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--nw-card);
 }
 
@@ -1746,7 +1746,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--nw-control-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--nw-card);
   color: var(--nw-text);
   font-size: 11.5px;
@@ -1785,7 +1785,7 @@
   margin-left: auto;
   display: grid;
   place-items: center;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--nw-muted);
   cursor: pointer;
@@ -1803,7 +1803,7 @@
   align-items: center;
   gap: 8px;
   border: 1px solid var(--nw-control-strong);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--nw-card);
   color: var(--nw-faint-2);
 }
@@ -1830,7 +1830,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--nw-body);
   font-size: 11.5px;

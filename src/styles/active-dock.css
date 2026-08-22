@@ -57,7 +57,7 @@
   display: grid;
   place-items: center;
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -97,7 +97,7 @@
   padding: 12px 13px 11px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   cursor: grab;
   user-select: none;
   text-align: left;
@@ -107,7 +107,7 @@
 .dock-card:hover {
   border-color: var(--blue);
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-raised);
 }
 
 .dock-card:active {
@@ -165,7 +165,7 @@
   flex: none;
   padding: 1px 5px;
   border: 1px solid var(--border-strong);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--bg-active);
   color: var(--dim-2);
   font-family: var(--font-sans);
@@ -190,7 +190,7 @@
 .dock-card-status {
   flex: none;
   padding: 3px 7px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   border: 1px solid transparent;
   font-family: var(--font-sans);
   font-size: 8.5px;
@@ -295,7 +295,7 @@
   gap: 7px;
   background: none;
   border: 1px dashed var(--border);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   color: var(--muted);
   cursor: pointer;
   transition: border-color 120ms ease, color 120ms ease;
@@ -369,8 +369,8 @@
   pointer-events: none;
   background: var(--bg-card);
   border: 1px solid var(--blue);
-  border-radius: 10px;
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
 }
 
 .dock-ghost-top {
@@ -403,10 +403,10 @@
   z-index: 60;
   display: flex;
   flex-direction: column;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1.5px solid var(--blue);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--shadow-modal);
 }
 
 .drop-lane {
@@ -433,7 +433,7 @@
 
 .drop-lane.is-active {
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .drop-lane-unit {
@@ -455,9 +455,9 @@
   border: 1.5px dashed var(--blue);
   border-left-style: solid;
   border-left-width: 3px;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--blue) 17%, var(--bg-raised));
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--shadow-raised);
   color: var(--blue-soft);
 }
 
@@ -477,10 +477,10 @@
   text-align: center;
   padding: 18px;
   pointer-events: none;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
   border: 1.5px dashed var(--fainter);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-modal);
   color: var(--dim);
 }
 
@@ -503,9 +503,9 @@
   z-index: 61;
   padding: 3px 7px;
   pointer-events: none;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(0, 0, 0, 0.4);
-  color: #fff;
+  color: var(--on-accent);
   font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 700;

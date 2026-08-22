@@ -57,7 +57,7 @@
   width: 100%;
   padding: 9px 11px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-strong);
   text-align: left;
@@ -80,7 +80,7 @@
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--dim);
   background: var(--line-soft);
   transition: color 150ms ease, background 150ms ease;
@@ -153,7 +153,7 @@
   gap: 16px;
   padding: 22px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: var(--bg-raised);
 }
 
@@ -186,7 +186,7 @@ input {
   min-height: 42px;
   padding: 0 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   outline: none;
   color: var(--text);
   background: var(--line-soft);
@@ -200,7 +200,7 @@ input::placeholder {
 
 input:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.18);
+  box-shadow: var(--focus-ring);
 }
 
 .field-hint-text {
@@ -226,7 +226,7 @@ input:focus {
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--dim);
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
@@ -240,7 +240,7 @@ input:focus {
 
 .settings-token button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.18);
+  box-shadow: var(--focus-ring);
 }
 
 .auth-primer {
@@ -249,7 +249,7 @@ input:focus {
   gap: 12px;
   padding: 14px;
   border: 1px solid rgba(79, 124, 255, 0.22);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: rgba(79, 124, 255, 0.07);
 }
 
@@ -258,7 +258,7 @@ input:focus {
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--blue);
   background: rgba(79, 124, 255, 0.12);
 }
@@ -283,7 +283,7 @@ input:focus {
   gap: 9px;
   padding: 13px;
   border: 1px solid rgba(62, 207, 142, 0.2);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--green);
   background: rgba(62, 207, 142, 0.06);
 }
@@ -299,7 +299,7 @@ input:focus {
   gap: 10px;
   padding: 14px;
   border: 1px solid rgba(188, 155, 255, 0.24);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: rgba(188, 155, 255, 0.06);
 }
 
@@ -333,7 +333,7 @@ input:focus {
   min-height: 30px;
   padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--line-soft);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -425,7 +425,7 @@ input:focus {
 .weekday-selector button {
   min-height: 40px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--muted);
   background: var(--line-soft);
   font-family: var(--font-mono);
@@ -472,7 +472,7 @@ input:focus {
   gap: 13px;
   padding: 13px;
   border: 1px solid color-mix(in srgb, var(--blue) 24%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--blue) 7%, var(--bg-raised));
 }
 
@@ -511,7 +511,7 @@ input:focus {
   height: 28px;
   padding: 3px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--line-soft);
   transition: all 150ms ease;
 }
@@ -564,7 +564,7 @@ input:focus {
   gap: 7px;
   padding: 10px 0;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--muted);
   font-family: var(--font-sans);
@@ -597,7 +597,7 @@ input:focus {
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--line-soft);
 }
 
@@ -623,7 +623,7 @@ input:focus {
   gap: 4px;
   padding: 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--line-soft);
 }
 
@@ -662,7 +662,7 @@ input:focus {
 }
 
 .update-status.error strong {
-  color: #ff8b84;
+  color: var(--red-soft);
 }
 
 /* shared buttons — canonical primary CTA: sans, white-on-accent, accent glow.
@@ -677,10 +677,10 @@ input:focus {
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.01em;
-  color: #fff;
+  color: var(--on-accent);
   background: var(--cta-accent);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 11px 18px;
   box-shadow: 0 2px 14px color-mix(in srgb, var(--cta-accent) 45%, transparent);
   transition: filter 150ms ease;
@@ -710,7 +710,7 @@ input:focus {
   color: var(--text-strong);
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   transition: border-color 150ms ease, color 150ms ease;
 }

@@ -273,7 +273,7 @@ export const TicketsView = ({
             <Loader2 className="spin" size={14} /> Loading tickets…
           </div>
         ) : error ? (
-          <div className="empty-note" style={{ padding: "28px 0", color: "#ff8b84" }}>
+          <div className="empty-note" style={{ padding: "28px 0", color: "var(--red-soft)" }}>
             {error}
           </div>
         ) : (

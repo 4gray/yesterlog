@@ -32,11 +32,28 @@
   --amber: #e0a44a;
   --amber-soft: #edc488;
   --red: #e05d5d;
+  --red-soft: #ff8b84; /* danger text on surfaces */
+  --red-strong: #d65a52; /* danger button fill — holds across themes */
   --purple: #bda6f5;
   --teal: #6bd0c2;
   --coral: #e8806c;
+  --on-accent: #fff; /* text on solid accent fills (blue/red buttons) */
   /* AI accent — used ONLY for optional local-AI affordances */
   --ai: #9c8cff;
+
+  /* per-ticket accent palette — seg = solid fill, text = readable-on-surface */
+  --ticket-1: #5b8cff;
+  --ticket-1-text: #8fb0ff;
+  --ticket-2: #3bb7a8;
+  --ticket-2-text: #6bd0c2;
+  --ticket-3: #9d7bf0;
+  --ticket-3-text: #bda6f5;
+  --ticket-4: #e0a44a;
+  --ticket-4-text: #edc488;
+  --ticket-5: #3ecf8e;
+  --ticket-5-text: #7fe3b6;
+  --ticket-6: #e87f9b;
+  --ticket-6-text: #f3a8bd;
 
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Helvetica Neue",
     sans-serif;
@@ -49,6 +66,31 @@
   --figure-standard: 48px; /* Week, Month, Review, Reports, Reconstruct */
   --figure-compact: 40px; /* Settings, Tickets */
   --cta-accent: var(--blue); /* primary-button accent, overridable per variant */
+
+  /* radius scale — the only sanctioned corner values (2/3px micro-bars stay literal) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-pill: 999px;
+
+  /* spacing scale — adopt in new/edited rules; no retroactive rewrite */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* elevation */
+  --shadow-card: 0 6px 16px rgba(0, 0, 0, 0.28);
+  --shadow-raised: 0 12px 30px rgba(0, 0, 0, 0.32);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent);
 
   font-family: var(--font-sans);
   font-size: 16px;
@@ -86,7 +128,14 @@
     --purple: #7a52d6;
     --teal: #1f8a7c;
     --coral: #c0503a;
+    --red-soft: #c94f47;
     --ai: #6d4fd6;
+    --ticket-1-text: #3b63d6;
+    --ticket-2-text: #1f8a7c;
+    --ticket-3-text: #7a52d6;
+    --ticket-4-text: #9a6a16;
+    --ticket-5-text: #15885d;
+    --ticket-6-text: #c2547a;
   }
 }
 
@@ -118,7 +167,14 @@
   --purple: #7a52d6;
   --teal: #1f8a7c;
   --coral: #c0503a;
+  --red-soft: #c94f47;
   --ai: #6d4fd6;
+  --ticket-1-text: #3b63d6;
+  --ticket-2-text: #1f8a7c;
+  --ticket-3-text: #7a52d6;
+  --ticket-4-text: #9a6a16;
+  --ticket-5-text: #15885d;
+  --ticket-6-text: #c2547a;
 }
 
 :root.theme-dark {
@@ -176,7 +232,7 @@ a {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 3px solid var(--bg);
 }
 

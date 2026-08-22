@@ -410,7 +410,7 @@ export const TicketPicker = ({
               {isConfigured ? emptyText : "Connect Jira to choose a ticket"}
             </span>
           )}
-          {!locked && <ChevronDown size={variant === "modal" ? 16 : 15} color="#5d636f" />}
+          {!locked && <ChevronDown size={variant === "modal" ? 16 : 15} color="var(--dim)" />}
         </button>
       </div>
 

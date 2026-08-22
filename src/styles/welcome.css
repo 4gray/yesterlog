@@ -46,10 +46,10 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 13px;
+  border-radius: var(--radius-xl);
   background: var(--blue);
   box-shadow: 0 8px 20px rgba(79, 124, 255, 0.32);
-  color: #fff;
+  color: var(--on-accent);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 800;
@@ -120,7 +120,7 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .welcome-value-icon.is-blue {
@@ -215,7 +215,7 @@
 
 .welcome-field input {
   min-height: 48px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
 }
 
@@ -237,7 +237,7 @@
   display: grid;
   place-items: center;
   border: none;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--dim);
 }
@@ -256,9 +256,9 @@
   justify-content: center;
   gap: 10px;
   border: none;
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 15px;
@@ -272,9 +272,9 @@
   margin-top: 14px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 95, 87, 0.35);
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: rgba(255, 95, 87, 0.08);
-  color: #ff9c94;
+  color: color-mix(in srgb, var(--red-soft) 70%, var(--text-bright));
   font-size: 12.5px;
 }
 
@@ -286,7 +286,7 @@
   margin-top: 18px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   color: var(--dim);
   font-size: 12.5px;
@@ -312,7 +312,7 @@
   display: grid;
   place-items: center;
   border: 1px solid rgba(62, 207, 142, 0.28);
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: rgba(62, 207, 142, 0.1);
   color: var(--green);
 }
@@ -324,7 +324,7 @@
   margin-top: 24px;
   padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   text-align: left;
 }
@@ -335,9 +335,9 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: var(--blue);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .welcome-linked > div:nth-child(2) {
@@ -369,7 +369,7 @@
   flex: none;
   padding: 3px 7px;
   border: 1px solid rgba(62, 207, 142, 0.28);
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   background: rgba(62, 207, 142, 0.1);
   color: var(--green);
   font-style: normal;
