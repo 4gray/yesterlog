@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import type { WeekState } from "../../shared/types";
-import { weekBillableSplit } from "../domain/activity";
 import { buildFocus, type FocusRating } from "../domain/reportsInsights";
 import { LegendChip, ReportEmpty, ReportInsight, ReportPageHeader, ReportPanel, formatMinutes } from "./reportsShared";
 import { WeekNavigator } from "./WeekNavigator";
@@ -49,7 +48,6 @@ export const ReportsFocus = ({
     return buildFocus(weekState, previous);
   }, [weekState, weekStates]);
 
-  const split = weekBillableSplit(weekState);
   const navigator = (
     <WeekNavigator onPreviousWeek={onPreviousWeek} onCurrentWeek={onCurrentWeek} onNextWeek={onNextWeek} />
   );
@@ -59,8 +57,6 @@ export const ReportsFocus = ({
       figure={report.deepSharePct}
       unit="% deep work"
       caption="focus blocks and context switches"
-      billableHours={split.billableHours}
-      localHours={split.localHours}
       controls={navigator}
     />
   );

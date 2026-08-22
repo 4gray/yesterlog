@@ -2,52 +2,22 @@
 .review-header {
   flex: none;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 28px var(--header-pad-x) 24px;
+  padding: 20px var(--header-pad-x) 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.review-figure-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.review-header .big-figure {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: var(--figure-standard);
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.review-header .big-figure .unit {
-  color: var(--dim-2);
-  font-size: 23px;
-}
-
-.review-figure-row .sub,
-.review-meta {
-  font-family: var(--font-mono);
+/* Review keeps its purple accent on the compact figure for identity. */
+.review-header .compact-figure {
   color: var(--purple);
-  font-size: 14px;
-}
-
-.review-meta {
-  margin-top: 8px;
-  color: var(--dim);
-  font-size: 11px;
 }
 
 .review-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-bottom: 6px;
 }
 
 /* Mirrors the .add-time-button schema (sans / 11.5px / radius 8 / 10px 15px /

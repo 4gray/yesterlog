@@ -22,50 +22,19 @@
 /* ---- header ---- */
 .recon-header {
   flex: none;
-  padding: 28px var(--header-pad-x) 24px;
+  padding: 20px var(--header-pad-x) 16px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
   border-bottom: 1px solid var(--line);
   -webkit-app-region: drag;
 }
 
-.recon-total {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  margin-top: 11px;
-}
-
-.recon-total-num {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--figure-standard);
-  line-height: 0.9;
-  letter-spacing: -0.04em;
-  color: var(--text-bright);
-  white-space: nowrap;
-}
-
-.recon-total-word {
-  font-size: 23px;
-  font-weight: 700;
-  color: var(--dim-2);
-}
-
-.recon-total-sub {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--dim);
-  padding-bottom: 8px;
-}
-
 .recon-controls {
   display: flex;
   align-items: center;
   gap: 13px;
-  padding-bottom: 4px;
   -webkit-app-region: no-drag;
 }
 

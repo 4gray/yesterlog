@@ -689,55 +689,20 @@
 }
 
 .report-page-header {
-  align-items: flex-end;
-}
-
-/* With the billable/to-log split under the figure the lead column grows taller, so
-   centre the navigator/toggle against it — matching the Summary header — instead of
-   bottom-aligning to the split baseline. */
-.report-page-header.has-split {
   align-items: center;
+  padding-top: 20px;
+  padding-bottom: 16px;
 }
 
-.report-head-lead {
-  min-width: 0;
-}
-
-.report-figure-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  margin-top: 10px;
-}
-
-.report-page-header .big-figure {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: var(--figure-standard);
-  line-height: 1;
-  letter-spacing: -0.05em;
-  white-space: nowrap;
-}
-
-.report-page-header .big-figure .unit {
-  font-size: 23px;
-  /* the figure's tight tracking crushes the spaces in "% vs last" — relax it */
-  letter-spacing: -0.01em;
-}
-
-.report-caption {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--dim);
-  padding-bottom: 8px;
-  text-wrap: pretty;
+.report-page-header .compact-figure .unit {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dim-2);
 }
 
 .report-page-header .reports-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
-  padding-bottom: 4px;
 }
 
 .report-body {

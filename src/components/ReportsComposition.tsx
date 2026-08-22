@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import type { WeekState } from "../../shared/types";
-import { weekBillableSplit } from "../domain/activity";
 import { buildComposition } from "../domain/reportsInsights";
 import { formatDuration } from "../utils/date";
 import { LegendChip, ReportEmpty, ReportPageHeader, ReportPanel } from "./reportsShared";
@@ -29,7 +28,6 @@ export const ReportsComposition = ({
   onOpenRecap
 }: ReportsCompositionProps) => {
   const report = useMemo(() => buildComposition(weekState), [weekState]);
-  const split = weekBillableSplit(weekState);
   const navigator = (
     <div className="report-recap-controls">
       <button type="button" className="report-recap-link" onClick={onOpenRecap}>
@@ -47,8 +45,6 @@ export const ReportsComposition = ({
       unit="% invisible"
       accent="var(--purple)"
       caption="reconstructed from tickets, meetings & notes"
-      billableHours={split.billableHours}
-      localHours={split.localHours}
       controls={navigator}
     />
   );

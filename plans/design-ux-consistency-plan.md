@@ -143,6 +143,12 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   → "…". Casing rule codified: mono-caps for eyebrows and compact header CTAs (terminal
   identity), sentence case for standard buttons and modal actions — enforce as views
   migrate to Button.
-- [ ] Phase 4 — header simplification
+- [x] Phase 4 — header simplification (2026-08-22). Shared `.compact-header-row` pattern in
+  primitives.css (eyebrow + 20px figure + mono sub, one line). Applied to Tickets, Review
+  (keeps its purple figure accent), Reconstruct (eyebrow shortened — the stepper's day pill
+  already carries the date), and the four Reports insight subtabs via ReportPageHeader
+  (billable-split rows dropped there; the split stays on Today and Summary). Judgment call
+  vs the original plan: Reports **Summary keeps its hero** — it is the aggregate answer page,
+  the same role Today/Week/Month play. ~120px reclaimed per compacted view.
 - [ ] Phase 5 — structure & details
 - [ ] Phase 6 — theme reconciliation

@@ -164,14 +164,12 @@ export const TicketsView = ({
   return (
     <div className="view view-scroll">
       <div className="tickets-header">
-        <div className="eyebrow">TICKETS</div>
-        <div className="tickets-figure-row">
-          <div className="big-figure">
+        <div className="compact-header-row">
+          <div className="eyebrow">TICKETS</div>
+          <span className="compact-figure">
             {visibleTicketCount}{" "}
-            <span className="unit">
-              {filters.query.trim() ? (visibleTicketCount === 1 ? "match" : "matches") : visibleTicketCount === 1 ? "issue" : "issues"}
-            </span>
-          </div>
+            {filters.query.trim() ? (visibleTicketCount === 1 ? "match" : "matches") : visibleTicketCount === 1 ? "issue" : "issues"}
+          </span>
           <span className="sub">
             {filters.assignedOnly ? "assigned to you" : "visible across Jira"} · {formatHours(weekHoursLogged)} logged this week
           </span>

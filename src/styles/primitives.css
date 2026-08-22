@@ -106,6 +106,35 @@
   border-color: var(--border-strong);
 }
 
+/* ============================ compact view header ============================
+   Secondary views (Tickets, Review, Recon, Reports subtabs) use a one-line
+   header: eyebrow + small figure + mono sub. Hero figures stay on the calendar
+   views (Today / Week / Month), where the number is the answer. */
+.compact-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.compact-header-row .compact-figure {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: var(--text-bright);
+  white-space: nowrap;
+}
+
+.compact-header-row .sub {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ============================ tooltip ============================ */
 .tooltip-host {
   display: contents;
