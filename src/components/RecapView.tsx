@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "./Button";
 import {
   Bookmark, Check, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileDown,
   Link2, Loader2, Pencil, Printer, RefreshCw, Save, Sparkles, Target, MessageSquare,
@@ -85,8 +86,7 @@ const StructuredBlock = ({ theme, format, detail, readOnly, onSources, onUpdate 
         : <h2>{theme.name}</h2>}
       <span className="recap-theme-metric">{theme.pullRequestCount} PRs · {theme.ticketCount} tickets · {formatReconDuration(theme.hours * 60)}</span>
       <button type="button" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Sources</button>
-      {!readOnly && <button type="button" className="recap-icon-btn" aria-label={editing ? "Cancel editing" : `Edit ${theme.name}`}
-        onClick={() => { setDraft(theme); setEditing((value) => !value); }}>{editing ? <X size={14} /> : <Pencil size={14} />}</button>}
+      {!readOnly && <Button variant="icon" className="recap-icon-btn" aria-label={editing ? "Cancel editing" : `Edit ${theme.name}`} onClick={() => { setDraft(theme); setEditing((value) => !value); }}>{editing ? <X size={14} /> : <Pencil size={14} />}</Button>}
     </header>
     <div className="recap-theme-body">
       {(copy.lead || copy.version) && (editing
@@ -193,7 +193,7 @@ const SourceDrawer = ({ draft, themeId, onClose, onOpenCalendar }: {
   const title = scopedTheme ? `${scopedTheme.name} evidence` : "Report evidence";
   return <><button className="recap-scrim" aria-label="Close sources" onClick={onClose} />
     <aside ref={drawerRef} className="recap-source-drawer" role="dialog" aria-modal="true" aria-label={title}>
-      <header><Link2 size={15} /><h2>{title}</h2><button className="recap-icon-btn" onClick={onClose} aria-label="Close sources"><X size={16} /></button>
+      <header><Link2 size={15} /><h2>{title}</h2><Button variant="icon" className="recap-icon-btn" onClick={onClose} aria-label="Close sources"><X size={16} /></Button>
         <div className="recap-source-summary"><strong>{formatReconDuration(totalHours * 60)}</strong><span>time reconstructed</span><p>{scopedTheme ? "This workstream is grounded in the items below." : "The report is grounded in the items below. Nothing is invented."}</p></div>
         <button type="button" className="recap-calendar-link" onClick={onOpenCalendar}>Open interval in the calendar →</button>
       </header>
@@ -260,7 +260,7 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
         </>}
       </main>
       {bragOpen && <button type="button" className="recap-brag-scrim" aria-label="Close brag doc" onClick={() => setBragOpen(false)} />}
-      <aside className={`recap-brag ${bragOpen ? "is-open" : ""}`}><header><Bookmark size={16} /><h2>Brag doc</h2><span>{ws.saved.length} saved</span><button type="button" className="recap-icon-btn recap-brag-close" onClick={() => setBragOpen(false)} aria-label="Close brag doc"><X size={14} /></button><p>Every recap stays here for review season. Your promotion material remains ready.</p></header><div className="recap-brag-list">
+      <aside className={`recap-brag ${bragOpen ? "is-open" : ""}`}><header><Bookmark size={16} /><h2>Brag doc</h2><span>{ws.saved.length} saved</span><Button variant="icon" className="recap-icon-btn recap-brag-close" onClick={() => setBragOpen(false)} aria-label="Close brag doc"><X size={14} /></Button><p>Every recap stays here for review season. Your promotion material remains ready.</p></header><div className="recap-brag-list">
         {!historyOnly && draft && (ws.selectedSaved
           ? <button className="recap-draft-card" onClick={ws.closeSaved}><div><code>DRAFT</code><strong>Current draft</strong><span>RETURN</span></div><p>Resume the editable report</p></button>
           : <button className="recap-draft-card"><div><code>{draft.interval.shortLabel}</code><strong>{meta.label}</strong><span>DRAFT</span></div><p><i className="recap-saved-dots">{draft.themes.map((theme) => <b key={theme.id} className={`is-${theme.colorToken}`} />)}</i>{draft.themes.length} focus {draft.themes.length === 1 ? "area" : "areas"} · editing now</p></button>)}

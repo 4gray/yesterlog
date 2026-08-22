@@ -35,6 +35,7 @@ import type {
 import { formatReconDuration } from "../domain/reconstruct";
 import type { AppSyncState } from "../app/useSyncControls";
 import type { AiProvider } from "../../shared/types";
+import { EmptyState } from "./EmptyState";
 
 export interface ReconstructDateLabels {
   /** "WEDNESDAY 17 JUNE" */
@@ -400,45 +401,40 @@ export const ReconstructView = ({
             })}
 
             {railSignals.length === 0 && isActive && isSyncing && (
-              <div className="recon-rail-empty">
-                <span className="recon-rail-empty-icon">
-                  <Loader2 size={18} strokeWidth={2} className="spin" />
-                </span>
-                <div className="recon-rail-empty-title">Syncing your activity…</div>
-                <div className="recon-rail-empty-text">Checking Jira and Bitbucket for this day.</div>
-              </div>
+              <EmptyState
+                className="recon-rail-empty"
+                icon={<Loader2 size={18} strokeWidth={2} className="spin" />}
+                title="Syncing your activity…"
+                hint="Checking Jira and Bitbucket for this day."
+              />
             )}
 
             {day.signals.length === 0 && isActive && syncState === "stale" && (
-              <div className="recon-rail-empty">
-                <span className="recon-rail-empty-icon">
-                  <RefreshCw size={18} strokeWidth={2} />
-                </span>
-                <div className="recon-rail-empty-title">Not synced yet</div>
-                <div className="recon-rail-empty-text">
-                  Sync your Jira and Bitbucket activity to reconstruct this day.
-                </div>
-                <button type="button" className="recon-rail-sync-btn" onClick={onSync}>
-                  <RefreshCw size={14} strokeWidth={1.9} />
-                  Sync now
-                </button>
-              </div>
+              <EmptyState
+                className="recon-rail-empty"
+                icon={<RefreshCw size={18} strokeWidth={2} />}
+                title="Not synced yet"
+                hint="Sync your Jira and Bitbucket activity to reconstruct this day."
+                action={
+                  <button type="button" className="recon-rail-sync-btn" onClick={onSync}>
+                    <RefreshCw size={14} strokeWidth={1.9} />
+                    Sync now
+                  </button>
+                }
+              />
             )}
 
             {railSignals.length === 0 && (isWeekend || (!isSyncing && syncState !== "stale")) && (
-              <div className="recon-rail-empty">
-                <span className="recon-rail-empty-icon">
-                  <PlusCircle size={18} strokeWidth={2} />
-                </span>
-                <div className="recon-rail-empty-title">
-                  {isWeekend ? "No activity this day" : "All signals placed"}
-                </div>
-                <div className="recon-rail-empty-text">
-                  {isWeekend
+              <EmptyState
+                className="recon-rail-empty"
+                icon={<PlusCircle size={18} strokeWidth={2} />}
+                title={isWeekend ? "No activity this day" : "All signals placed"}
+                hint={
+                  isWeekend
                     ? "No Jira or Bitbucket activity detected — expected on a day off."
-                    : "Every signal is on the timeline. Drag an entry back here to unplace it."}
-                </div>
-              </div>
+                    : "Every signal is on the timeline. Drag an entry back here to unplace it."
+                }
+              />
             )}
           </div>
 

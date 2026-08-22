@@ -106,6 +106,39 @@
   border-color: var(--border-strong);
 }
 
+/* ============================ tooltip ============================ */
+.tooltip-host {
+  display: contents;
+}
+
+.tooltip-bubble {
+  position: fixed;
+  z-index: 120;
+  pointer-events: none;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+}
+
+.tooltip-bubble.is-top {
+  transform: translate(-50%, -100%);
+}
+
+.tooltip-bubble.is-bottom {
+  transform: translate(-50%, 0);
+}
+
+.tooltip-bubble.is-right {
+  transform: translate(0, -50%);
+}
+
 /* ============================ empty state ============================ */
 .empty-state {
   display: grid;
