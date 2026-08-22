@@ -135,7 +135,14 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   (~85 native title="" left, migrate as views are touched), bespoke view-local button
   classes, remaining *-empty classes (many are inline placeholders where the centered
   EmptyState would be wrong — migrate judiciously).
-- [ ] Phase 3 — copy pass
+- [x] Phase 3 — copy pass (2026-08-22). Welcome rewritten to functional register ("Log your
+  Jira time as you go.", plain value props, "Connect your Jira account"); Recap tagline and
+  brag-doc promo line replaced; Composition self-restating hero banner deleted (CSS removed
+  too); Focus caption now "focus blocks and context switches"; Today "LOGGED OF 8h" →
+  "LOGGED · TARGET 8h"; Trends "+100%vslast" cram fixed (unit letter-spacing); ASCII "..."
+  → "…". Casing rule codified: mono-caps for eyebrows and compact header CTAs (terminal
+  identity), sentence case for standard buttons and modal actions — enforce as views
+  migrate to Button.
 - [ ] Phase 4 — header simplification
 - [ ] Phase 5 — structure & details
 - [ ] Phase 6 — theme reconciliation

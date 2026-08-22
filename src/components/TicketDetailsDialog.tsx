@@ -100,7 +100,7 @@ export const TicketDetailsDialog = ({
           <div className="ticket-details-hero">
             <div>
               <div className="ticket-details-key">{issue?.key ?? issueKey}</div>
-              <h2>{issue?.summary ?? "Loading Jira issue..."}</h2>
+              <h2>{issue?.summary ?? "Loading Jira issue…"}</h2>
             </div>
             <div className="ticket-details-actions">
               {onOpenInCursor && issue ? (
@@ -180,7 +180,7 @@ export const TicketDetailsDialog = ({
             {details?.descriptionAdf ? (
               <AdfRenderer document={details.descriptionAdf} fallback={description} />
             ) : (
-              <p>{description || (isLoading ? "Loading description..." : "No description available.")}</p>
+              <p>{description || (isLoading ? "Loading description…" : "No description available.")}</p>
             )}
           </div>
         </div>

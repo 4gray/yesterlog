@@ -235,7 +235,7 @@ const formatCheckedAt = (checkedAt?: string) => {
 
 const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdates: boolean) => {
   if (isCheckingUpdates) {
-    return "Checking GitHub Releases...";
+    return "Checking GitHub Releases…";
   }
 
   if (updateInfo?.autoUpdate?.phase === "downloading") {

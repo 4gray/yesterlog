@@ -89,10 +89,10 @@ export const WelcomeView = ({
         </div>
 
         <div className="welcome-headline">
-          <div className="welcome-kicker">Hey there</div>
-          <h1>Let's get your hours sorted.</h1>
+          <div className="welcome-kicker">Welcome</div>
+          <h1>Log your Jira time as you go.</h1>
           <p>
-            Yesterlog keeps an eye on your week and gives you a nudge when a day is looking a little light.
+            Yesterlog tracks your week against your target and shows which days still need time logged.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export const WelcomeView = ({
               <Zap size={15} />
             </span>
             <span>
-              <strong>Log without the faff</strong>
+              <strong>Fast logging</strong>
               <small>Ticket to worklog in a couple of keystrokes.</small>
             </span>
           </div>
@@ -111,8 +111,8 @@ export const WelcomeView = ({
               <LineChart size={15} />
             </span>
             <span>
-              <strong>Spot the gaps early</strong>
-              <small>See what is still missing before the week is gone.</small>
+              <strong>Gap tracking</strong>
+              <small>See which days are short before the week closes.</small>
             </span>
           </div>
           <div>
@@ -120,8 +120,8 @@ export const WelcomeView = ({
               <LockKeyhole size={14} />
             </span>
             <span>
-              <strong>Your notes, your eyes only</strong>
-              <small>Off-ticket notes stay right here on your machine.</small>
+              <strong>Local notes</strong>
+              <small>Off-ticket notes never leave your machine.</small>
             </span>
           </div>
           <div>
@@ -129,7 +129,7 @@ export const WelcomeView = ({
               <Upload size={14} />
             </span>
             <span>
-              <strong>Coming from an older version?</strong>
+              <strong>Upgrading?</strong>
               <small>Personal notes can be imported later from Settings.</small>
             </span>
           </div>
@@ -143,8 +143,8 @@ export const WelcomeView = ({
               <div className="welcome-success-icon">
                 <Check size={30} />
               </div>
-              <h2>You are all set!</h2>
-              <p>Yesterlog is hooked up and ready to watch your hours.</p>
+              <h2>You're all set.</h2>
+              <p>Jira is connected. Your worklogs will sync from here.</p>
 
               <div className="welcome-linked">
                 <div className="welcome-linked-icon">
@@ -165,8 +165,8 @@ export const WelcomeView = ({
             <>
               <div className="welcome-form-title">
                 <span>Connect Jira</span>
-                <h2>Hook up your Jira</h2>
-                <p>Pop in your details and Yesterlog takes it from there. Everything stays on your device.</p>
+                <h2>Connect your Jira account</h2>
+                <p>Enter your site, email, and API token. Credentials stay on this device.</p>
               </div>
 
               <label className="welcome-field">
