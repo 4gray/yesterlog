@@ -1,17 +1,4 @@
-.quicklog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(6, 7, 10, 0.72);
-}
-
-.quicklog-scrim {
-  position: absolute;
-  inset: 0;
-}
+/* overlay + scrim come from the shared Modal (.modal-overlay/.modal-backdrop) */
 
 .quicklog-sheet {
   position: relative;
