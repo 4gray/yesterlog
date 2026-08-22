@@ -1,5 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { AppSyncState } from "../app/useSyncControls";
+import { Tooltip } from "./Tooltip";
 import {
   Calendar,
   CalendarDays,
@@ -86,21 +87,33 @@ export const Sidebar = ({
   // active section and the sidebar is expanded — collapsed hides all labels.
   const showReportSub = view === "reports" && !collapsed;
 
+  // Icon-only rail: labels are invisible, so each control gets a side tooltip.
+  const withRailTip = (node: ReactNode, text: string) =>
+    collapsed ? (
+      <Tooltip text={text} placement="right">
+        {node}
+      </Tooltip>
+    ) : (
+      node
+    );
+
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
       <nav className="sb-nav">
         {visibleNav.map(({ id, label, Icon }) => (
           <Fragment key={id}>
-            <button
-              type="button"
-              className={`nav-item ${view === id ? "active" : ""}`}
-              aria-current={view === id ? "page" : undefined}
-              onClick={() => onViewChange(id)}
-              title={label}
-            >
-              <Icon size={18} />
-              <span className="nav-label">{label}</span>
-            </button>
+            {withRailTip(
+              <button
+                type="button"
+                className={`nav-item ${view === id ? "active" : ""}`}
+                aria-current={view === id ? "page" : undefined}
+                onClick={() => onViewChange(id)}
+              >
+                <Icon size={18} />
+                <span className="nav-label">{label}</span>
+              </button>,
+              label
+            )}
             {id === "reports" && showReportSub ? (
               <div className="report-subnav" role="tablist" aria-label="Reports pages">
                 {REPORT_TABS.filter((tab) => tab.id !== "reviews" || showReview).map((tab) => (
@@ -124,21 +137,26 @@ export const Sidebar = ({
 
       <div className="sb-spacer" />
 
-      <button
-        type="button"
-        className={`nav-item ${view === "settings" ? "active" : ""}`}
-        onClick={() => onViewChange("settings")}
-        title={settingsDirty ? "Settings · unsaved changes" : "Settings"}
-      >
-        <Settings size={18} />
-        <span className="nav-label">SETTINGS</span>
-        {settingsDirty && <span className="nav-dot" aria-label="Unsaved changes" />}
-      </button>
+      {withRailTip(
+        <button
+          type="button"
+          className={`nav-item ${view === "settings" ? "active" : ""}`}
+          onClick={() => onViewChange("settings")}
+        >
+          <Settings size={18} />
+          <span className="nav-label">SETTINGS</span>
+          {settingsDirty && <span className="nav-dot" aria-label="Unsaved changes" />}
+        </button>,
+        settingsDirty ? "SETTINGS · UNSAVED CHANGES" : "SETTINGS"
+      )}
 
-      <button type="button" className="nav-item sb-collapse" onClick={onToggleCollapse} title="Collapse sidebar">
-        <ChevronsLeft className="collapse-ic" size={18} />
-        <span className="nav-label">COLLAPSE</span>
-      </button>
+      {withRailTip(
+        <button type="button" className="nav-item sb-collapse" onClick={onToggleCollapse}>
+          <ChevronsLeft className="collapse-ic" size={18} />
+          <span className="nav-label">COLLAPSE</span>
+        </button>,
+        "EXPAND SIDEBAR"
+      )}
 
       <div className="sb-synced" title="Sync status">
         <span className={`sb-dot ${SYNC_DOT_STATE[syncState]}`} />

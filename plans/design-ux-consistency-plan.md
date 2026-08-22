@@ -125,9 +125,16 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   to new `styles/primitives.css`; QuickLogSheet folded onto Modal (its overlay/scrim CSS
   deleted). Decision: no generic `Card` primitive — the five *-card classes are distinct
   components (dock card is draggable, welcome card is a landing tile), folding them would be
-  artificial. Remaining: Tooltip (92 native title="", needs its own visual-QA pass),
-  Recap/Notes scrims onto Modal, migrate the 12 bespoke view-local button classes and the
-  4 view-local icon buttons, remaining ~20 *-empty classes.
+  artificial. Also done: `Tooltip` primitive (display:contents host + fixed-position bubble,
+  escapes overflow clipping) adopted on the collapsed sidebar rail (nav/settings/collapse,
+  replacing their native titles); rec-icon-btn/recap-icon-btn retagged to Button
+  variant="icon" (local CSS still wins on size — trim overrides when touching those views);
+  Reconstruct rail empties on EmptyState (rail CSS repointed at shared inner classes).
+  Decision: Recap source drawer + brag scrim are drawer/click-away patterns, not modals —
+  they stay off Modal; Notes scrims wait for Phase 5. Remaining: broader Tooltip adoption
+  (~85 native title="" left, migrate as views are touched), bespoke view-local button
+  classes, remaining *-empty classes (many are inline placeholders where the centered
+  EmptyState would be wrong — migrate judiciously).
 - [ ] Phase 3 — copy pass
 - [ ] Phase 4 — header simplification
 - [ ] Phase 5 — structure & details

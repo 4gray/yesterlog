@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "./Button";
 import { Check, Pencil, Repeat2, Trash2, X } from "lucide-react";
 import type { PendingRecurringOccurrence, RecurringEntry } from "../../shared/types";
 
@@ -90,24 +91,15 @@ export const PendingRecurringCard = ({ pending, onConfirm, onSkip }: PendingRecu
           <div className="rec-pending-bar">
             <span className="rec-pending-meta">{pending.localTime}</span>
             <span className="rec-pending-actions">
-              <button
-                type="button"
-                className="rec-icon-btn is-confirm"
-                onClick={confirm}
-                title={`Log ${durLabel} locally`}
-                aria-label={`Log ${durLabel} locally`}
-              >
+              <Button variant="icon" className="rec-icon-btn is-confirm" onClick={confirm} title={`Log ${durLabel} locally`} aria-label={`Log ${durLabel} locally`}>
                 <Check size={14} strokeWidth={2.4} />
-              </button>
-              <button
-                type="button"
-                className="rec-icon-btn"
-                onClick={() => setEditing(false)}
+              </Button>
+              <Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(false)}
                 title="Cancel"
                 aria-label="Cancel editing"
               >
                 <X size={14} strokeWidth={2.2} />
-              </button>
+              </Button>
             </span>
           </div>
         </>
@@ -117,33 +109,21 @@ export const PendingRecurringCard = ({ pending, onConfirm, onSkip }: PendingRecu
             {pending.localTime} · {durLabel}
           </span>
           <span className="rec-pending-actions">
-            <button
-              type="button"
-              className="rec-icon-btn is-confirm"
-              onClick={confirm}
-              title={`Log ${durLabel} locally`}
-              aria-label={`Log ${durLabel} locally`}
-            >
+            <Button variant="icon" className="rec-icon-btn is-confirm" onClick={confirm} title={`Log ${durLabel} locally`} aria-label={`Log ${durLabel} locally`}>
               <Check size={14} strokeWidth={2.4} />
-            </button>
-            <button
-              type="button"
-              className="rec-icon-btn"
-              onClick={() => setEditing(true)}
+            </Button>
+            <Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(true)}
               title="Adjust duration & note"
               aria-label="Adjust duration and note"
             >
               <Pencil size={13} strokeWidth={1.9} />
-            </button>
-            <button
-              type="button"
-              className="rec-icon-btn"
-              onClick={() => void onSkip(pending.eventId, pending.dateKey)}
+            </Button>
+            <Button variant="icon" className="rec-icon-btn" onClick={() => void onSkip(pending.eventId, pending.dateKey)}
               title="Skip today"
               aria-label="Skip today"
             >
               <X size={14} strokeWidth={2.2} />
-            </button>
+            </Button>
           </span>
         </div>
       )}
@@ -208,29 +188,20 @@ export const RecurringEntryRow = ({ entry, onSave, onDelete }: RecurringEntryRow
         />
         <div className="rec-pending-bar">
           {onDelete && (
-            <button
-              type="button"
-              className="rec-icon-btn is-danger"
-              onClick={() => void onDelete(entry.eventId, entry.dateKey)}
+            <Button variant="icon" className="rec-icon-btn is-danger" onClick={() => void onDelete(entry.eventId, entry.dateKey)}
               title="Delete this entry"
               aria-label={`Delete ${entry.title}`}
             >
               <Trash2 size={14} strokeWidth={2} />
-            </button>
+            </Button>
           )}
           <span className="rec-pending-actions">
-            <button
-              type="button"
-              className="rec-icon-btn is-confirm"
-              onClick={save}
-              title={`Save ${formatWeekRecurringMinutes(minutes)}`}
-              aria-label={`Save ${formatWeekRecurringMinutes(minutes)}`}
-            >
+            <Button variant="icon" className="rec-icon-btn is-confirm" onClick={save} title={`Save ${formatWeekRecurringMinutes(minutes)}`} aria-label={`Save ${formatWeekRecurringMinutes(minutes)}`}>
               <Check size={14} strokeWidth={2.4} />
-            </button>
-            <button type="button" className="rec-icon-btn" onClick={cancel} title="Cancel" aria-label="Cancel editing">
+            </Button>
+            <Button variant="icon" className="rec-icon-btn" onClick={cancel} title="Cancel" aria-label="Cancel editing">
               <X size={14} strokeWidth={2.2} />
-            </button>
+            </Button>
           </span>
         </div>
       </div>
