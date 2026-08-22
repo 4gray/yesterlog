@@ -150,5 +150,19 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   (billable-split rows dropped there; the split stays on Today and Summary). Judgment call
   vs the original plan: Reports **Summary keeps its hero** — it is the aggregate answer page,
   the same role Today/Week/Month play. ~120px reclaimed per compacted view.
-- [ ] Phase 5 — structure & details
+- [x] Phase 5 — structure & details (2026-08-23). Done: ⌘/Ctrl+1–9 view shortcuts
+  (`useViewShortcuts`, numbered by visible sidebar order) + palette "Go to …" entries and a
+  theme toggle; Reports subnav moved from the sidebar into an in-view `.report-tabs` strip
+  (sidebar is single-level again); day-calendar blocks shorter than two text rows use the
+  single-row layout (no more half-clipped meta); active-work cards show one trailing fact so
+  project names stop truncating; LoadingView is a spinner + pulsing label; Notes restored to
+  the standard sidebar and its fixed-dark workspace remapped from cool blue-black onto the
+  warm family (typography joins --font-sans; still fixed dark in both themes — light-mode
+  treatment is the first Phase 6 question, now visible as light-sidebar/dark-workspace
+  adjacency); Settings instant-apply sections now say "Changes apply immediately" where
+  saveable sections show the save state. Decisions: nav "side effects" kept as designed —
+  Today/Tickets/Recon meaning "the current week" is correct semantics, and the review→week
+  redirect protects an unusable view; per-view week cursors would be feature work, not a
+  consistency fix. NotesWorkspace split (2757 lines) deferred — mechanical refactor, no UX
+  impact.
 - [ ] Phase 6 — theme reconciliation
