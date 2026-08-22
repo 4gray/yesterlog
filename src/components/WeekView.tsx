@@ -160,14 +160,8 @@ export const quickLogContextForRange = (context: QuickLogContext, range: Range):
   };
 };
 
-const PALETTE = [
-  { seg: "#5b8cff", text: "#8fb0ff" },
-  { seg: "#3bb7a8", text: "#6bd0c2" },
-  { seg: "#9d7bf0", text: "#bda6f5" },
-  { seg: "#e0a44a", text: "#edc488" },
-  { seg: "#3ecf8e", text: "#7fe3b6" },
-  { seg: "#e87f9b", text: "#f3a8bd" }
-];
+// Week grid shares the theme-aware ticket palette with the active-work dock.
+const PALETTE = DOCK_PALETTE;
 
 const pad = (value: number) => String(value).padStart(2, "0");
 const hm = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -398,7 +392,7 @@ const DayColumn = ({
                       style={{ color: color.text }}
                     />
                     <span className="day-log-spacer" />
-                    {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
+                    {comments.length > 0 && <MessageSquare size={12} stroke="var(--dim)" strokeWidth={1.8} />}
                     {logs.some((log) => log.allocation) && <span className="day-log-bulk">BULK</span>}
                     <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
                     <span className="day-log-action-slot">
@@ -509,7 +503,7 @@ const DayColumn = ({
                       </div>
                       {log.comment && (
                         <div className="wl-pop-comment">
-                          <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                          <MessageSquare size={12} stroke="var(--dim)" strokeWidth={1.7} />
                           <span>{log.comment}</span>
                         </div>
                       )}
@@ -518,7 +512,7 @@ const DayColumn = ({
                 })
               : activeEntry.comments.map((comment, index) => (
                   <div className="wl-pop-comment" key={`${activeEntry.issue.key}-comment-${index}`}>
-                    <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                    <MessageSquare size={12} stroke="var(--dim)" strokeWidth={1.7} />
                     <span>{comment}</span>
                   </div>
                 ))}

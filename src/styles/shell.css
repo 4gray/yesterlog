@@ -84,7 +84,7 @@
   gap: 12px;
   padding: 9px 11px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--dim-2);
   white-space: nowrap;
@@ -209,7 +209,7 @@
 .callout {
   margin: 14px 40px 0;
   padding: 11px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -224,7 +224,7 @@
 
 .callout.error {
   border-color: rgba(255, 95, 87, 0.35);
-  color: #ff8b84;
+  color: var(--red-soft);
 }
 
 .snackbar-stack {
@@ -247,9 +247,9 @@
   gap: 11px;
   padding: 12px 12px 12px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-raised) 94%, #000 6%);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.42);
+  box-shadow: var(--shadow-modal);
   color: var(--text-strong);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -275,7 +275,7 @@
 }
 
 .snackbar.error .snackbar-icon {
-  color: #ff8b84;
+  color: var(--red-soft);
 }
 
 .snackbar.info .snackbar-icon {
@@ -302,7 +302,7 @@
   gap: 6px;
   padding: 0 9px;
   border: 1px solid rgba(79, 124, 255, 0.4);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: rgba(79, 124, 255, 0.1);
   color: var(--text-strong);
   font-family: var(--font-mono);
@@ -323,7 +323,7 @@
   display: grid;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--dim);
 }

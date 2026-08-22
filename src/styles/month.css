@@ -26,7 +26,7 @@
   color: var(--amber);
   background: color-mix(in srgb, var(--amber) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   padding: 6px 12px;
   white-space: nowrap;
 }
@@ -67,7 +67,7 @@
   color: var(--text-strong);
   background: var(--bg-raised);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   cursor: pointer;
   transition: border-color 150ms ease, color 150ms ease;
@@ -177,7 +177,7 @@
 .month-day {
   flex: 1;
   min-width: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 11px 12px 10px;
   border: 1px solid var(--line);
   background: var(--bg-card);
@@ -215,7 +215,7 @@
 }
 
 .month-day.status-gap {
-  border-color: color-mix(in srgb, #e8917e 40%, transparent);
+  border-color: color-mix(in srgb, var(--ring-fire) 40%, transparent);
 }
 
 .month-day.status-today {
@@ -276,7 +276,7 @@
 }
 
 .month-day.status-gap .month-day-hours {
-  color: #e8917e;
+  color: var(--ring-fire);
 }
 
 .month-day.status-today .month-day-hours {
@@ -306,7 +306,7 @@
 }
 
 .month-day.status-gap .month-day-fill {
-  background: #e8917e;
+  background: var(--ring-fire);
 }
 
 .month-day.status-today .month-day-fill {
@@ -316,7 +316,7 @@
 .month-week-total {
   width: 212px;
   flex: none;
-  border-radius: 11px;
+  border-radius: var(--radius-lg);
   padding: 12px 15px;
   display: flex;
   flex-direction: column;
@@ -394,7 +394,7 @@
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.04em;
-  border-radius: 5px;
+  border-radius: var(--radius-xs);
   padding: 3px 7px;
   color: var(--faint);
 }
@@ -485,7 +485,7 @@
 }
 
 .month-legend-swatch.status-gap {
-  background: #e8917e;
+  background: var(--ring-fire);
 }
 
 .month-legend-swatch.status-today {

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { ChevronDown, ChevronUp, Hand, LayoutGrid, MousePointerClick, Plus } from "lucide-react";
 import type { JiraTicket } from "../../shared/types";
 import { formatHours } from "../utils/date";
-import { buildDockColorMap, formatRelativeTime, getDockStatus } from "./activeWork";
+import { buildDockColorMap, DOCK_PALETTE, formatRelativeTime, getDockStatus } from "./activeWork";
 import { EpicPill } from "./EpicPill";
 import { getIssueTypeBadgeLabel } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
@@ -206,7 +206,7 @@ export const ActiveWorkDock = ({
           <DockCard
             key={ticket.key}
             ticket={ticket}
-            color={colorMap.get(ticket.key) ?? { seg: "#5b8cff", text: "#8fb0ff" }}
+            color={colorMap.get(ticket.key) ?? DOCK_PALETTE[0]}
             isDragging={draggingKey === ticket.key}
             now={now}
             onGrabCard={onGrabCard}

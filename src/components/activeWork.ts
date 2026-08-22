@@ -1,16 +1,20 @@
 import type { JiraTicket } from "../../shared/types";
 
-/** Accent palette shared with the week grid — stable per ticket key. */
-export const DOCK_PALETTE = [
-  { seg: "#5b8cff", text: "#8fb0ff" },
-  { seg: "#3bb7a8", text: "#6bd0c2" },
-  { seg: "#9d7bf0", text: "#bda6f5" },
-  { seg: "#e0a44a", text: "#edc488" },
-  { seg: "#3ecf8e", text: "#7fe3b6" },
-  { seg: "#e87f9b", text: "#f3a8bd" }
-] as const;
+/** Accent palette shared with the week grid — stable per ticket key.
+ *  Values are the theme-aware --ticket-N tokens from styles/base.css. */
+export interface DockColor {
+  seg: string;
+  text: string;
+}
 
-export type DockColor = (typeof DOCK_PALETTE)[number];
+export const DOCK_PALETTE: readonly DockColor[] = [
+  { seg: "var(--ticket-1)", text: "var(--ticket-1-text)" },
+  { seg: "var(--ticket-2)", text: "var(--ticket-2-text)" },
+  { seg: "var(--ticket-3)", text: "var(--ticket-3-text)" },
+  { seg: "var(--ticket-4)", text: "var(--ticket-4-text)" },
+  { seg: "var(--ticket-5)", text: "var(--ticket-5-text)" },
+  { seg: "var(--ticket-6)", text: "var(--ticket-6-text)" }
+];
 
 /** Assigns a stable color to each ticket key in list order. */
 export const buildDockColorMap = (tickets: JiraTicket[]) => {

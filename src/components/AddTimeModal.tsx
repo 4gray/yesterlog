@@ -882,7 +882,7 @@ export const AddTimeModal = ({
                       <div className="modal-started">
                         <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
                         <label className="input-chip">
-                          <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
+                          <Clock size={14} stroke="var(--dim)" strokeWidth={1.7} />
                           <input
                             type="time"
                             value={timeStr}
@@ -1002,7 +1002,7 @@ export const AddTimeModal = ({
                 </div>
                 <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
                 <label className="input-chip personal-time-chip">
-                  <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
+                  <Clock size={14} stroke="var(--dim)" strokeWidth={1.7} />
                   <input
                     type="time"
                     value={timeStr}
