@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
+import { Modal } from "./Modal";
 
 export interface CommandPaletteCommand {
   id: string;
@@ -71,11 +72,9 @@ export const CommandPalette = ({ open, commands, onClose }: CommandPaletteProps)
       return undefined;
     }
 
+    // Escape is handled by the Modal shell.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      } else if (event.key === "ArrowDown") {
+      if (event.key === "ArrowDown") {
         event.preventDefault();
         setActiveIndex((current) => (visible.length ? (current + 1) % visible.length : 0));
       } else if (event.key === "ArrowUp") {
@@ -109,9 +108,7 @@ export const CommandPalette = ({ open, commands, onClose }: CommandPaletteProps)
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel command-palette-panel">
+    <Modal label="Command palette" onClose={onClose} panelClassName="command-palette-panel">
         <div className="command-palette-search">
           <Search size={14} strokeWidth={2} />
           {/* Focus stays in the input; the active row is announced via aria-activedescendant. */}
@@ -157,7 +154,6 @@ export const CommandPalette = ({ open, commands, onClose }: CommandPaletteProps)
             ))
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

@@ -12,6 +12,7 @@ import { buildReportsReview } from "../domain/reportsReview";
 import { buildReportsHistory, type KpiDelta } from "../domain/reportsTrend";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { DayRing } from "./DayRing";
+import { EmptyState } from "./EmptyState";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { TimeSplit } from "./TimeSplit";
 import { WeekNavigator } from "./WeekNavigator";
@@ -402,7 +403,7 @@ export const ReportsSummary = ({
               })}
             </div>
           ) : (
-            <div className="empty-note">No worklogs synced for this week yet.</div>
+            <EmptyState title="No worklogs yet" hint="Nothing has synced for this week." />
           )}
         </div>
       </div>

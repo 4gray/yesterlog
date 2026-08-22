@@ -35,6 +35,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import type { AiProvider, AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
 import { DEFAULT_WORKING_DAYS, WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
 import { aiConnectionFromSettings, probeOllama, type OllamaStatus } from "../api/ollama";
+import { Button } from "./Button";
 import type { ThemeMode } from "./Sidebar";
 
 export interface RecurringEventDraft {
@@ -545,10 +546,10 @@ export const SettingsView = ({
           <ExternalLink size={16} />
           Create API token
         </a>
-        <button className="secondary-button" type="button" onClick={onTestConnection} disabled={isTesting}>
+        <Button variant="secondary" onClick={onTestConnection} disabled={isTesting}>
           {isTesting ? <Loader2 className="spin" size={16} /> : <TestTube2 size={16} />}
           Test Jira connection
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -679,15 +680,10 @@ export const SettingsView = ({
           <ExternalLink size={16} />
           View scopes
         </a>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={onTestBitbucketConnection}
-          disabled={isTestingBitbucket}
-        >
+        <Button variant="secondary" onClick={onTestBitbucketConnection} disabled={isTestingBitbucket}>
           {isTestingBitbucket ? <Loader2 className="spin" size={16} /> : <TestTube2 size={16} />}
           Test Bitbucket
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -928,10 +924,10 @@ export const SettingsView = ({
         </div>
 
         <div className="inline-actions">
-          <button className="secondary-button" type="button" onClick={handleTestOllama} disabled={isProbingOllama}>
+          <Button variant="secondary" onClick={handleTestOllama} disabled={isProbingOllama}>
             {isProbingOllama ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
             {isCli ? "Test CLI" : "Test connection"}
-          </button>
+          </Button>
           {provider === "ollama" ? (
             <>
               <a className="secondary-button" href={OLLAMA_DOWNLOAD_URL} target="_blank" rel="noreferrer">
@@ -1131,10 +1127,10 @@ export const SettingsView = ({
           <strong>Current week CSV</strong>
           <small>{weekRangeLabel}</small>
         </div>
-        <button className="secondary-button" type="button" onClick={onExportWeekCsv}>
+        <Button variant="secondary" onClick={onExportWeekCsv}>
           <Download size={16} />
           Export CSV
-        </button>
+        </Button>
       </div>
 
       <div className="data-transfer-row">
@@ -1149,15 +1145,12 @@ export const SettingsView = ({
           hidden
           onChange={handleImportFileChange}
         />
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => importInputRef.current?.click()}
+        <Button variant="secondary" onClick={() => importInputRef.current?.click()}
           disabled={isImportingPersonalNotes}
         >
           {isImportingPersonalNotes ? <Loader2 className="spin" size={16} /> : <Upload size={16} />}
           {isImportingPersonalNotes ? "Importing" : "Import CSV"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -1198,44 +1191,29 @@ export const SettingsView = ({
       </div>
 
       <div className="inline-actions">
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={onCheckForUpdates}
-          disabled={isCheckingUpdates}
-        >
+        <Button variant="secondary" onClick={onCheckForUpdates} disabled={isCheckingUpdates}>
           {isCheckingUpdates ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
           {updateInfo?.autoUpdate?.platform === "linux-snap" ? "Refresh release notes" : "Check updates"}
-        </button>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => onOpenReleasePage(updateInfo?.releasePageUrl)}
+        </Button>
+        <Button variant="secondary" onClick={() => onOpenReleasePage(updateInfo?.releasePageUrl)}
         >
           <ExternalLink size={16} />
           GitHub Releases
-        </button>
-        <button className="secondary-button" type="button" onClick={onShowReleaseNotes}>
+        </Button>
+        <Button variant="secondary" onClick={onShowReleaseNotes}>
           <FileText size={16} />
           Current notes
-        </button>
+        </Button>
         {updateInfo?.updateAvailable ? (
           <>
             {updateInfo.autoUpdate?.supported ? (
               updateInfo.autoUpdate.phase === "downloaded" ? (
-                <button className="primary-button" type="button" onClick={onInstallUpdate}>
+                <Button variant="primary" onClick={onInstallUpdate}>
                   <RefreshCw size={16} />
                   Restart to install
-                </button>
+                </Button>
               ) : (
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={onDownloadUpdate}
-                  disabled={
-                    updateInfo.autoUpdate.phase === "checking" || updateInfo.autoUpdate.phase === "downloading"
-                  }
-                >
+                <Button variant="primary" onClick={onDownloadUpdate} disabled={ updateInfo.autoUpdate.phase === "checking" || updateInfo.autoUpdate.phase === "downloading" }>
                   {updateInfo.autoUpdate.phase === "checking" || updateInfo.autoUpdate.phase === "downloading" ? (
                     <Loader2 className="spin" size={16} />
                   ) : (
@@ -1245,18 +1223,13 @@ export const SettingsView = ({
                   typeof updateInfo.autoUpdate.progress?.percent === "number"
                     ? `Downloading ${Math.round(updateInfo.autoUpdate.progress.percent)}%`
                     : "Download update"}
-                </button>
+                </Button>
               )
             ) : (
-              <button
-                className="primary-button"
-                type="button"
-                onClick={onDownloadUpdate}
-                disabled={!updateInfo.downloadUrl}
-              >
+              <Button variant="primary" onClick={onDownloadUpdate} disabled={!updateInfo.downloadUrl}>
                 <Download size={16} />
                 Download
-              </button>
+              </Button>
             )}
           </>
         ) : null}
@@ -1364,9 +1337,9 @@ export const SettingsView = ({
               >
                 {saveLabel}
               </button>
-              <button type="button" className="secondary-button" onClick={closeRecurringForm}>
+              <Button variant="secondary" onClick={closeRecurringForm}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -1462,10 +1435,10 @@ export const SettingsView = ({
 
         {SAVEABLE_SECTIONS.has(activeSection) && (
           <div className="settings-save">
-            <button className="primary-button" type="button" onClick={onSave} disabled={!isDirty}>
+            <Button variant="primary" onClick={onSave} disabled={!isDirty}>
               <Save size={16} />
               Save settings
-            </button>
+            </Button>
             <span className={`settings-save-hint ${isDirty ? "is-dirty" : ""}`}>
               {isDirty ? "Unsaved changes" : "All changes saved"}
             </span>

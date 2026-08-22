@@ -425,6 +425,9 @@ export const TicketPicker = ({
                   onChange={(event) => setSearchQuery(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Escape") {
+                      // Keep Escape local: clear/close the picker without
+                      // dismissing the surrounding modal.
+                      event.stopPropagation();
                       if (searchQuery) {
                         setSearchQuery("");
                       } else {

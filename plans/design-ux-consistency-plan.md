@@ -114,7 +114,17 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   Phase 5), `week.css` light badge hexes (→ Phase 6), a handful of contextual one-offs
   (`today.css #c7a663/#7a818d`, `review.css` on-accent darks, `week.css #2a3550`).
   Verified: tsc clean, 918/918 tests, dark+light screenshots (Week/Month/Modal/Recap).
-- [ ] Phase 2 — primitives
+- [~] Phase 2 — primitives (started 2026-08-22). Done: `Modal` (Escape + backdrop close,
+  Tab focus trap, focus restore; window-level keys; renders in place since .modal-overlay is
+  fixed) adopted by AddTimeModal, TicketDetailsDialog, ReleaseNotesDialog, CommandPalette,
+  ReviewDialogFrame — Escape now works on the two dialogs that lacked it, and Escape in the
+  ticket-picker search no longer dismisses the whole modal; `Button`
+  (primary/secondary/ghost/icon, type="button" default) adopted at all 19 primary/secondary
+  <button> call sites (anchors styled as .secondary-button stay anchors); `EmptyState`
+  adopted in ReviewView (4 states) and ReportsSummary; button styles moved from settings.css
+  to new `styles/primitives.css`. Remaining: Tooltip (92 native title=""), Card, QuickLogSheet
+  + Recap/Notes scrims onto Modal, migrate the 12 bespoke view-local button classes and the
+  4 view-local icon buttons, remaining ~20 *-empty classes.
 - [ ] Phase 3 — copy pass
 - [ ] Phase 4 — header simplification
 - [ ] Phase 5 — structure & details

@@ -4,6 +4,7 @@ import type { JiraIssueDetails, OpenCursorPromptResult } from "../../shared/type
 import { formatClock, formatShortDate } from "../utils/date";
 import { AdfRenderer } from "./AdfRenderer";
 import { CursorGlyph } from "./CursorGlyph";
+import { Modal } from "./Modal";
 import { EpicPill } from "./EpicPill";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketStatusBadge } from "./TicketStatusBadge";
@@ -81,9 +82,7 @@ export const TicketDetailsDialog = ({
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={`Ticket details for ${issueKey}`}>
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel ticket-details-panel">
+    <Modal label={`Ticket details for ${issueKey}`} onClose={onClose} panelClassName="ticket-details-panel">
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">Ticket details</span>
@@ -194,7 +193,6 @@ export const TicketDetailsDialog = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

@@ -1,4 +1,5 @@
 @import "./styles/base.css";
+@import "./styles/primitives.css";
 @import "./styles/shell.css";
 @import "./styles/week.css";
 @import "./styles/modal.css";
