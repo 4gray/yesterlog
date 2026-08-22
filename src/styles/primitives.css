@@ -1,0 +1,142 @@
+/* ============================ shared primitives ============================
+   Canonical styles for the shared components in src/components:
+   Button (primary/secondary/ghost/icon), EmptyState. New views use these;
+   view-local button and *-empty classes migrate here over time. */
+
+/* canonical primary CTA: sans, white-on-accent, accent glow. Accent is the
+   --cta-accent token so variants (e.g. .is-recurring) recolor both fill and
+   glow in one place. Header CTAs (.add-time-button, .review-log-button) are
+   the compact members of this family. */
+.primary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--on-accent);
+  background: var(--cta-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 11px 18px;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--cta-accent) 45%, transparent);
+  transition: filter 150ms ease;
+}
+
+.primary-button:hover {
+  filter: brightness(1.08);
+}
+
+.primary-button:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.primary-button:disabled:hover {
+  filter: none;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-strong);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.secondary-button:hover {
+  border-color: var(--border-strong);
+  color: var(--text-bright);
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* borderless low-emphasis action */
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.ghost-button:hover {
+  color: var(--text-bright);
+  background: var(--bg-hover);
+}
+
+/* square icon-only action — the canonical form of the four view-local
+   icon buttons (rec-icon-btn, recap-icon-btn, notes-icon-button,
+   week-tl-icon-button); those migrate here as views are touched. */
+.icon-button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.icon-button:hover {
+  color: var(--text-bright);
+  border-color: var(--border-strong);
+}
+
+/* ============================ empty state ============================ */
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 36px 24px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  margin-bottom: 4px;
+}
+
+.empty-state-title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.empty-state-hint {
+  margin: 0;
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 340px;
+}
+
+.empty-state-action {
+  margin-top: 10px;
+}

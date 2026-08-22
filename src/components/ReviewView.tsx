@@ -16,6 +16,9 @@ import {
   fromLocalDateKey,
   getIsoWeekNumber
 } from "../utils/date";
+import { Button } from "./Button";
+import { EmptyState } from "./EmptyState";
+import { Modal } from "./Modal";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { WeekNavigator } from "./WeekNavigator";
 
@@ -251,25 +254,22 @@ interface ReviewDialogFrameProps {
 }
 
 const ReviewDialogFrame = ({ title, eyebrow, onClose, children, footerHint, actions }: ReviewDialogFrameProps) => (
-  <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={title}>
-    <div className="modal-backdrop" onClick={onClose} />
-    <div className="modal-panel review-dialog-panel">
-      <div className="modal-head">
-        <div className="modal-title-row">
-          <span className="modal-title">{title}</span>
-          {eyebrow ? <span className="modal-day">{eyebrow}</span> : null}
-        </div>
-        <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-          <X size={14} strokeWidth={2.2} />
-        </button>
+  <Modal label={title} onClose={onClose} panelClassName="review-dialog-panel">
+    <div className="modal-head">
+      <div className="modal-title-row">
+        <span className="modal-title">{title}</span>
+        {eyebrow ? <span className="modal-day">{eyebrow}</span> : null}
       </div>
-      <div className="modal-body review-dialog-body">{children}</div>
-      <div className="modal-foot">
-        <span className="modal-foot-hint">{footerHint}</span>
-        <div className="modal-foot-actions">{actions}</div>
-      </div>
+      <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+        <X size={14} strokeWidth={2.2} />
+      </button>
     </div>
-  </div>
+    <div className="modal-body review-dialog-body">{children}</div>
+    <div className="modal-foot">
+      <span className="modal-foot-hint">{footerHint}</span>
+      <div className="modal-foot-actions">{actions}</div>
+    </div>
+  </Modal>
 );
 
 interface ReviewPreviewListProps {
@@ -720,13 +720,16 @@ export const ReviewView = ({
 
       <div className="review-list">
         {!isConfigured ? (
-          <div className="review-empty">Connect Bitbucket in Settings to unlock Review.</div>
+          <EmptyState title="Review needs Bitbucket" hint="Connect Bitbucket in Settings to unlock Review." />
         ) : !result ? (
-          <div className="review-empty">Sync Bitbucket reviews for this week.</div>
+          <EmptyState title="Not synced yet" hint="Sync Bitbucket reviews for this week." />
         ) : sessions.length === 0 ? (
-          <div className="review-empty">No Bitbucket review sessions found for this week.</div>
+          <EmptyState title="No review sessions" hint="No Bitbucket review activity was found for this week." />
         ) : visibleSessions.length === 0 ? (
-          <div className="review-empty">No review sessions match {ownershipFilterCopy[ownershipFilter].toLowerCase()}.</div>
+          <EmptyState
+            title="Nothing matches this filter"
+            hint={`No review sessions match ${ownershipFilterCopy[ownershipFilter].toLowerCase()}.`}
+          />
         ) : (
           groupedSessions.map(([dateKey, daySessions]) => {
             const date = fromLocalDateKey(dateKey);
@@ -845,10 +848,10 @@ export const ReviewView = ({
               <button type="button" className="modal-cancel" onClick={() => setDialog(undefined)} disabled={isLogging}>
                 CANCEL
               </button>
-              <button type="button" className="primary-button" onClick={confirmLog} disabled={!canConfirmLog || isLogging}>
+              <Button variant="primary" onClick={confirmLog} disabled={!canConfirmLog || isLogging}>
                 {isLogging ? <Loader2 className="spin" size={15} /> : null}
                 CREATE {logPreview.length} {logPreview.length === 1 ? "WORKLOG" : "WORKLOGS"}
-              </button>
+              </Button>
             </>
           }
         >
@@ -879,9 +882,9 @@ export const ReviewView = ({
               <button type="button" className="modal-cancel" onClick={() => setDialog(undefined)}>
                 CANCEL
               </button>
-              <button type="button" className="primary-button" onClick={confirmTargetMode}>
+              <Button variant="primary" onClick={confirmTargetMode}>
                 {dialog.mode === targetMode ? "KEEP TARGET" : "USE TARGET"}
-              </button>
+              </Button>
             </>
           }
         >
@@ -906,9 +909,9 @@ export const ReviewView = ({
           onClose={() => setDialog(undefined)}
           footerHint="ESTIMATES ARE REVIEWABLE BEFORE ANY JIRA WRITE"
           actions={
-            <button type="button" className="primary-button" onClick={() => setDialog(undefined)}>
+            <Button variant="primary" onClick={() => setDialog(undefined)}>
               GOT IT
-            </button>
+            </Button>
           }
         >
           <div className="review-estimate-steps">

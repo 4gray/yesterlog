@@ -1,7 +1,9 @@
 import { Download, ExternalLink, FileText, Loader2, RefreshCw, X } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { normalizeReleaseVersion } from "../../shared/releases";
 import type { AppReleaseInfo, AppUpdateInfo } from "../../shared/types";
+import { Button } from "./Button";
+import { Modal } from "./Modal";
 import { ReleaseNotesMarkdown } from "./ReleaseNotesMarkdown";
 
 interface ReleaseNotesDialogProps {
@@ -60,17 +62,6 @@ export const ReleaseNotesDialog = ({
   onSelectRelease,
   onRefreshReleaseHistory
 }: ReleaseNotesDialogProps) => {
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
   const releaseVersions = useMemo(() => {
     const selectedRelease = releaseFromUpdateInfo(updateInfo);
     const byVersion = new Map<string, AppReleaseInfo>();
@@ -106,9 +97,7 @@ export const ReleaseNotesDialog = ({
     : "Download";
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Release notes">
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel release-notes-panel">
+    <Modal label="Release notes" onClose={onClose} panelClassName="release-notes-panel">
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">Release notes</span>
@@ -169,19 +158,18 @@ export const ReleaseNotesDialog = ({
             <button type="button" className="modal-cancel" onClick={onClose}>
               Done
             </button>
-            <button type="button" className="secondary-button" onClick={() => onOpenReleasePage(updateInfo.releasePageUrl)}>
+            <Button variant="secondary" onClick={() => onOpenReleasePage(updateInfo.releasePageUrl)}>
               <ExternalLink size={16} />
               GitHub
-            </button>
+            </Button>
             {canDownload ? (
-              <button type="button" className="primary-button" onClick={() => onDownload(updateInfo)}>
+              <Button variant="primary" onClick={() => onDownload(updateInfo)}>
                 {updateInfo.autoUpdate?.phase === "downloaded" ? <RefreshCw size={16} /> : <Download size={16} />}
                 {downloadLabel}
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };

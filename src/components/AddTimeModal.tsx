@@ -20,6 +20,8 @@ import {
 } from "./AddTimeDurationPicker";
 import { AddTimeRecurringForm, formatRecurringMinutes } from "./AddTimeRecurringForm";
 import { AddTimeTimelineEditor } from "./AddTimeTimelineEditor";
+import { Button } from "./Button";
+import { Modal } from "./Modal";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
 export interface LogRecurringPayload {
@@ -557,11 +559,10 @@ export const AddTimeModal = ({
     setRecNote(event.defaultNote);
   };
 
+  // Escape is handled by the Modal shell; this only owns ⌘/Ctrl+Enter submit.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         void handleSubmit();
       }
@@ -688,14 +689,11 @@ export const AddTimeModal = ({
   };
 
   return (
-    <div
-      className="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label={isMovingWorklog ? "Move time entry" : isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
+    <Modal
+      label={isMovingWorklog ? "Move time entry" : isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
+      onClose={onClose}
+      panelClassName="add-time-modal-panel"
     >
-      <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel add-time-modal-panel">
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">{modalTitle}</span>
@@ -1087,9 +1085,9 @@ export const AddTimeModal = ({
               CANCEL
             </button>
             {(!isRecurringView || recurringCandidates.length > 0) && (
-              <button
-                type="button"
-                className={`primary-button ${isRecurringView ? "is-recurring" : ""}`}
+              <Button
+                variant="primary"
+                className={isRecurringView ? "is-recurring" : undefined}
                 onClick={handleSubmit}
                 disabled={!canSubmit}
               >
@@ -1111,11 +1109,10 @@ export const AddTimeModal = ({
                           : activeTicket
                             ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
                             : "Log time"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
