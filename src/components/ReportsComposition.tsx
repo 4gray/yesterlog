@@ -68,29 +68,6 @@ export const ReportsComposition = ({
     <>
       {header}
       <div className="report-body">
-        {/* Hero insight band */}
-        <div className="report-hero is-purple">
-          <div className="report-hero-lead">
-            <div className="report-hero-title">
-              {report.invisiblePct}% of your week was <span className="is-purple">invisible work</span>.
-            </div>
-            <div className="report-hero-sub">
-              Meetings, review and firefighting that no timesheet would have caught — reconstructed from tickets, your
-              calendar and personal notes.
-            </div>
-          </div>
-          <div className="report-hero-figures">
-            <div className="report-hero-figure">
-              <div className="report-hero-num is-purple">{report.invisiblePct}%</div>
-              <div className="report-hero-cap">invisible</div>
-            </div>
-            <div className="report-hero-figure">
-              <div className="report-hero-num">{report.visiblePct}%</div>
-              <div className="report-hero-cap">hands-on code</div>
-            </div>
-          </div>
-        </div>
-
         <div className="report-columns">
           {/* Where the week went */}
           <ReportPanel className="is-wide" title={`WHERE THE WEEK WENT · ${formatDuration(report.totalHours)}`}>

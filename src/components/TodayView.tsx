@@ -183,7 +183,7 @@ export const TodayView = ({
                 <span className="unit">m</span>
               </div>
               <div className="today-meta">
-                <div className="today-meta-label">LOGGED OF {formatHours(dailyTargetHours)}</div>
+                <div className="today-meta-label">LOGGED · TARGET {formatHours(dailyTargetHours)}</div>
                 <div className="meter-text">{formatClock(remainingHours * 3600)} left</div>
               </div>
             </div>

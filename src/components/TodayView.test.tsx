@@ -153,7 +153,7 @@ describe("TodayView calendar", () => {
   it("keeps the header figure and daily target", () => {
     const markup = renderToday();
 
-    expect(markup).toContain("LOGGED OF 8h");
+    expect(markup).toContain("LOGGED · TARGET 8h");
   });
 
   it("renders the active-work dock with Today-specific logging guidance", () => {

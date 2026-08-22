@@ -48,7 +48,7 @@ describe("WelcomeView", () => {
       />
     );
 
-    expect(markup).toContain("Coming from an older version?");
+    expect(markup).toContain("Upgrading?");
     expect(markup).toContain("Personal notes can be imported later from Settings.");
   });
 });

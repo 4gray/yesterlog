@@ -225,7 +225,7 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
   ));
 
   return <div className="view recap-workspace">
-    <header className="recap-topbar"><span className="recap-title-icon"><Sparkles size={18} /></span><div><h1>Recap</h1><p>Turn a stretch of real work into review-ready highlights</p></div>
+    <header className="recap-topbar"><span className="recap-title-icon"><Sparkles size={18} /></span><div><h1>Recap</h1><p>Summarize a week, month, or quarter from your logged activity</p></div>
       <div className="recap-top-actions"><button type="button" className="recap-secondary recap-brag-toggle" onClick={() => setBragOpen(true)} aria-expanded={bragOpen}><Bookmark size={14} /> Brag doc</button><div className="recap-export-wrap"><button type="button" className="recap-secondary" onClick={() => setExportOpen((value) => !value)} disabled={!draft}><Download size={14} /> Export</button>{exportOpen && <div className="recap-export-menu"><button onClick={copy}><Copy size={14} /> Copy text</button><button onClick={download}><FileDown size={14} /> Download Markdown</button><button onClick={print}><Printer size={14} /> Print / Save PDF</button></div>}</div>
         {ws.selectedSaved ? <><button className="recap-secondary" onClick={ws.closeSaved}><ChevronLeft size={14} /> Back to draft</button><button className="recap-primary" onClick={ws.duplicateSaved} disabled={ws.isLoading || ws.record?.intervalKey !== ws.selectedSaved.version.interval.key}><Copy size={14} /> Duplicate as draft</button></> : <button className="recap-primary" onClick={ws.saveCurrent} disabled={!draft || ws.isGenerating}><Save size={14} /> Save to brag doc</button>}</div>
     </header>
@@ -260,7 +260,7 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
         </>}
       </main>
       {bragOpen && <button type="button" className="recap-brag-scrim" aria-label="Close brag doc" onClick={() => setBragOpen(false)} />}
-      <aside className={`recap-brag ${bragOpen ? "is-open" : ""}`}><header><Bookmark size={16} /><h2>Brag doc</h2><span>{ws.saved.length} saved</span><Button variant="icon" className="recap-icon-btn recap-brag-close" onClick={() => setBragOpen(false)} aria-label="Close brag doc"><X size={14} /></Button><p>Every recap stays here for review season. Your promotion material remains ready.</p></header><div className="recap-brag-list">
+      <aside className={`recap-brag ${bragOpen ? "is-open" : ""}`}><header><Bookmark size={16} /><h2>Brag doc</h2><span>{ws.saved.length} saved</span><Button variant="icon" className="recap-icon-btn recap-brag-close" onClick={() => setBragOpen(false)} aria-label="Close brag doc"><X size={14} /></Button><p>Saved recaps stay here, on this device.</p></header><div className="recap-brag-list">
         {!historyOnly && draft && (ws.selectedSaved
           ? <button className="recap-draft-card" onClick={ws.closeSaved}><div><code>DRAFT</code><strong>Current draft</strong><span>RETURN</span></div><p>Resume the editable report</p></button>
           : <button className="recap-draft-card"><div><code>{draft.interval.shortLabel}</code><strong>{meta.label}</strong><span>DRAFT</span></div><p><i className="recap-saved-dots">{draft.themes.map((theme) => <b key={theme.id} className={`is-${theme.colorToken}`} />)}</i>{draft.themes.length} focus {draft.themes.length === 1 ? "area" : "areas"} · editing now</p></button>)}
