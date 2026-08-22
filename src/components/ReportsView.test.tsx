@@ -187,6 +187,33 @@ describe("ReportsView", () => {
     expect(markup).toContain("Next week");
   });
 
+  it("renders the in-view tab strip and gates the Code review tab on Bitbucket", () => {
+    const withBitbucket = renderToStaticMarkup(
+      <ReportsView
+        reportTab="summary"
+        weekState={weekState}
+        isBitbucketReady
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+    const jiraOnly = renderToStaticMarkup(
+      <ReportsView
+        reportTab="summary"
+        weekState={weekState}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
+
+    expect(withBitbucket).toContain("report-tabs");
+    expect(withBitbucket).toContain("Code review");
+    expect(jiraOnly).toContain("report-tabs");
+    expect(jiraOnly).not.toContain(">Code review<");
+  });
+
   it("renders the compact one-line header on an insight sub-page", () => {
     const markup = renderToStaticMarkup(
       <ReportsView

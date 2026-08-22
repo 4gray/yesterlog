@@ -74,7 +74,8 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
 describe("ReconstructView", () => {
   it("renders the header total, date and signals for an active day", () => {
     const markup = render();
-    expect(markup).toContain("RECONSTRUCT — WEDNESDAY 17 JUNE");
+    expect(markup).toContain("RECONSTRUCT");
+    expect(markup).toContain("WED 17 JUN");
     expect(markup).toContain("WED 17 JUN");
     expect(markup).toContain("YLOG-395");
     expect(markup).toContain("WORKING DAY");

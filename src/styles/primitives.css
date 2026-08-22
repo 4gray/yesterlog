@@ -168,6 +168,32 @@
   transform: translate(0, -50%);
 }
 
+/* ============================ loading ============================ */
+.loading-view {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: var(--dim);
+}
+
+.loading-view-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ============================ empty state ============================ */
 .empty-state {
   display: grid;

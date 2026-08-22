@@ -3,7 +3,7 @@ import type {
   JiraIssueTypeInfo,
   WeekState
 } from "../../shared/types";
-import type { ReportTab } from "./Sidebar";
+import { REPORT_TABS, type ReportTab } from "./Sidebar";
 import { ReportsComposition } from "./ReportsComposition";
 import { ReportsFocus } from "./ReportsFocus";
 import { ReportsReviews } from "./ReportsReviews";
@@ -28,8 +28,8 @@ interface ReportsViewProps {
 
 /**
  * Reports is a parent section: Summary is the landing page, and Composition /
- * Focus / Trends are insight sub-pages selected from the sidebar sub-nav. Every
- * page shares the same scroll container so switching tabs keeps the layout.
+ * Focus / Trends are insight sub-pages selected from the in-view tab strip.
+ * Every page shares the same scroll container so switching tabs keeps the layout.
  */
 export const ReportsView = ({
   reportTab,
@@ -49,6 +49,20 @@ export const ReportsView = ({
 
   return (
     <div className="view view-scroll">
+      <div className="report-tabs" role="tablist" aria-label="Reports pages">
+        {REPORT_TABS.filter((tab) => tab.id !== "reviews" || isBitbucketReady).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={reportTab === tab.id}
+            className={`report-tab${reportTab === tab.id ? " active" : ""}`}
+            onClick={() => onReportTabChange(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       {reportTab === "composition" ? (
         <ReportsComposition weekState={weekState} onOpenRecap={onOpenRecap} {...nav} />
       ) : reportTab === "focus" ? (

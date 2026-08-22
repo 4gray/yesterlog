@@ -8,10 +8,8 @@ const renderSidebar = (showReview: boolean) =>
   renderToStaticMarkup(
     <Sidebar
       view="reports"
-      reportTab="summary"
       collapsed={false}
       onViewChange={noop}
-      onReportTabChange={noop}
       onToggleCollapse={noop}
       syncLabel="SYNCED"
       syncState="synced"
@@ -20,12 +18,15 @@ const renderSidebar = (showReview: boolean) =>
     />
   );
 
-describe("Sidebar Reports tabs", () => {
-  it("shows Code review when Bitbucket is configured", () => {
-    expect(renderSidebar(true)).toContain("Code review");
+describe("Sidebar", () => {
+  // The Reports sub-tabs moved into ReportsView; the sidebar shows only the
+  // primary nav (Review gated on Bitbucket).
+  it("shows the Review nav item when Bitbucket is configured", () => {
+    expect(renderSidebar(true)).toContain("REVIEW");
+    expect(renderSidebar(true)).not.toContain("Code review");
   });
 
-  it("hides Code review for Jira-only usage", () => {
-    expect(renderSidebar(false)).not.toContain("Code review");
+  it("hides the Review nav item for Jira-only usage", () => {
+    expect(renderSidebar(false)).not.toContain("REVIEW");
   });
 });
