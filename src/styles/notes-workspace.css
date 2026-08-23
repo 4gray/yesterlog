@@ -1,37 +1,38 @@
-/* Ticket Notes is a fixed dark workspace in every app theme, drawn from the
-   same warm family as the rest of the app. The standard sidebar applies —
-   Notes no longer forces its own collapsed rail. */
+/* Ticket Notes runs on the app theme: the --nw-* tokens alias the app tokens,
+   so the workspace follows light/dark like every other view. Only deliberate
+   constants remain literal (on-accent chip text, the dark code surface). */
 
 .notes-workspace {
-  --nw-page: #0f0e0c;
-  --nw-window: #121110;
-  --nw-sidebar: #100f0d;
-  --nw-card: #161514;
-  --nw-selected: #1e1c19;
-  --nw-hover: #191816;
-  --nw-hover-strong: #211f1c;
-  --nw-line: #23211e;
-  --nw-hairline: #1b1a17;
-  --nw-control: #262320;
-  --nw-control-strong: #2e2b27;
-  --nw-control-hover: #3a3731;
-  --nw-primary: #f5f3f0;
-  --nw-text: #e9e7e3;
-  --nw-secondary: #9d9b95;
-  --nw-body: #b8b5af;
-  --nw-body-strong: #cfccc6;
-  --nw-muted: #67645e;
-  --nw-faint: #54514b;
-  --nw-faint-2: #67645e;
-  --nw-faint-3: #45423b;
-  --nw-blue: #4f7cff;
+  --nw-page: var(--bg-sunken);
+  --nw-window: var(--bg);
+  --nw-sidebar: var(--bg-sidebar);
+  --nw-card: var(--bg-card);
+  --nw-selected: var(--bg-active);
+  --nw-hover: var(--bg-hover);
+  --nw-hover-strong: var(--bg-active);
+  --nw-line: var(--line);
+  --nw-hairline: var(--line-soft);
+  --nw-control: var(--bg-card);
+  --nw-control-strong: var(--bg-active);
+  --nw-control-hover: var(--border);
+  --nw-primary: var(--text-bright);
+  --nw-text: var(--text);
+  --nw-secondary: var(--muted);
+  --nw-body: color-mix(in srgb, var(--text-strong) 55%, var(--muted));
+  --nw-body-strong: var(--text-strong);
+  --nw-muted: var(--dim-2);
+  --nw-faint: var(--faint);
+  --nw-faint-2: var(--dim-2);
+  --nw-faint-3: var(--border-strong);
+  --nw-blue: var(--blue);
+  --nw-blue-soft: var(--blue-soft);
   --nw-blue-hover: #5f88ff;
-  --nw-amber: #edc488;
-  --nw-teal: #6bd0c2;
-  --nw-red: #f08a8a;
-  --nw-violet: #bda6f5;
+  --nw-amber: var(--amber-soft);
+  --nw-teal: var(--teal);
+  --nw-red: var(--red-soft);
+  --nw-violet: var(--purple);
   --nw-bitbucket: #6ba8ff;
-  --nw-slate: #9d9b95;
+  --nw-slate: var(--muted);
   --nw-cyan: #7fc8e8;
   position: relative;
   flex: 1;
@@ -42,7 +43,6 @@
   overflow: hidden;
   background: var(--nw-window);
   color: var(--nw-text);
-  color-scheme: dark;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
@@ -90,7 +90,7 @@
   border: 1px solid rgba(124, 157, 255, 0.34);
   border-radius: var(--radius-sm);
   background: rgba(124, 157, 255, 0.1);
-  color: #9db4ff;
+  color: var(--nw-blue-soft);
   cursor: pointer;
 }
 
@@ -514,7 +514,7 @@
   padding: 2px 7px;
   border-radius: var(--radius-xs);
   background: rgba(79, 124, 255, 0.13);
-  color: #7c9dff;
+  color: var(--nw-blue-soft);
   font-size: 10px;
   font-weight: 700;
   line-height: 1.35;
@@ -774,7 +774,7 @@
   height: 26px;
   padding: 0 10px;
   border-radius: var(--radius-sm);
-  background: var(--nw-amber);
+  background: var(--amber);
   color: #241c0e;
   font-size: 10.5px;
   font-weight: 800;
@@ -782,7 +782,7 @@
 }
 
 .notes-mark-all button:hover {
-  background: #f3ce97;
+  background: color-mix(in srgb, var(--amber) 78%, #fff);
 }
 
 .notes-editor-scroll {
@@ -1058,7 +1058,7 @@
 }
 
 .notes-rich-link {
-  color: #90aaff;
+  color: var(--nw-blue-soft);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1135,7 +1135,7 @@
 }
 
 .notes-panel > header a:hover {
-  color: #96c2ff;
+  color: var(--nw-blue-soft);
 }
 
 .notes-panel-close {
@@ -1158,7 +1158,7 @@
 }
 
 .notes-pr-panel > header {
-  color: #a8c6f7;
+  color: var(--nw-blue-soft);
 }
 
 .notes-pr-status {
@@ -1352,7 +1352,7 @@
 }
 
 .notes-ai-panel > header {
-  color: #d6c8f7;
+  color: var(--nw-violet);
 }
 
 .notes-panel-loading,
@@ -1403,7 +1403,7 @@
 
 .notes-ai-suggestion > span.is-question {
   background: rgba(124, 157, 255, 0.12);
-  color: #7c9dff;
+  color: var(--nw-blue-soft);
 }
 
 .notes-ai-suggestion > span.is-check {
@@ -1597,7 +1597,7 @@
 .notes-composer > button:first-child.is-active,
 .notes-modal-composer > button.is-active {
   background: rgba(79, 124, 255, 0.16);
-  color: #7c9dff;
+  color: var(--nw-blue-soft);
 }
 
 .notes-composer input,

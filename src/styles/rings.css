@@ -17,11 +17,6 @@
   --ring-fire: #cf5a33;
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not(.theme-dark) {
-    --ring-fire: #cf5a33;
-  }
-}
 
 .day-ring {
   position: relative;

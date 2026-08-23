@@ -28,15 +28,15 @@ export const useThemeMode = ({ initialTheme, persist = true }: UseThemeModeOptio
 
   const effectiveTheme: ThemeMode = selectedTheme ?? (systemLight ? "light" : "dark");
 
+  // The resolved theme class is always applied (system preference included), so
+  // the stylesheets need exactly one light block — :root.theme-light — instead
+  // of a duplicated @media (prefers-color-scheme) branch. index.html applies
+  // the same class pre-paint to avoid a first-frame flash.
   useEffect(() => {
     const root = document.documentElement;
     root.classList.remove("theme-light", "theme-dark");
-    if (selectedTheme === "light") {
-      root.classList.add("theme-light");
-    } else if (selectedTheme === "dark") {
-      root.classList.add("theme-dark");
-    }
-  }, [selectedTheme]);
+    root.classList.add(effectiveTheme === "light" ? "theme-light" : "theme-dark");
+  }, [effectiveTheme]);
 
   useEffect(() => {
     const mq = window.matchMedia?.(LIGHT_MEDIA_QUERY);

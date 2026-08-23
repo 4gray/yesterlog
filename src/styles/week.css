@@ -958,42 +958,22 @@
   text-overflow: ellipsis;
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not(.theme-dark) .issue-type-badge {
-    border-color: #adc0ff;
-    background: #eef3ff;
-    color: #3b63d6;
-  }
-
-  :root:not(.theme-dark) .issue-type-badge.is-sub {
-    border-color: #e5c06d;
-    background: #fff7e6;
-    color: #9a6a16;
-  }
-
-  :root:not(.theme-dark) .ticket-status-badge.is-done {
-    border-color: #94d8bd;
-    background: #edf9f3;
-    color: #15885d;
-  }
-}
-
 :root.theme-light .issue-type-badge {
-  border-color: #adc0ff;
-  background: #eef3ff;
-  color: #3b63d6;
+  border-color: color-mix(in srgb, var(--blue) 42%, #fff);
+  background: color-mix(in srgb, var(--blue) 8%, #fff);
+  color: var(--blue-soft);
 }
 
 :root.theme-light .issue-type-badge.is-sub {
-  border-color: #e5c06d;
-  background: #fff7e6;
-  color: #9a6a16;
+  border-color: color-mix(in srgb, var(--amber) 55%, #fff);
+  background: color-mix(in srgb, var(--amber) 9%, #fff);
+  color: var(--amber-soft);
 }
 
 :root.theme-light .ticket-status-badge.is-done {
-  border-color: #94d8bd;
-  background: #edf9f3;
-  color: #15885d;
+  border-color: color-mix(in srgb, var(--green) 45%, #fff);
+  background: color-mix(in srgb, var(--green) 8%, #fff);
+  color: var(--ticket-5-text);
 }
 
 .day-log-key {

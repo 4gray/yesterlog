@@ -99,69 +99,31 @@
   background: var(--bg);
 }
 
-/* light theme — by system preference (when no explicit choice) … */
-@media (prefers-color-scheme: light) {
-  :root:not(.theme-dark) {
-    color-scheme: light;
-    --bg: #eef0f3;
-    --bg-sidebar: #e7e9ee;
-    --bg-sunken: #e4e7ec;
-    --bg-raised: #ffffff;
-    --bg-card: #ffffff;
-    --bg-active: #e3e7ef;
-    --bg-hover: #e9ecf1;
-    --line: #e1e4e9;
-    --line-soft: #eaecf0;
-    --border: #d4d8df;
-    --border-strong: #c9ced6;
-    --leader: #d4d8df;
-    --text: #1b1e25;
-    --text-bright: #0c0d11;
-    --text-strong: #3c414b;
-    --muted: #5a606b;
-    --dim: #757b87;
-    --dim-2: #7c828f;
-    --faint: #a3a9b3;
-    --fainter: #c2c6ce;
-    --blue-soft: #3b63d6;
-    --amber-soft: #9a6a16;
-    --purple: #7a52d6;
-    --teal: #1f8a7c;
-    --coral: #c0503a;
-    --red-soft: #c94f47;
-    --ai: #6d4fd6;
-    --ticket-1-text: #3b63d6;
-    --ticket-2-text: #1f8a7c;
-    --ticket-3-text: #7a52d6;
-    --ticket-4-text: #9a6a16;
-    --ticket-5-text: #15885d;
-    --ticket-6-text: #c2547a;
-  }
-}
-
-/* … or by explicit toggle (overrides system) */
+/* light theme — warm paper, the perceptual counterpart of the sepia dark.
+   The resolved theme class is always applied (index.html pre-paint script +
+   useThemeMode), so this single block is the only light definition. */
 :root.theme-light {
   color-scheme: light;
-  --bg: #eef0f3;
-  --bg-sidebar: #e7e9ee;
-  --bg-sunken: #e4e7ec;
+  --bg: #f2f0ed;
+  --bg-sidebar: #eae7e2;
+  --bg-sunken: #e7e4df;
   --bg-raised: #ffffff;
   --bg-card: #ffffff;
-  --bg-active: #e3e7ef;
-  --bg-hover: #e9ecf1;
-  --line: #e1e4e9;
-  --line-soft: #eaecf0;
-  --border: #d4d8df;
-  --border-strong: #c9ced6;
-  --leader: #d4d8df;
-  --text: #1b1e25;
-  --text-bright: #0c0d11;
-  --text-strong: #3c414b;
-  --muted: #5a606b;
-  --dim: #757b87;
-  --dim-2: #7c828f;
-  --faint: #a3a9b3;
-  --fainter: #c2c6ce;
+  --bg-active: #e7e2da;
+  --bg-hover: #ece9e4;
+  --line: #e4e1db;
+  --line-soft: #edeae5;
+  --border: #d7d3cc;
+  --border-strong: #c9c4bb;
+  --leader: #d7d3cc;
+  --text: #211f1b;
+  --text-bright: #12110e;
+  --text-strong: #433f39;
+  --muted: #625d55;
+  --dim: #7c766d;
+  --dim-2: #837d74;
+  --faint: #aaa49b;
+  --fainter: #c7c2b9;
   --blue-soft: #3b63d6;
   --amber-soft: #9a6a16;
   --purple: #7a52d6;
