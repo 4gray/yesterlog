@@ -104,6 +104,9 @@ export const Sidebar = ({
                 type="button"
                 className={`nav-item ${view === id ? "active" : ""}`}
                 aria-current={view === id ? "page" : undefined}
+                // Explicit name: the visual label is display:none in the mobile
+                // layout, which would otherwise leave the button nameless.
+                aria-label={label}
                 onClick={() => onViewChange(id)}
               >
                 <Icon size={18} />
@@ -121,6 +124,7 @@ export const Sidebar = ({
         <button
           type="button"
           className={`nav-item ${view === "settings" ? "active" : ""}`}
+          aria-label="SETTINGS"
           onClick={() => onViewChange("settings")}
         >
           <Settings size={18} />
