@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Tooltip } from "./Tooltip";
 import { Button } from "./Button";
 import { Check, Pencil, Repeat2, Trash2, X } from "lucide-react";
 import type { PendingRecurringOccurrence, RecurringEntry } from "../../shared/types";
@@ -94,12 +95,9 @@ export const PendingRecurringCard = ({ pending, onConfirm, onSkip }: PendingRecu
               <Button variant="icon" className="rec-icon-btn is-confirm" onClick={confirm} title={`Log ${durLabel} locally`} aria-label={`Log ${durLabel} locally`}>
                 <Check size={14} strokeWidth={2.4} />
               </Button>
-              <Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(false)}
-                title="Cancel"
-                aria-label="Cancel editing"
-              >
+              <Tooltip text="Cancel"><Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(false)} aria-label="Cancel editing">
                 <X size={14} strokeWidth={2.2} />
-              </Button>
+              </Button></Tooltip>
             </span>
           </div>
         </>
@@ -112,18 +110,12 @@ export const PendingRecurringCard = ({ pending, onConfirm, onSkip }: PendingRecu
             <Button variant="icon" className="rec-icon-btn is-confirm" onClick={confirm} title={`Log ${durLabel} locally`} aria-label={`Log ${durLabel} locally`}>
               <Check size={14} strokeWidth={2.4} />
             </Button>
-            <Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(true)}
-              title="Adjust duration & note"
-              aria-label="Adjust duration and note"
-            >
+            <Tooltip text="Adjust duration & note"><Button variant="icon" className="rec-icon-btn" onClick={() => setEditing(true)} aria-label="Adjust duration and note">
               <Pencil size={13} strokeWidth={1.9} />
-            </Button>
-            <Button variant="icon" className="rec-icon-btn" onClick={() => void onSkip(pending.eventId, pending.dateKey)}
-              title="Skip today"
-              aria-label="Skip today"
-            >
+            </Button></Tooltip>
+            <Tooltip text="Skip today"><Button variant="icon" className="rec-icon-btn" onClick={() => void onSkip(pending.eventId, pending.dateKey)} aria-label="Skip today">
               <X size={14} strokeWidth={2.2} />
-            </Button>
+            </Button></Tooltip>
           </span>
         </div>
       )}
@@ -188,20 +180,17 @@ export const RecurringEntryRow = ({ entry, onSave, onDelete }: RecurringEntryRow
         />
         <div className="rec-pending-bar">
           {onDelete && (
-            <Button variant="icon" className="rec-icon-btn is-danger" onClick={() => void onDelete(entry.eventId, entry.dateKey)}
-              title="Delete this entry"
-              aria-label={`Delete ${entry.title}`}
-            >
+            <Tooltip text="Delete this entry"><Button variant="icon" className="rec-icon-btn is-danger" onClick={() => void onDelete(entry.eventId, entry.dateKey)} aria-label={`Delete ${entry.title}`}>
               <Trash2 size={14} strokeWidth={2} />
-            </Button>
+            </Button></Tooltip>
           )}
           <span className="rec-pending-actions">
             <Button variant="icon" className="rec-icon-btn is-confirm" onClick={save} title={`Save ${formatWeekRecurringMinutes(minutes)}`} aria-label={`Save ${formatWeekRecurringMinutes(minutes)}`}>
               <Check size={14} strokeWidth={2.4} />
             </Button>
-            <Button variant="icon" className="rec-icon-btn" onClick={cancel} title="Cancel" aria-label="Cancel editing">
+            <Tooltip text="Cancel"><Button variant="icon" className="rec-icon-btn" onClick={cancel} aria-label="Cancel editing">
               <X size={14} strokeWidth={2.2} />
-            </Button>
+            </Button></Tooltip>
           </span>
         </div>
       </div>
@@ -217,15 +206,9 @@ export const RecurringEntryRow = ({ entry, onSave, onDelete }: RecurringEntryRow
         <span className="day-log-dur">{formatWeekRecurringMinutes(initialMinutes)}</span>
         <span className="day-log-action-slot">
           {onSave && (
-            <button
-              type="button"
-              className="day-log-edit"
-              onClick={() => setEditing(true)}
-              title="Adjust duration & note"
-              aria-label={`Edit ${entry.title}`}
-            >
+            <Tooltip text="Adjust duration & note"><button type="button" className="day-log-edit" onClick={() => setEditing(true)} aria-label={`Edit ${entry.title}`}>
               <Pencil size={12} strokeWidth={2} />
-            </button>
+            </button></Tooltip>
           )}
         </span>
       </div>
