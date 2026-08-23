@@ -175,3 +175,20 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   text, the dark code surface). Correction: the audit note "sidebar stays dark in light
   mode" was a misreading — the sidebar always used `--bg-sidebar` and switches correctly;
   no change was needed.
+
+## Post-plan polish (2026-08-23, after the Phase 1–6 merge)
+
+- Bespoke view CTAs retagged onto Button variants: add-time/recon-send/review-log on
+  primary; sync, recon rail/ghost/setup, recap-source on secondary; review-info on icon.
+  Local classes stay for deliberate accent overrides and can shrink as views are touched.
+- Tooltip adopted on icon-only controls (recurring-row actions, recon timeline controls,
+  review estimate info) — native title="" remains only where the control also has a
+  visible label; migrate opportunistically.
+- EmptyState adopted in the move-worklog picker, the Add Time recurring tab, Recap's main
+  empty (with an Open calendar action) and the brag-doc drawer; dead per-view empty CSS
+  removed. The remaining *-empty classes are inline placeholders where the centered
+  EmptyState would be wrong.
+- NotesWorkspace: shared helpers → notesWorkspaceShared.ts, demo fixtures →
+  notesWorkspaceDemo.ts (2757 → 2439 lines). The deep split (extract a
+  useNotesWorkspace hook + rail/editor/panel subcomponents) is its own dedicated task —
+  60+ entangled state variables deserve focused review, not a drive-by refactor.
