@@ -192,3 +192,17 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   notesWorkspaceDemo.ts (2757 → 2439 lines). The deep split (extract a
   useNotesWorkspace hook + rail/editor/panel subcomponents) is its own dedicated task —
   60+ entangled state variables deserve focused review, not a drive-by refactor.
+
+## NotesWorkspace deep split (2026-08-23)
+
+Done as its own pass after the polish merge:
+- `useNotesWorkspace` hook (1571 lines) owns every piece of state and behavior —
+  load/persistence, scratchpad autosave, selection/meta, PR cache + two-way tasks,
+  AI briefing, new-note flow — moved verbatim, no behavior change.
+- `NotesWorkspace.tsx` is a 557-line view composing `NotesRail`, `NotesList`,
+  `NotesPrPanel`, `NotesAiPanel`, `NotesNewNoteModal` (render-only, narrow props).
+- Verified interactively in demo mode: rail expand/selection, PR panel toggle,
+  comment → to-do capture (rail counts update), New note modal with Jira targets.
+  946/946 tests, tsc clean.
+- Next natural step (optional): sub-split the hook internally
+  (scratchpad / PR / briefing / new-note clusters) — the seams are now visible.
