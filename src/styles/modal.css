@@ -250,15 +250,6 @@
   text-align: center;
 }
 
-.move-worklog-empty strong {
-  color: var(--text-bright);
-  font-size: 13px;
-}
-
-.move-worklog-empty span {
-  font-size: 12px;
-}
-
 .move-worklog-route {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
