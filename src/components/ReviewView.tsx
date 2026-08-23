@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Tooltip } from "./Tooltip";
 import { Check, CircleHelp, ExternalLink, Loader2, RotateCw, X } from "lucide-react";
 import type {
   AppSettings,
@@ -662,12 +663,9 @@ export const ReviewView = ({
             </button>
           ))}
         </div>
-        <Button variant="icon" className="review-info-button" onClick={() => setDialog({ kind: "estimate-info" })}
-          title="How review time is estimated"
-          aria-label="How review time is estimated"
-        >
+        <Tooltip text="How review time is estimated"><Button variant="icon" className="review-info-button" onClick={() => setDialog({ kind: "estimate-info" })} aria-label="How review time is estimated">
           <CircleHelp size={15} strokeWidth={2} />
-        </Button>
+        </Button></Tooltip>
         <span className="review-filter-hint">
           {ownershipFilter === "my-pull-requests" ? "PRs you created" : "PRs where your Bitbucket review activity was found"}
         </span>

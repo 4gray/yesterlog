@@ -25,6 +25,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { useState, type CSSProperties, type DragEvent } from "react";
+import { Tooltip } from "./Tooltip";
 import { Button } from "./Button";
 import type {
   ReconstructConfidence,
@@ -261,10 +262,10 @@ export const ReconstructView = ({
           </button>
 
           {isActive && isEnhancing ? (
-            <button type="button" className="recon-primary is-stop" onClick={onStopAi} title="Stop drafting">
+            <Tooltip text="Stop drafting"><button type="button" className="recon-primary is-stop" onClick={onStopAi}>
               <Loader2 size={15} strokeWidth={2} className="spin" />
               Stop drafting
-            </button>
+            </button></Tooltip>
           ) : isActive ? (
             <button type="button" className={`recon-primary ${aiOn ? "is-ai" : ""}`} onClick={onPrimaryAction}>
               {aiOn ? <Sparkles size={15} strokeWidth={2} /> : <Zap size={15} strokeWidth={2} />}
@@ -386,14 +387,9 @@ export const ReconstructView = ({
                       {conf.label}
                     </span>
                     {!signal.isMarker && (
-                      <button
-                        type="button"
-                        className="recon-sig-place"
-                        onClick={() => onPlaceSignal(signal.id, signal.startHour)}
-                        title="Place on the timeline"
-                      >
+                      <Tooltip text="Place on the timeline"><button type="button" className="recon-sig-place" onClick={() => onPlaceSignal(signal.id, signal.startHour)}>
                         Place
-                      </button>
+                      </button></Tooltip>
                     )}
                   </div>
                 </div>
@@ -626,21 +622,21 @@ const TimelineRowView = ({
             </div>
             {onAdjustDuration ? (
               <span className="recon-dur-edit">
-                <button type="button" onClick={() => onAdjustDuration(-15)} title="−15 min" aria-label="Decrease duration">
+                <Tooltip text="−15 min"><button type="button" onClick={() => onAdjustDuration(-15)} aria-label="Decrease duration">
                   <Minus size={13} strokeWidth={2.4} />
-                </button>
+                </button></Tooltip>
                 <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
-                <button type="button" onClick={() => onAdjustDuration(15)} title="+15 min" aria-label="Increase duration">
+                <Tooltip text="+15 min"><button type="button" onClick={() => onAdjustDuration(15)} aria-label="Increase duration">
                   <Plus size={13} strokeWidth={2.4} />
-                </button>
+                </button></Tooltip>
               </span>
             ) : (
               <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
             )}
             {onRemove && (
-              <button type="button" className="recon-tl-remove" onClick={onRemove} title="Return to the rail">
+              <Tooltip text="Return to the rail"><button type="button" className="recon-tl-remove" onClick={onRemove}>
                 <X size={14} strokeWidth={2} />
-              </button>
+              </button></Tooltip>
             )}
           </>
         )}
