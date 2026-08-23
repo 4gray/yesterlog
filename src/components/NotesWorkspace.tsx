@@ -1,24 +1,12 @@
 import {
   Archive,
-  BookOpen,
-  Check,
-  CheckCircle2,
-  ChevronsLeft,
   ChevronsRight,
-  ExternalLink,
   FileText,
   GitPullRequest,
-  Lightbulb,
   ListTodo,
   LoaderCircle,
   LockKeyhole,
-  MoveUpRight,
-  NotebookPen,
-  Plus,
-  Search,
-  Sparkles,
-  Trash2,
-  X
+  Sparkles
 } from "lucide-react";
 import {
   useCallback,
@@ -88,6 +76,11 @@ import {
   ScratchpadEditor,
   type ScratchpadEditorValue
 } from "./ScratchpadEditor";
+import { NotesAiPanel } from "./NotesAiPanel";
+import { NotesList } from "./NotesList";
+import { NotesNewNoteModal } from "./NotesNewNoteModal";
+import { NotesPrPanel } from "./NotesPrPanel";
+import { NotesRail } from "./NotesRail";
 import type { TicketSearchHandler } from "./TicketPicker";
 
 export interface NotesWorkspaceProps {
@@ -1467,42 +1460,27 @@ export const NotesWorkspace = ({
     "--notes-accent": selectedMeta.color
   } as CSSProperties;
 
-  const renderSidebarTicket = (
-    ticket: NoteTicketActivity | WorkspaceNoteBucket,
-    linked = false
-  ) => {
-    const jira = "lastWorkedAt" in ticket ? ticket : ticket.jira!;
-    const key = jira.key.toUpperCase();
-    const noteBucket = buckets[key];
-    const open = countOpenWorkspaceTodos(noteBucket?.notes ?? []);
-    const selected = selectedContainer === key;
-    const done = jira.statusCategory === "done";
-    const color = accentForKey(key);
-    return (
-      <button
-        type="button"
-        key={key}
-        className={`notes-ticket-row${selected ? " is-selected" : ""}${done ? " is-done" : ""}`}
-        onClick={() => chooseContainer(key)}
-        style={{ "--ticket-color": color } as CSSProperties}
-      >
-        <span className="notes-ticket-bar" />
-        <span className="notes-ticket-copy">
-          <span className="notes-ticket-key">
-            {key}
-            {done ? <CheckCircle2 size={12} aria-label="Done" /> : null}
-          </span>
-          <span className="notes-ticket-title">{jira.summary}</span>
-        </span>
-        {linked ? <span className="notes-type-badge">{issueTypeLabel(jira)}</span> : null}
-        <span className="notes-ticket-tail">
-          {open ? <span className="notes-open-count">{open} open</span> : null}
-          {"lastWorkedAt" in ticket ? (
-            <span className="notes-recency">{formatRecency(ticket.lastWorkedAt, currentDate)}</span>
-          ) : null}
-        </span>
-      </button>
-    );
+  const moveNoteToGeneral = (note: WorkspaceNote) => {
+    const source = bucketsRef.current[selectedContainer] ?? selectedBucket;
+    const target = bucketsRef.current[GENERAL_NOTES_CONTAINER_ID] ?? {
+      containerId: GENERAL_NOTES_CONTAINER_ID,
+      notes: []
+    };
+    if (!isDemo && !jiraNoteScope) {
+      onErrorRef.current("Sync Jira once before saving ticket notes for this account.");
+      return;
+    }
+    const moved = moveWorkspaceNote(source, target, note.id, new Date().toISOString());
+    const next = {
+      ...bucketsRef.current,
+      [selectedContainer]: moved.source,
+      [GENERAL_NOTES_CONTAINER_ID]: moved.target
+    };
+    setBucketState(next);
+    if (!isDemo) {
+      const capturedScope = jiraNoteScope ?? null;
+      enqueueMutation(() => saveWorkspaceNoteBuckets([moved.source, moved.target], capturedScope));
+    }
   };
 
   if (
@@ -1545,139 +1523,32 @@ export const NotesWorkspace = ({
     <section className="notes-workspace" aria-label="Notes workspace" style={editorStyle}>
       <header className="notes-titlebar">Yesterlog — Notes</header>
       <div className="notes-workspace-body">
-        {!sidebarOpen ? null : (
-          <button
-            type="button"
-            className="notes-rail-scrim"
-            aria-label="Close notes sidebar"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-        <aside className={`notes-rail${sidebarOpen ? " is-open" : ""}`} aria-label="Notes">
-          <div className="notes-rail-header">
-            <span className="notes-rail-icon"><NotebookPen size={15} /></span>
-            <strong>Notes</strong>
-            <button type="button" className="notes-icon-button" onClick={openNewNote} aria-label="New note">
-              <Plus size={15} />
-            </button>
-            <button
-              type="button"
-              className="notes-icon-button"
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Collapse notes sidebar"
-            >
-              <ChevronsLeft size={15} />
-            </button>
-          </div>
-
-          <div className="notes-scope" aria-label="Ticket activity range">
-            {(["today", "week", "all"] as const).map((value) => (
-              <button
-                type="button"
-                key={value}
-                className={scope === value ? "is-active" : ""}
-                onClick={() => setScope(value)}
-              >
-                {value[0].toUpperCase() + value.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          <div className="notes-rail-scroll">
-            <section className="notes-rail-section">
-              <div className="notes-section-heading">
-                <span>Notebooks</span>
-                <i />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNotebookAdding(true);
-                    setNotebookName("");
-                  }}
-                  aria-label="Create notebook"
-                >
-                  <Plus size={12} />
-                </button>
-              </div>
-              <button
-                type="button"
-                className={`notes-notebook-row${selectedContainer === GENERAL_NOTES_CONTAINER_ID ? " is-selected" : ""}`}
-                onClick={() => chooseContainer(GENERAL_NOTES_CONTAINER_ID)}
-              >
-                <span className="notes-notebook-icon"><Lightbulb size={12} /></span>
-                <span>General notes</span>
-                {countOpenWorkspaceTodos(buckets[GENERAL_NOTES_CONTAINER_ID]?.notes ?? []) ? (
-                  <em>{countOpenWorkspaceTodos(buckets[GENERAL_NOTES_CONTAINER_ID]?.notes ?? [])} open</em>
-                ) : null}
-              </button>
-              {notebooks.map((notebook) => {
-                const containerId = notebookContainerId(notebook.id);
-                const open = countOpenWorkspaceTodos(buckets[containerId]?.notes ?? []);
-                return (
-                  <button
-                    type="button"
-                    className={`notes-notebook-row${selectedContainer === containerId ? " is-selected" : ""}`}
-                    onClick={() => chooseContainer(containerId)}
-                    key={notebook.id}
-                  >
-                    <span className="notes-notebook-icon"><BookOpen size={12} /></span>
-                    <span>{notebook.title}</span>
-                    {open ? <em>{open} open</em> : null}
-                  </button>
-                );
-              })}
-              {notebookAdding ? (
-                <input
-                  className="notes-notebook-input"
-                  value={notebookName}
-                  onChange={(event) => setNotebookName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") createNotebook();
-                    if (event.key === "Escape") {
-                      setNotebookAdding(false);
-                      setNotebookName("");
-                    }
-                  }}
-                  placeholder="Notebook name… (Enter)"
-                  autoFocus
-                />
-              ) : null}
-            </section>
-
-            <section className="notes-rail-section">
-              <div className="notes-section-heading notes-ticket-heading">
-                <span>
-                  {scopedTickets.length} {scopedTickets.length === 1 ? "ticket" : "tickets"} ·{" "}
-                  {scope === "today" ? "worked today" : scope === "week" ? "worked this week" : "all time"}
-                </span>
-                <i />
-              </div>
-              <div className="notes-ticket-list">
-                {scopedTickets.map((ticket) => renderSidebarTicket(ticket))}
-                {!scopedTickets.length ? (
-                  <p className="notes-scope-empty">Nothing tracked in this range. Switch to All…</p>
-                ) : null}
-              </div>
-            </section>
-
-            {linkedBuckets.length ? (
-              <section className="notes-rail-section">
-                <div className="notes-section-heading">
-                  <span>Linked via search</span>
-                  <i />
-                </div>
-                <div className="notes-ticket-list">
-                  {linkedBuckets.map((bucket) => renderSidebarTicket(bucket, true))}
-                </div>
-              </section>
-            ) : null}
-          </div>
-
-          <footer className="notes-rail-footer">
-            <LockKeyhole size={11} />
-            <span>Local only · never synced to Jira</span>
-          </footer>
-        </aside>
+        <NotesRail
+          open={sidebarOpen}
+          notebooks={notebooks}
+          buckets={buckets}
+          scopedTickets={scopedTickets}
+          linkedBuckets={linkedBuckets}
+          selectedContainer={selectedContainer}
+          scope={scope}
+          notebookAdding={notebookAdding}
+          notebookName={notebookName}
+          currentDate={currentDate}
+          onChooseContainer={chooseContainer}
+          onScopeChange={setScope}
+          onOpenNewNote={openNewNote}
+          onClose={() => setSidebarOpen(false)}
+          onStartNotebookAdd={() => {
+            setNotebookAdding(true);
+            setNotebookName("");
+          }}
+          onNotebookNameChange={setNotebookName}
+          onCancelNotebookAdd={() => {
+            setNotebookAdding(false);
+            setNotebookName("");
+          }}
+          onCreateNotebook={createNotebook}
+        />
 
         <main className="notes-editor">
           <header className="notes-editor-header">
@@ -1892,379 +1763,87 @@ export const NotesWorkspace = ({
             >
               <div className="notes-editor-column">
               {isPrOpen && prAvailable && !showArchive ? (
-                <section className="notes-panel notes-pr-panel" aria-label="Bitbucket pull request">
-                  <header>
-                    <GitPullRequest size={14} />
-                    <strong>
-                      PR #{selectedPr?.pullRequestId ?? linkedPullRequest?.pullRequestId} —{" "}
-                      {selectedPr?.title ?? linkedPullRequest?.title ?? "Pull request"}
-                    </strong>
-                    {selectedPr ? (
-                      <span className={`notes-pr-status is-${selectedPr.state.toLowerCase()}`}>
-                        {selectedPr.state === "MERGED"
-                          ? "Merged"
-                          : selectedPr.state === "OPEN"
-                            ? "Open"
-                            : selectedPr.state.charAt(0).toUpperCase() +
-                              selectedPr.state.slice(1).toLowerCase()}
-                      </span>
-                    ) : null}
-                    <span className="notes-panel-meta">
-                      {selectedPr
-                        ? `${selectedPr.approvalCount} ${selectedPr.approvalCount === 1 ? "approval" : "approvals"} · ${selectedPr.commentCount} comments`
-                        : "Loading live details…"}
-                    </span>
-                    {selectedPr?.url ? (
-                      <a href={selectedPr.url} target="_blank" rel="noreferrer">
-                        Open in Bitbucket <ExternalLink size={10} />
-                      </a>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="notes-panel-close"
-                      onClick={() =>
-                        selectedJiraKey &&
-                        setPrOpen((current) => ({ ...current, [selectedJiraKey]: false }))
-                      }
-                      aria-label="Close pull request panel"
-                    >
-                      <X size={13} />
-                    </button>
-                  </header>
-
-                  {selectedPrEntry?.status === "loading" ? (
-                    <div className="notes-panel-loading">
-                      <LoaderCircle className="notes-spinner" size={14} />
-                      Loading tasks and comments from Bitbucket…
-                    </div>
-                  ) : selectedPr ? (
-                    <>
-                      {selectedPrTasksForPanel.length ? (
-                        <div className="notes-pr-section">
-                          <h2>Tasks</h2>
-                          {selectedPrTasksForPanel.map((task) => (
-                            <div className={`notes-pr-task${task.resolved ? " is-done" : ""}`} key={task.id}>
-                              <button
-                                type="button"
-                                className="notes-checkbox"
-                                aria-label={task.resolved ? "Reopen task in Bitbucket" : "Resolve task in Bitbucket"}
-                                aria-pressed={task.resolved}
-                                disabled={pendingPrTasks.has(
-                                  `${pullRequestTargetId(selectedPr)}/${task.id}`
-                                )}
-                                onClick={() => void togglePrTask(task.id)}
-                              >
-                                {task.resolved ? <Check size={12} /> : null}
-                              </button>
-                              <div>
-                                <p>{task.content}</p>
-                                <span>
-                                  {task.authorDisplayName || "Bitbucket"}
-                                  {task.resolved ? " · resolved, synced to Bitbucket" : ""}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {selectedPr.comments.length ? (
-                        <div className="notes-pr-section">
-                          <h2>Unresolved comments</h2>
-                          {selectedPr.comments.map((comment) => {
-                            const todoText = commentTodoText(
-                              comment.authorDisplayName,
-                              comment.content
-                            );
-                            const added = hasTodoText(todoText);
-                            return (
-                              <div className="notes-pr-comment" key={comment.id}>
-                                <span className="notes-avatar">{comment.authorInitials}</span>
-                                <div>
-                                  <p>{comment.content}</p>
-                                  <span>
-                                    {comment.authorDisplayName}
-                                    {comment.path
-                                      ? ` · ${comment.path}${comment.line ? `:${comment.line}` : ""}`
-                                      : ""}
-                                  </span>
-                                </div>
-                                <button
-                                  type="button"
-                                  className={added ? "is-added" : ""}
-                                  disabled={added}
-                                  onClick={() =>
-                                    addNoteToContainer(
-                                      selectedContainer,
-                                      todoText,
-                                      "todo",
-                                      selectedMeta.jira
-                                    )
-                                  }
-                                >
-                                  {added ? "Added ✓" : "+ to-do"}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-
-                      {selectedPrAllClear ||
-                      (!selectedPr.tasks.length && !selectedPr.comments.length) ? (
-                        <div className="notes-pr-clear">
-                          <CheckCircle2 size={16} />
-                          No open tasks or unresolved comments.
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <div className="notes-panel-empty">
-                      <span>Pull request details are unavailable.</span>
-                      {selectedJiraKey ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setPrCache((current) => {
-                              const next = { ...current };
-                              delete next[selectedJiraKey];
-                              return next;
-                            })
-                          }
-                        >
-                          Retry
-                        </button>
-                      ) : null}
-                    </div>
-                  )}
-                  <footer>
-                    Live from Bitbucket — checking a task resolves it in the PR. Comments are copied only when you choose + to-do.
-                  </footer>
-                </section>
+                <NotesPrPanel
+                  pr={selectedPr}
+                  isLoading={selectedPrEntry?.status === "loading"}
+                  fallbackId={linkedPullRequest?.pullRequestId}
+                  fallbackTitle={linkedPullRequest?.title}
+                  tasksForPanel={selectedPrTasksForPanel}
+                  allClear={selectedPrAllClear}
+                  isTaskPending={(taskId) =>
+                    Boolean(selectedPr && pendingPrTasks.has(`${pullRequestTargetId(selectedPr)}/${taskId}`))
+                  }
+                  hasTodoText={hasTodoText}
+                  onToggleTask={(taskId) => void togglePrTask(taskId)}
+                  onAddTodo={(text) =>
+                    addNoteToContainer(selectedContainer, text, "todo", selectedMeta.jira)
+                  }
+                  onClose={() =>
+                    selectedJiraKey &&
+                    setPrOpen((current) => ({ ...current, [selectedJiraKey]: false }))
+                  }
+                  onRetry={() =>
+                    selectedJiraKey &&
+                    setPrCache((current) => {
+                      const next = { ...current };
+                      delete next[selectedJiraKey];
+                      return next;
+                    })
+                  }
+                />
               ) : null}
 
               {isBriefingOpen && currentBriefing && !showArchive ? (
-                <section className="notes-panel notes-ai-panel" aria-label="AI briefing">
-                  <header>
-                    <Sparkles size={14} />
-                    <strong>AI briefing</strong>
-                    <span className="notes-panel-meta">
-                      {currentBriefing.sourceLabel}
-                    </span>
-                    <button
-                      type="button"
-                      className="notes-panel-close"
-                      onClick={() =>
-                        selectedJiraKey &&
-                        setBriefingOpen((current) => ({
-                          ...current,
-                          [selectedJiraKey]: false
-                        }))
-                      }
-                      aria-label="Close AI briefing"
-                    >
-                      <X size={13} />
-                    </button>
-                  </header>
-                  {currentBriefing.status === "loading" ? (
-                    <div className="notes-panel-loading">
-                      <LoaderCircle className="notes-spinner" size={14} />
-                      Reading ticket description, comments, and pull request…
-                    </div>
-                  ) : currentBriefing.suggestions.length ? (
-                    <div className="notes-ai-suggestions">
-                      {currentBriefing.suggestions.map((suggestion) => {
-                        const added = hasTodoText(suggestion.text);
-                        return (
-                          <div className="notes-ai-suggestion" key={suggestion.id}>
-                            <span className={`is-${suggestion.kind}`}>{suggestion.kind}</span>
-                            <p>{suggestion.text}</p>
-                            <button
-                              type="button"
-                              className={added ? "is-added" : ""}
-                              disabled={added}
-                              onClick={() =>
-                                addNoteToContainer(
-                                  selectedContainer,
-                                  suggestion.text,
-                                  "todo",
-                                  selectedMeta.jira
-                                )
-                              }
-                            >
-                              {added ? "Added ✓" : "+ to-do"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="notes-panel-empty">No grounded suggestions were returned. Your notes are unchanged.</p>
-                  )}
-                  <footer>
-                    Suggestions, not facts — generated by your AI provider from ticket data. Your notes stay local and are never sent.
-                  </footer>
-                </section>
+                <NotesAiPanel
+                  briefing={currentBriefing}
+                  hasTodoText={hasTodoText}
+                  onAddTodo={(text) =>
+                    addNoteToContainer(selectedContainer, text, "todo", selectedMeta.jira)
+                  }
+                  onClose={() =>
+                    selectedJiraKey &&
+                    setBriefingOpen((current) => ({ ...current, [selectedJiraKey]: false }))
+                  }
+                />
               ) : null}
 
-              {visibleNotes.length ? (
-                <div className="notes-list" aria-label={showArchive ? "Archived notes" : "Notes"}>
-                  {visibleNotes.map((note) => (
-                    <article
-                      className={`notes-row${note.done ? " is-done" : ""}`}
-                      key={note.id}
-                    >
-                      {note.type === "todo" ? (
-                        <button
-                          type="button"
-                          className="notes-checkbox"
-                          aria-label={note.done ? "Mark to-do open" : "Mark to-do done"}
-                          aria-pressed={note.done}
-                          onClick={() =>
-                            mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
-                              setWorkspaceNoteDone(
-                                bucket,
-                                note.id,
-                                !note.done,
-                                new Date().toISOString()
-                              )
-                            )
-                          }
-                        >
-                          {note.done ? <Check size={12} /> : null}
-                        </button>
-                      ) : (
-                        <FileText className="notes-text-icon" size={15} />
-                      )}
-                      <div className="notes-row-copy">
-                        {editingNoteId === note.id ? (
-                          <input
-                            className="notes-inline-edit"
-                            value={editingText}
-                            onChange={(event) => setEditingText(event.target.value)}
-                            onBlur={() => commitEdit(note.id)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") commitEdit(note.id);
-                              if (event.key === "Escape") {
-                                event.preventDefault();
-                                setEditingNoteId(undefined);
-                                setEditingText("");
-                              }
-                            }}
-                            autoFocus
-                          />
-                        ) : (
-                          <button
-                            type="button"
-                            className="notes-row-text"
-                            onClick={() => {
-                              setEditingNoteId(note.id);
-                              setEditingText(note.text);
-                            }}
-                          >
-                            {note.text}
-                          </button>
-                        )}
-                        <time dateTime={note.createdAt}>
-                          {formatNoteDate(note.createdAt, currentDate)}
-                        </time>
-                      </div>
-                      <div className="notes-row-actions">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
-                              setWorkspaceNoteArchived(
-                                bucket,
-                                note.id,
-                                !showArchive,
-                                new Date().toISOString()
-                              )
-                            )
-                          }
-                          aria-label={showArchive ? "Restore from archive" : "Archive note"}
-                          title={showArchive ? "Restore from archive" : "Archive note"}
-                        >
-                          <Archive size={13} />
-                        </button>
-                        {!showArchive && !selectedMeta.isGeneral && !selectedMeta.isNotebook ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const source = bucketsRef.current[selectedContainer] ?? selectedBucket;
-                              const target = bucketsRef.current[GENERAL_NOTES_CONTAINER_ID] ?? {
-                                containerId: GENERAL_NOTES_CONTAINER_ID,
-                                notes: []
-                              };
-                              if (!isDemo && !jiraNoteScope) {
-                                onErrorRef.current(
-                                  "Sync Jira once before saving ticket notes for this account."
-                                );
-                                return;
-                              }
-                              const moved = moveWorkspaceNote(
-                                source,
-                                target,
-                                note.id,
-                                new Date().toISOString()
-                              );
-                              const next = {
-                                ...bucketsRef.current,
-                                [selectedContainer]: moved.source,
-                                [GENERAL_NOTES_CONTAINER_ID]: moved.target
-                              };
-                              setBucketState(next);
-                              if (!isDemo) {
-                                const capturedScope = jiraNoteScope ?? null;
-                                enqueueMutation(() =>
-                                  saveWorkspaceNoteBuckets([
-                                    moved.source,
-                                    moved.target
-                                  ], capturedScope)
-                                );
-                              }
-                            }}
-                            aria-label="Move to General notes"
-                            title="Move to General notes"
-                          >
-                            <MoveUpRight size={13} />
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
-                              deleteWorkspaceNote(bucket, note.id)
-                            )
-                          }
-                          aria-label="Delete note"
-                          title="Delete note"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="notes-empty">
-                  <span><NotebookPen size={20} /></span>
-                  <strong>
-                    {typeFilter !== "all" && baseVisibleNotes.length
-                      ? `No ${typeFilter === "todo" ? "to-dos" : "plain notes"} here`
-                      : showArchive
-                        ? `No archived notes on ${selectedMeta.nick}`
-                        : `No notes on ${selectedMeta.nick} yet`}
-                  </strong>
-                  <p>
-                    {typeFilter !== "all" && baseVisibleNotes.length
-                      ? "Switch the filter to see the other items."
-                      : showArchive
-                        ? "Archive a note with the box icon — it moves here, out of the way."
-                        : "Jot anything below — a gotcha, a reminder, a link."}
-                  </p>
-                </div>
-              )}
+              <NotesList
+                notes={visibleNotes}
+                hasFilteredOut={typeFilter !== "all" && baseVisibleNotes.length > 0}
+                typeFilter={typeFilter}
+                showArchive={showArchive}
+                nick={selectedMeta.nick}
+                canMoveToGeneral={!showArchive && !selectedMeta.isGeneral && !selectedMeta.isNotebook}
+                editingNoteId={editingNoteId}
+                editingText={editingText}
+                currentDate={currentDate}
+                onToggleDone={(note) =>
+                  mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
+                    setWorkspaceNoteDone(bucket, note.id, !note.done, new Date().toISOString())
+                  )
+                }
+                onArchive={(note) =>
+                  mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
+                    setWorkspaceNoteArchived(bucket, note.id, !showArchive, new Date().toISOString())
+                  )
+                }
+                onMoveToGeneral={moveNoteToGeneral}
+                onDelete={(note) =>
+                  mutateBucket(selectedContainer, selectedMeta.jira, (bucket) =>
+                    deleteWorkspaceNote(bucket, note.id)
+                  )
+                }
+                onStartEdit={(note) => {
+                  setEditingNoteId(note.id);
+                  setEditingText(note.text);
+                }}
+                onEditingTextChange={setEditingText}
+                onCommitEdit={commitEdit}
+                onCancelEdit={() => {
+                  setEditingNoteId(undefined);
+                  setEditingText("");
+                }}
+              />
               </div>
             </div>
           )}
@@ -2328,111 +1907,27 @@ export const NotesWorkspace = ({
       </div>
 
       {newNoteOpen ? (
-        <div
-          className="notes-modal-backdrop"
-          onMouseDown={(event: MouseEvent<HTMLDivElement>) => {
-            if (event.target === event.currentTarget) setNewNoteOpen(false);
+        <NotesNewNoteModal
+          text={newNoteText}
+          todo={newNoteTodo}
+          search={newNoteSearch}
+          searchLoading={searchLoading}
+          targetOptions={targetOptions}
+          selectedTarget={selectedTarget}
+          onClose={() => setNewNoteOpen(false)}
+          onSave={saveNewNote}
+          onTextChange={setNewNoteText}
+          onToggleTodo={() => setNewNoteTodo((current) => !current)}
+          onSearchChange={setNewNoteSearch}
+          onPickTarget={(target) => {
+            setNewNoteTarget(target.containerId);
+            setNewNoteTargetOption(target);
           }}
-        >
-          <section
-            className="notes-new-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-note-title"
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                event.stopPropagation();
-                setNewNoteOpen(false);
-              }
-            }}
-          >
-            <header>
-              <h2 id="new-note-title">New note</h2>
-              <button type="button" onClick={() => setNewNoteOpen(false)} aria-label="Close new note">
-                <X size={14} />
-              </button>
-            </header>
-            <div className="notes-modal-composer">
-              <button
-                type="button"
-                className={newNoteTodo ? "is-active" : ""}
-                onClick={() => setNewNoteTodo((current) => !current)}
-                aria-label={newNoteTodo ? "Save as plain note" : "Save as to-do"}
-                aria-pressed={newNoteTodo}
-              >
-                <ListTodo size={15} />
-              </button>
-              <input
-                value={newNoteText}
-                onChange={(event) => setNewNoteText(event.target.value)}
-                onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
-                  if (event.key === "Enter") saveNewNote();
-                }}
-                placeholder={
-                  newNoteTodo ? "Write a to-do…" : "Write a note…  ( [] makes it a to-do )"
-                }
-                autoFocus
-              />
-            </div>
-            <span className="notes-modal-label">Attach to</span>
-            <div className={`notes-target-chip${selectedTarget.containerId !== GENERAL_NOTES_CONTAINER_ID ? " is-picked" : ""}`}>
-              <i style={{ background: selectedTarget.color }} />
-              <span>{selectedTarget.label}</span>
-              {selectedTarget.containerId !== GENERAL_NOTES_CONTAINER_ID ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewNoteTarget(GENERAL_NOTES_CONTAINER_ID);
-                    setNewNoteTargetOption(undefined);
-                  }}
-                  aria-label="Reset target to General notes"
-                >
-                  <X size={11} />
-                </button>
-              ) : (
-                <em>or pick anything from Jira below</em>
-              )}
-            </div>
-            <div className="notes-modal-search">
-              <Search size={14} />
-              <input
-                value={newNoteSearch}
-                onChange={(event) => setNewNoteSearch(event.target.value)}
-                placeholder="Search tickets, epics, sub-tasks…"
-              />
-              {searchLoading ? <LoaderCircle className="notes-spinner" size={13} /> : null}
-            </div>
-            <div className="notes-search-results" aria-label="Attach targets">
-              {targetOptions.map((target) => (
-                <button
-                  type="button"
-                  key={target.containerId}
-                  onClick={() => {
-                    setNewNoteTarget(target.containerId);
-                    setNewNoteTargetOption(target);
-                  }}
-                >
-                  <span className="notes-type-badge">{target.typeLabel}</span>
-                  <i style={{ background: target.color }} />
-                  <span>{target.label}</span>
-                </button>
-              ))}
-              {!targetOptions.length && !searchLoading ? (
-                <p>No matching Jira tickets or notebooks.</p>
-              ) : null}
-            </div>
-            <footer>
-              <span><LockKeyhole size={11} /> Stored locally · never synced to Jira</span>
-              <button
-                type="button"
-                onClick={saveNewNote}
-                disabled={!newNoteText.trim()}
-              >
-                Save note
-              </button>
-            </footer>
-          </section>
-        </div>
+          onResetTarget={() => {
+            setNewNoteTarget(GENERAL_NOTES_CONTAINER_ID);
+            setNewNoteTargetOption(undefined);
+          }}
+        />
       ) : null}
     </section>
   );
