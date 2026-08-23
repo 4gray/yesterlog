@@ -34,7 +34,7 @@ Your manager gets clean worklogs. You get your Friday back — and a record of t
 > No account. No Yesterlog cloud. No telemetry. Your credentials, synced activity, notes, and drafts stay on your machine.
 
 <p align="center">
-  <img src="./docs/screenshots/v3.0.0/dark-week.png" alt="Yesterlog weekly worklog view" width="920">
+  <img src="./docs/screenshots/v3.3.0/dark-week.png" alt="Yesterlog weekly worklog view" width="920">
 </p>
 
 ## From traces to proof
