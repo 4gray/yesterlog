@@ -295,7 +295,7 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
 
     await clickNav(page, "RECAP", "recap");
     await page.locator(".recap-workspace").waitFor();
-    assert.ok(await page.getByText("Turn a stretch of real work into review-ready highlights").isVisible());
+    assert.ok(await page.getByText("Summarize a week, month, or quarter from your logged activity").isVisible());
 
     await clickNav(page, "SETTINGS", "settings");
     assert.ok(await page.getByRole("heading", { name: "Jira connection" }).isVisible());
