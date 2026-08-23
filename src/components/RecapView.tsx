@@ -85,7 +85,7 @@ const StructuredBlock = ({ theme, format, detail, readOnly, onSources, onUpdate 
       {editing ? <input className="recap-edit-name" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
         : <h2>{theme.name}</h2>}
       <span className="recap-theme-metric">{theme.pullRequestCount} PRs · {theme.ticketCount} tickets · {formatReconDuration(theme.hours * 60)}</span>
-      <button type="button" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Sources</button>
+      <Button variant="secondary" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Sources</Button>
       {!readOnly && <Button variant="icon" className="recap-icon-btn" aria-label={editing ? "Cancel editing" : `Edit ${theme.name}`} onClick={() => { setDraft(theme); setEditing((value) => !value); }}>{editing ? <X size={14} /> : <Pencil size={14} />}</Button>}
     </header>
     <div className="recap-theme-body">
@@ -138,11 +138,11 @@ const NarrativeReport = ({ draft, format, detail, readOnly, onSources, onUpdate 
   return <article className="recap-report">
     <header className="recap-report-tools">
       <div><strong>Continuous report</strong><span>{draft.themes.length} grounded {draft.themes.length === 1 ? "workstream" : "workstreams"} woven into one document</span></div>
-      <button type="button" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Review sources</button>
-      {!readOnly && <button type="button" className="recap-source-btn" aria-label={editing ? "Cancel report editing" : "Edit report"} onClick={() => {
+      <Button variant="secondary" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Review sources</Button>
+      {!readOnly && <Button variant="secondary" className="recap-source-btn" aria-label={editing ? "Cancel report editing" : "Edit report"} onClick={() => {
         setWorkingCopy(source);
         setEditing((value) => !value);
-      }}>{editing ? <X size={13} /> : <Pencil size={13} />} {editing ? "Cancel" : "Edit report"}</button>}
+      }}>{editing ? <X size={13} /> : <Pencil size={13} />} {editing ? "Cancel" : "Edit report"}</Button>}
     </header>
     <div className="recap-report-prose">
       {editing
