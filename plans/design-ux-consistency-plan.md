@@ -165,4 +165,13 @@ Register: functional, sentence case, neutral American English, `…` everywhere,
   redirect protects an unusable view; per-view week cursors would be feature work, not a
   consistency fix. NotesWorkspace split (2757 lines) deferred — mechanical refactor, no UX
   impact.
-- [ ] Phase 6 — theme reconciliation
+- [x] Phase 6 — theme reconciliation (2026-08-23). Done: light mode rebuilt as warm paper
+  (same hue family as the sepia dark); theme mechanism simplified — the resolved
+  `.theme-light`/`.theme-dark` class is always applied (index.html pre-paint script +
+  useThemeMode), so every duplicated `@media (prefers-color-scheme)` block is deleted
+  (base/rings/week) and light styles live in exactly one place; week light badges rewritten
+  on tokens/color-mix; Notes made fully theme-aware by aliasing the `--nw-*` tokens to app
+  tokens (follows light and dark; only deliberate constants stay literal — on-accent chip
+  text, the dark code surface). Correction: the audit note "sidebar stays dark in light
+  mode" was a misreading — the sidebar always used `--bg-sidebar` and switches correctly;
+  no change was needed.

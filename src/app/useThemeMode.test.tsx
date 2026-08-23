@@ -112,14 +112,14 @@ describe("useThemeMode", () => {
     expect(document.documentElement.classList.contains("theme-dark")).toBe(true);
   });
 
-  it("uses the system preference without adding explicit root classes", () => {
+  it("applies the resolved class when following the system preference", () => {
     installMatchMedia(true);
 
     renderHarness();
 
     expect(getApi().selectedTheme).toBeNull();
     expect(getApi().effectiveTheme).toBe("light");
-    expect(document.documentElement.classList.contains("theme-light")).toBe(false);
+    expect(document.documentElement.classList.contains("theme-light")).toBe(true);
     expect(document.documentElement.classList.contains("theme-dark")).toBe(false);
   });
 
