@@ -1,4 +1,5 @@
 import { Bookmark, Loader2, Plus, RotateCw, Sparkles } from "lucide-react";
+import { Button } from "./Button";
 import { formatHours, formatWeekRangeCompact, getIsoWeekNumber } from "../utils/date";
 import { formatShortcut } from "../utils/platform";
 import { CommandBar } from "./CommandBar";
@@ -101,21 +102,14 @@ export const WeekHeader = ({
           </button>
         )}
         <CommandBar onOpen={onOpenCommandPalette} shortcutLabel={formatShortcut("K")} />
-        <button
-          type="button"
-          className="sync-button"
-          onClick={onSync}
-          disabled={isSyncing || !isConfigured}
-          title={syncTitle}
-          aria-label={syncTitle}
-        >
+        <Button variant="secondary" className="sync-button" onClick={onSync} disabled={isSyncing || !isConfigured} title={syncTitle} aria-label={syncTitle}>
           {isSyncing ? <Loader2 className="spin" size={14} /> : <RotateCw size={14} strokeWidth={2} />}
           <span className={`sync-dot ${SYNC_DOT_STATE[syncState]}`} />
-        </button>
-        <button type="button" className="add-time-button" onClick={() => onAddTime()}>
+        </Button>
+        <Button variant="primary" className="add-time-button" onClick={() => onAddTime()}>
           <Plus size={13} strokeWidth={2.4} />
           ADD TIME
-        </button>
+        </Button>
       </div>
     </div>
   );

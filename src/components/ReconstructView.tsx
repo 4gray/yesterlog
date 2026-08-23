@@ -25,6 +25,7 @@ import {
   type LucideIcon
 } from "lucide-react";
 import { useState, type CSSProperties, type DragEvent } from "react";
+import { Button } from "./Button";
 import type {
   ReconstructConfidence,
   ReconstructDay,
@@ -294,9 +295,9 @@ export const ReconstructView = ({
             <span className="mono">‹ ›</span>, or log time anyway if you worked.
           </span>
           <span className="recon-banner-spacer" />
-          <button type="button" className="recon-ghost-btn" onClick={onLogTime}>
+          <Button variant="secondary" className="recon-ghost-btn" onClick={onLogTime}>
             LOG TIME ANYWAY
-          </button>
+          </Button>
         </div>
       )}
       {isActive && aiOn && (
@@ -328,9 +329,9 @@ export const ReconstructView = ({
             Connect a provider to auto-draft worklog descriptions and reason about gaps.
           </span>
           <span className="recon-banner-spacer" />
-          <button type="button" className="recon-setup-btn" onClick={onOpenSettings}>
+          <Button variant="secondary" className="recon-setup-btn" onClick={onOpenSettings}>
             SET UP AI
-          </button>
+          </Button>
         </div>
       )}
 
@@ -415,10 +416,10 @@ export const ReconstructView = ({
                 title="Not synced yet"
                 hint="Sync your Jira and Bitbucket activity to reconstruct this day."
                 action={
-                  <button type="button" className="recon-rail-sync-btn" onClick={onSync}>
+                  <Button variant="secondary" className="recon-rail-sync-btn" onClick={onSync}>
                     <RefreshCw size={14} strokeWidth={1.9} />
                     Sync now
-                  </button>
+                  </Button>
                 }
               />
             )}
@@ -439,10 +440,10 @@ export const ReconstructView = ({
 
           {isActive && railSignals.some((signal) => !signal.isMarker) && (
             <div className="recon-rail-foot">
-              <button type="button" className="recon-rail-btn" onClick={onPlaceAll}>
+              <Button variant="secondary" className="recon-rail-btn" onClick={onPlaceAll}>
                 <Zap size={16} strokeWidth={1.9} />
                 Place everything
-              </button>
+              </Button>
             </div>
           )}
         </aside>
@@ -544,16 +545,10 @@ export const ReconstructView = ({
                 <span className="mono recon-foot-gap">{summary.gapLabel}</span> {summary.footerTail}
               </div>
               <div className="recon-foot-actions">
-                <button
-                  type="button"
-                  className="recon-send-btn"
-                  onClick={onLogTime}
-                  disabled={isComplete}
-                  title={isComplete ? summary.sendBtnLabel : "Open the Add Time flow to log these entries"}
-                >
+                <Button variant="primary" className="recon-send-btn" onClick={onLogTime} disabled={isComplete} title={isComplete ? summary.sendBtnLabel : "Open the Add Time flow to log these entries"}>
                   <Send size={15} strokeWidth={2.2} />
                   {summary.sendBtnLabel}
-                </button>
+                </Button>
               </div>
             </div>
           )}

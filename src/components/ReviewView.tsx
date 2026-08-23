@@ -611,25 +611,14 @@ export const ReviewView = ({
         </div>
 
         <div className="review-actions">
-          <button
-            type="button"
-            className="sync-button"
-            onClick={onSync}
-            disabled={isSyncing || !isConfigured}
-            title={isConfigured ? "Sync Bitbucket reviews" : "Connect Bitbucket in settings to sync reviews"}
-          >
+          <Button variant="secondary" className="sync-button" onClick={onSync} disabled={isSyncing || !isConfigured} title={isConfigured ? "Sync Bitbucket reviews" : "Connect Bitbucket in settings to sync reviews"}>
             {isSyncing ? <Loader2 className="spin" size={14} /> : <RotateCw size={14} strokeWidth={2} />}
             SYNC
-          </button>
-          <button
-            type="button"
-            className="review-log-button"
-            onClick={openLogDialog}
-            disabled={isLogging || selectedIds.length === 0}
-          >
+          </Button>
+          <Button variant="primary" className="review-log-button" onClick={openLogDialog} disabled={isLogging || selectedIds.length === 0}>
             {isLogging ? <Loader2 className="spin" size={15} /> : <Check size={15} strokeWidth={2.4} />}
             LOG {selectedIds.length} {selectedIds.length === 1 ? "SESSION" : "SESSIONS"}
-          </button>
+          </Button>
           <div className="week-divider" />
           <WeekNavigator onPreviousWeek={onPreviousWeek} onCurrentWeek={onCurrentWeek} onNextWeek={onNextWeek} />
         </div>
@@ -673,15 +662,12 @@ export const ReviewView = ({
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="review-info-button"
-          onClick={() => setDialog({ kind: "estimate-info" })}
+        <Button variant="icon" className="review-info-button" onClick={() => setDialog({ kind: "estimate-info" })}
           title="How review time is estimated"
           aria-label="How review time is estimated"
         >
           <CircleHelp size={15} strokeWidth={2} />
-        </button>
+        </Button>
         <span className="review-filter-hint">
           {ownershipFilter === "my-pull-requests" ? "PRs you created" : "PRs where your Bitbucket review activity was found"}
         </span>
