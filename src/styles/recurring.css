@@ -309,27 +309,6 @@
   color: var(--purple);
 }
 
-.recurring-empty {
-  padding: 24px 22px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  text-align: center;
-}
-
-.recurring-empty p {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-.recurring-empty small {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--dim);
-}
-
 .primary-button.is-recurring {
   --cta-accent: var(--purple);
 }

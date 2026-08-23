@@ -147,7 +147,7 @@ describe("AddTimeRecurringForm", () => {
   it("renders an empty state when no candidate is available", () => {
     renderForm({ candidates: [], selectedEvent: undefined });
 
-    expect(container.textContent).toContain("No recurring events scheduled for this day");
+    expect(container.textContent).toContain("No recurring events for this day");
     expect(container.querySelector(".recurring-option")).toBeNull();
     expect(container.querySelector(".note-textarea")).toBeNull();
   });

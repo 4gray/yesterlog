@@ -1,5 +1,6 @@
 import { LockKeyhole, Repeat2 } from "lucide-react";
 import type { RecurringEvent } from "../../shared/types";
+import { EmptyState } from "./EmptyState";
 
 const RECURRING_PRESET_MINUTES = [10, 15, 30, 45, 60] as const;
 
@@ -114,10 +115,10 @@ export const AddTimeRecurringForm = ({
         </div>
       </>
     ) : (
-      <div className="recurring-empty">
-        <p>No recurring events scheduled for this day — or all are already logged.</p>
-        <small>Manage recurring events in Settings.</small>
-      </div>
+      <EmptyState
+        title="No recurring events for this day"
+        hint="Nothing is scheduled — or everything is already logged. Manage recurring events in Settings."
+      />
     )}
   </div>
 );

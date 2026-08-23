@@ -21,6 +21,7 @@ import {
 import { AddTimeRecurringForm, formatRecurringMinutes } from "./AddTimeRecurringForm";
 import { AddTimeTimelineEditor } from "./AddTimeTimelineEditor";
 import { Button } from "./Button";
+import { EmptyState } from "./EmptyState";
 import { Modal } from "./Modal";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
@@ -793,11 +794,12 @@ export const AddTimeModal = ({
               {isMovingWorklog && editingWorklog ? (
                 <div className="move-worklog-panel">
                   {!isMoveTargetSelected ? (
-                    <div className="move-worklog-empty">
-                      <ArrowRightLeft size={20} strokeWidth={1.7} />
-                      <strong>Choose the correct Jira issue</strong>
-                      <span>The original worklog stays unchanged until Jira accepts the move.</span>
-                    </div>
+                    <EmptyState
+                      className="move-worklog-empty"
+                      icon={<ArrowRightLeft size={20} strokeWidth={1.7} />}
+                      title="Choose the correct Jira issue"
+                      hint="The original worklog stays unchanged until Jira accepts the move."
+                    />
                   ) : (
                     <>
                       <div className="move-worklog-route" aria-label="Worklog move preview">

@@ -44,3 +44,4 @@
 .report-recap-controls { display:flex; align-items:center; gap:10px; }
 .reports-actions { display:flex; align-items:center; gap:10px; }
 @media (max-width:1120px) { .calendar-recap-link { font-size:0; width:36px; padding:0; }.calendar-recap-link svg { width:15px; height:15px; }.month-actions { flex-wrap:wrap; justify-content:flex-end; } }
+.recap-empty .empty-state-title { color: var(--text-bright); font-size: 16px; }
