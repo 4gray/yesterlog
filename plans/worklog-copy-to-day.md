@@ -167,8 +167,29 @@ pick the day, confirm the prefilled duration and comment.
   The browser pane's automated right-click and drag do not emit `contextmenu`/pointer events, so
   those two gestures were driven with dispatched DOM events; the Electron app delivers real ones.
 
+## Phase 3 (2026-10-02)
+
+- **Several days at once.** The day picker gets a "Several days" toggle (also ⌘/Ctrl/Shift-click on a
+  chip); chips become `aria-pressed` toggles and a footer books "on N days". The sheet then shows
+  `TUE, WED · 2 DAYS`, a per-day placement line (`Tue 18:40 · Wed 17:00`) computed with the same
+  `copyStartMinutes` rules and recomputed on duration change, no Day Map, and "Book 2h on 2 days".
+  Days without a free slot block the confirm with a message naming them.
+- **Batch write.** `useJiraWorklogs.handleAddWorklogs` posts one ordinary worklog per day in
+  calendar order, stops at the first Jira error, merges all optimistic results into one cache update,
+  queues one background reconcile, and shows one summary snackbar ("Booked 2h to KEY on Tuesday,
+  Wednesday." or "Booked … on 1 of 3 days. Wednesday failed: …"). The sheet closes when at least one
+  day was booked; the snackbar carries the failure.
+- **Command palette.** `buildBookCommands` adds "Book KEY on another day · MON · 2.3h" per logged
+  ticket-day of the visible week; running one switches to Week and opens the picker centred via the
+  `bookRequest` prop.
+- Verification: `npm run test` 137 files / 977 tests; `npm run build`; `npm run e2e:renderer` 8/8.
+  Browser (demo seed, dark): toggle → Tue+Wed selected → "Book on 2 days" → multi sheet with
+  placements and a one-line confirm; ⌘K "Book" lists the per-row commands and Enter opens the
+  picker. Stale "buildBookCommands is not defined" entries in the pane console came from an HMR
+  intermediate state before the import landed; the reloaded page renders and the build is clean.
+
 ## Status
 
-Phase 1 committed as 2238297; Phase 2 implemented 2026-10-02 on `claude/worklog-copy-between-days-175511`. Known limit: the
+Phase 1 committed as 2238297, Phase 2 as 77d1d2e; Phase 3 implemented 2026-10-02 on `claude/worklog-copy-between-days-175511`. All three phases of the plan are done. Known limit: the
 Edit-modal path uses Add Time's retrospective default start, so on a busy target day it may show the
 existing overlap warning until the user moves the slot; the Week picker path places the copy itself.

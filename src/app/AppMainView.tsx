@@ -85,6 +85,8 @@ export interface AppMainViewProps {
   worklogAllocationPreferences?: AppReconRouteProps["worklogAllocationPreferences"];
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
   handleAddWorklog: AppWeekRouteProps["handleAddWorklog"];
+  handleAddWorklogs?: AppWeekRouteProps["handleAddWorklogs"];
+  weekBookRequest?: AppWeekRouteProps["bookRequest"];
   handleMoveWorklog: AppTodayRouteProps["handleMoveWorklog"];
   handleMoveRecurring: AppTodayRouteProps["handleMoveRecurring"];
   handleSync: AppWeekRouteProps["handleSync"];
@@ -202,6 +204,8 @@ export const AppMainView = ({
   worklogAllocationPreferences,
   isImportingPersonalNotes,
   handleAddWorklog,
+  handleAddWorklogs,
+  weekBookRequest,
   handleMoveWorklog,
   handleMoveRecurring,
   handleSync,
@@ -320,6 +324,8 @@ export const AppMainView = ({
         openEditPersonalNote={openEditPersonalNote}
         handleToggleSkipped={handleToggleSkipped}
         handleAddWorklog={handleAddWorklog}
+        handleAddWorklogs={handleAddWorklogs}
+        bookRequest={weekBookRequest}
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}

@@ -25,6 +25,16 @@ export interface QuickLogContext {
   targetDayName?: string;
   /** One line explaining where the copy lands ("14:00–16:00 · same time as Monday"). */
   placementHint?: string;
+  /** Booking on several days at once: the destinations, in calendar order. */
+  targets?: QuickLogTarget[];
+  /** Clock minutes of the source worklog, used to place each day's copy when `targets` is set. */
+  sourceStartMinutes?: number;
+}
+
+export interface QuickLogTarget {
+  dateKey: string;
+  weekdayName: string;
+  dayLabel: string;
 }
 
 export interface QuickLogTimelineContext {
@@ -83,7 +93,11 @@ export const QuickLogSheet = ({
 
   const presetMatch = HOUR_CHIPS.some((chip) => chip.hours === context.hours);
   const isCopy = context.mode === "copy";
-  const targetDay = context.targetDayName ?? context.dayLabel;
+  const multi = context.targets && context.targets.length > 1 ? context.targets : undefined;
+  const targetDay = multi ? `${multi.length} days` : context.targetDayName ?? context.dayLabel;
+  const dayLabel = multi
+    ? `${multi.map((target) => target.weekdayName.slice(0, 3).toUpperCase()).join(", ")} · ${multi.length} DAYS`
+    : context.dayLabel;
 
   const openCustom = () => {
     setCustomMode(true);
@@ -155,7 +169,7 @@ export const QuickLogSheet = ({
           <div className="quicklog-title-row">
             <span className="quicklog-title">{isCopy ? "Book time" : "Log time"}</span>
             <span className="quicklog-day">
-              {context.dayLabel}
+              {dayLabel}
               {timeline ? ` · ${timeline.time}` : ""}
             </span>
           </div>
@@ -265,7 +279,13 @@ export const QuickLogSheet = ({
         </div>
 
         <div className="quicklog-foot">
-          <span className="quicklog-hint">{isCopy ? "⌘⏎ TO BOOK · DRAG THE DAY MAP TO ADJUST" : "⌘⏎ TO ADD · ESC TO CANCEL"}</span>
+          <span className="quicklog-hint">
+            {isCopy
+              ? timeline
+                ? "⌘⏎ TO BOOK · DRAG THE DAY MAP TO ADJUST"
+                : "⌘⏎ TO BOOK · ESC TO CANCEL"
+              : "⌘⏎ TO ADD · ESC TO CANCEL"}
+          </span>
           <div className="quicklog-actions">
             <button type="button" className="quicklog-cancel" onClick={onCancel}>
               CANCEL

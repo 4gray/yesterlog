@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Ban, CalendarPlus, Check, CloudUpload, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
 import type { MouseEvent as ReactMouseEvent } from "react";
@@ -24,6 +24,7 @@ import {
   buildCommittedItems,
   minuteToLabel,
   overlapsCommitted,
+  startedISOForMinute,
   type CalendarItem,
   type Range
 } from "../domain/dayCalendar";
@@ -41,7 +42,7 @@ import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
 import { TimeSplit } from "./TimeSplit";
-import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
+import { QuickLogSheet, type QuickLogContext, type QuickLogTarget } from "./QuickLogSheet";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
 import { useActiveWorkDock } from "./useActiveWorkDock";
@@ -66,6 +67,18 @@ export interface DockLogPayload {
   timeSpentSeconds: number;
   startedISO: string;
   comment?: string;
+}
+
+export interface DockLogBatchResult {
+  created: number;
+  total: number;
+  error?: string;
+}
+
+/** Opens the "book on another day" picker for these worklogs from outside the view (command palette). */
+export interface WeekBookRequest {
+  worklogIds: string[];
+  token: number;
 }
 
 interface WeekViewProps {
@@ -98,6 +111,9 @@ interface WeekViewProps {
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
   onDockLog?: (payload: DockLogPayload) => Promise<boolean>;
+  /** Books the same worklog on several days in one go; absent disables "Several days". */
+  onDockLogMany?: (payloads: DockLogPayload[]) => Promise<DockLogBatchResult>;
+  bookRequest?: WeekBookRequest;
   onConfirmRecurring?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
   onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
@@ -633,6 +649,8 @@ export const WeekView = ({
   onEditPersonalNote,
   onToggleSkipped,
   onDockLog,
+  onDockLogMany,
+  bookRequest,
   onConfirmRecurring,
   onSkipRecurring,
   onDeleteRecurring,
@@ -785,9 +803,38 @@ export const WeekView = ({
         timelineEndMinutes: quickLog.timelineEndMinutes
       })
     : true;
-  const quickLogValidationMessage =
-    quickLog && !quickLogIntervalAvailable
+  // Several days: each destination gets its own placement from the same rules as a single copy,
+  // recomputed whenever the duration changes.
+  const quickLogMultiTargets = quickLog?.targets && quickLog.targets.length > 1 ? quickLog.targets : undefined;
+  const quickLogMultiPlacements = useMemo(() => {
+    if (!quickLog || !quickLogMultiTargets) {
+      return [];
+    }
+    const durationMinutes = Math.max(15, Math.round(quickLog.hours * 60));
+    return quickLogMultiTargets.map((target) => ({
+      target,
+      placement: copyStartMinutes({
+        sourceStartMinutes: quickLog.sourceStartMinutes ?? 9 * 60,
+        durationMinutes,
+        committed: committedByDay.get(target.dateKey) ?? []
+      })
+    }));
+  }, [committedByDay, quickLog, quickLogMultiTargets]);
+  const quickLogMultiBlocked = quickLogMultiPlacements.filter(({ placement }) => !placement);
+  const quickLogValidationMessage = quickLogMultiTargets
+    ? quickLogMultiBlocked.length > 0
+      ? `No free slot for ${formatDuration(quickLog?.hours ?? 0)} on ${quickLogMultiBlocked
+          .map(({ target }) => target.weekdayName)
+          .join(", ")} — shorten the duration or book those days separately.`
+      : undefined
+    : quickLog && !quickLogIntervalAvailable
       ? "Choose a shorter duration or another time — this interval is unavailable."
+      : undefined;
+  const quickLogMultiHint =
+    quickLogMultiTargets && quickLogMultiBlocked.length === 0
+      ? quickLogMultiPlacements
+          .map(({ target, placement }) => `${target.weekdayName.slice(0, 3)} ${minuteToLabel(placement!.startMinutes)}`)
+          .join(" · ")
       : undefined;
 
   const confirmQuickLog = useCallback(async () => {
@@ -795,6 +842,22 @@ export const WeekView = ({
       return;
     }
     const timeSpentSeconds = Math.round(quickLog.hours * 3600);
+    if (quickLogMultiTargets && onDockLogMany) {
+      const payloads: DockLogPayload[] = quickLogMultiPlacements
+        .filter(({ placement }) => placement)
+        .map(({ target, placement }) => ({
+          issueKey: quickLogTicket.key,
+          ticket: quickLogTicket,
+          timeSpentSeconds,
+          startedISO: startedISOForMinute(fromLocalDateKey(target.dateKey), placement!.startMinutes),
+          comment: quickLog.comment.trim() || undefined
+        }));
+      const result = await onDockLogMany(payloads);
+      if (result.created > 0) {
+        setQuickLog(null);
+      }
+      return;
+    }
     const started = quickLogStartedAt({
       dateKey: quickLog.dateKey,
       currentDate: now,
@@ -811,7 +874,12 @@ export const WeekView = ({
     if (success) {
       setQuickLog(null);
     }
-  }, [now, onDockLog, quickLog, quickLogTicket, quickLogValidationMessage]);
+  }, [now, onDockLog, onDockLogMany, quickLog, quickLogMultiPlacements, quickLogMultiTargets, quickLogTicket, quickLogValidationMessage]);
+
+  const allWorklogs = useMemo(
+    () => Object.values(syncResult?.daySummaries ?? {}).flatMap((bucket) => bucket.worklogs),
+    [syncResult]
+  );
 
   const openCopyPicker = useCallback((logs: JiraWorklog[], anchor: HTMLElement) => {
     const rect = anchor.getBoundingClientRect();
@@ -868,6 +936,57 @@ export const WeekView = ({
     [committedByDay, copyDraft, copySourceDateKey, dropDayMeta, weekState.days]
   );
 
+  const pickCopyTargets = useCallback(
+    (targets: CopyTarget[]) => {
+      if (!copyDraft || targets.length === 0) {
+        return;
+      }
+      if (targets.length === 1) {
+        pickCopyTarget(targets[0]);
+        return;
+      }
+      const ordered = [...targets].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+      const quickTargets: QuickLogTarget[] = ordered.map((target) => ({
+        dateKey: target.dateKey,
+        weekdayName: target.weekdayName,
+        dayLabel: dropDayMeta.get(target.dateKey)?.label ?? target.dateKey
+      }));
+      setCopyPicker(null);
+      setQuickLog({
+        ticketKey: copyDraft.ticketKey,
+        ticketSummary: copyDraft.ticketSummary,
+        ticket: copyDraft.ticket,
+        mode: "copy",
+        targets: quickTargets,
+        sourceStartMinutes: copyDraft.sourceStartMinutes,
+        dateKey: quickTargets[0].dateKey,
+        dayLabel: quickTargets[0].dayLabel,
+        hours: copyDraft.hours,
+        comment: copyDraft.comment
+      });
+    },
+    [copyDraft, dropDayMeta, pickCopyTarget]
+  );
+
+  // Command palette: "Book KEY on another day" lands here with the row's worklog ids.
+  useEffect(() => {
+    if (!bookRequest || !onDockLog) {
+      return;
+    }
+    const logs = bookRequest.worklogIds
+      .map((id) => allWorklogs.find((log) => log.id === id))
+      .filter((log): log is JiraWorklog => Boolean(log));
+    if (!canCopyWorklogs(logs)) {
+      return;
+    }
+    const centerX = Math.round(window.innerWidth / 2 - 170);
+    const centerY = Math.round(window.innerHeight / 2 - 80);
+    setContextMenu(null);
+    setCopyPicker({ logs, anchor: { left: centerX, top: centerY, bottom: centerY, align: "start" } });
+    // Only the request token should retrigger this; worklog refreshes must not reopen the picker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookRequest?.token]);
+
   /** Option-drag in Timeline dropped a duplicate at an exact slot: confirm it in the booking sheet. */
   const bookWorklogAt = useCallback(
     (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => {
@@ -895,11 +1014,6 @@ export const WeekView = ({
       });
     },
     [dropDayMeta, weekState.days]
-  );
-
-  const allWorklogs = useMemo(
-    () => Object.values(syncResult?.daySummaries ?? {}).flatMap((bucket) => bucket.worklogs),
-    [syncResult]
   );
 
   /**
@@ -1152,14 +1266,15 @@ export const WeekView = ({
           anchor={copyPicker.anchor}
           accentColor={colorOf(copyDraft.ticketKey).text}
           onPick={pickCopyTarget}
+          onPickMany={onDockLogMany ? pickCopyTargets : undefined}
           onClose={closeCopyPicker}
         />
       )}
 
       {quickLog && (
         <QuickLogSheet
-          context={quickLog}
-          timeline={quickLogTimeline}
+          context={quickLogMultiHint ? { ...quickLog, placementHint: quickLogMultiHint } : quickLog}
+          timeline={quickLogMultiTargets ? undefined : quickLogTimeline}
           color={quickLogColor}
           isLogging={isLogging}
           validationMessage={quickLogValidationMessage}

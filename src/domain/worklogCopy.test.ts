@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DayTrackingSummary, JiraWorklog } from "../../shared/types";
 import { buildCommittedItems } from "./dayCalendar";
 import {
+  buildBookCommands,
   buildCopyTargets,
   canCopyWorklogs,
   copyDraftFromWorklogs,
@@ -245,4 +246,54 @@ describe("copyDraftFromWorklogs", () => {
       ])
     ).toBeUndefined();
   });
+
+
+describe("buildBookCommands", () => {
+  it("lists one palette entry per ticket-day in calendar order and skips bulk slices", () => {
+    const entries = buildBookCommands({
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+      syncedAt: "2026-06-18T00:00:00.000Z",
+      accountId: "me",
+      trackedSeconds: 0,
+      issueCount: 0,
+      worklogCount: 0,
+      daySummaries: {
+        "2026-06-16": {
+          trackedSeconds: 0,
+          issues: [],
+          worklogs: [
+            worklog({ id: "b", started: localStart("2026-06-16", 9), timeSpentSeconds: 3600 }),
+            worklog({ id: "c", started: localStart("2026-06-16", 13), timeSpentSeconds: 1800 }),
+            worklog({
+              id: "bulk",
+              issueKey: "OPS-1",
+              allocation: {
+                dateKey: "2026-06-16",
+                started: "2026-06-16T09:00:00.000Z",
+                timeSpentSeconds: 3600,
+                partIndex: 1,
+                partCount: 2,
+                isApproximate: true,
+                direction: "backward"
+              }
+            })
+          ]
+        },
+        "2026-06-15": {
+          trackedSeconds: 0,
+          issues: [],
+          worklogs: [worklog({ id: "a", issueKey: "UX-31", started: localStart("2026-06-15", 10) })]
+        }
+      }
+    });
+
+    expect(entries).toEqual([
+      { id: "book-2026-06-15-UX-31", label: "Book UX-31 on another day", hint: "MON · 2h", worklogIds: ["a"] },
+      { id: "book-2026-06-16-YLOG-397", label: "Book YLOG-397 on another day", hint: "TUE · 1.5h", worklogIds: ["b", "c"] }
+    ]);
+    expect(buildBookCommands(undefined)).toEqual([]);
+  });
+});
 });

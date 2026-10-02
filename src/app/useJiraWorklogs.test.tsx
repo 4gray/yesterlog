@@ -813,4 +813,54 @@ describe("useJiraWorklogs", () => {
     expect(loadTickets).not.toHaveBeenCalled();
     expect(getApi().isDeletingWorklog).toBe(false);
   });
+
+
+  it("books one worklog on several days with a single summary and one reconcile", async () => {
+    addWorklog
+      .mockResolvedValueOnce({ ok: true, worklogId: "30001", issueKey: "TB-22", timeSpentSeconds: 1800 })
+      .mockResolvedValueOnce({ ok: true, worklogId: "30002", issueKey: "TB-22", timeSpentSeconds: 1800 });
+    renderHarness({ currentSyncResult: syncResult() });
+
+    let result: Awaited<ReturnType<JiraWorklogsApi["handleAddWorklogs"]>> | undefined;
+    await act(async () => {
+      result = await getApi().handleAddWorklogs([
+        { ...payload, startedISO: new Date(2026, 5, 16, 11).toISOString() },
+        { ...payload, startedISO: new Date(2026, 5, 18, 11).toISOString() }
+      ]);
+    });
+
+    expect(result).toEqual({ created: 2, total: 2, error: undefined });
+    expect(addWorklog).toHaveBeenCalledTimes(2);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    expect(runSync).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledTimes(1);
+    expect(showSuccess.mock.calls[0][0]).toMatch(/^Booked 0h 30m to TB-22 on Tuesday, Thursday\.$/);
+    expect(showError).not.toHaveBeenCalled();
+    expect(getApi().isLogging).toBe(false);
+  });
+
+  it("stops a multi-day booking at the first Jira error and reports the partial result", async () => {
+    addWorklog
+      .mockResolvedValueOnce({ ok: true, worklogId: "30001", issueKey: "TB-22", timeSpentSeconds: 1800 })
+      .mockRejectedValueOnce(new Error("Jira is unavailable"));
+    renderHarness({ currentSyncResult: syncResult() });
+
+    let result: Awaited<ReturnType<JiraWorklogsApi["handleAddWorklogs"]>> | undefined;
+    await act(async () => {
+      result = await getApi().handleAddWorklogs([
+        { ...payload, startedISO: new Date(2026, 5, 16, 11).toISOString() },
+        { ...payload, startedISO: new Date(2026, 5, 17, 11).toISOString() },
+        { ...payload, startedISO: new Date(2026, 5, 18, 11).toISOString() }
+      ]);
+    });
+
+    expect(result).toEqual({ created: 1, total: 3, error: "Jira is unavailable" });
+    expect(addWorklog).toHaveBeenCalledTimes(2);
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    expect(showSuccess).not.toHaveBeenCalled();
+    expect(showError).toHaveBeenCalledWith(
+      "Booked 0h 30m to TB-22 on 1 of 3 days. Wednesday failed: Jira is unavailable"
+    );
+    expect(getApi().logError).toBe("Booked 0h 30m to TB-22 on 1 of 3 days. Wednesday failed: Jira is unavailable");
+  });
 });

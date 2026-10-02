@@ -307,4 +307,80 @@ describe("WeekView copy to another day", () => {
     expect(sheet!.textContent).toContain("18:00");
     expect(onDockLog).not.toHaveBeenCalled();
   });
+
+
+  it("books the same worklog on several days from the picker in one batch", async () => {
+    const onDockLogMany = vi.fn<NonNullable<Parameters<typeof WeekView>[0]["onDockLogMany"]>>(async (payloads) => ({
+      created: payloads.length,
+      total: payloads.length
+    }));
+    act(() => {
+      root.render(renderWeek({ onDockLogMany }));
+    });
+    act(() => copyButton()?.click());
+
+    const picker = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
+    const toggle = picker.querySelector<HTMLButtonElement>(".copy-pop-multi-toggle");
+    expect(toggle?.textContent).toBe("Several days");
+    act(() => toggle!.click());
+
+    const chips = Array.from(picker.querySelectorAll<HTMLButtonElement>(".copy-pop-day"));
+    act(() => chips[1].click());
+    act(() => chips[3].click());
+    expect(chips[1].getAttribute("aria-pressed")).toBe("true");
+    expect(chips[3].getAttribute("aria-pressed")).toBe("true");
+    const confirmMany = picker.querySelector<HTMLButtonElement>(".copy-pop-confirm");
+    expect(confirmMany?.textContent).toBe("Book on 2 days");
+
+    act(() => confirmMany!.click());
+
+    const sheet = document.body.querySelector<HTMLElement>(".quicklog-sheet")!;
+    expect(sheet.textContent).toContain("TUE, THU · 2 DAYS");
+    expect(sheet.textContent).toContain("Tue 14:00 · Thu 14:00");
+    expect(sheet.querySelector(".add-time-timeline-track")).toBeNull();
+    const confirm = sheet.querySelector<HTMLButtonElement>(".quicklog-confirm");
+    expect(confirm?.textContent).toContain("Book 2h on 2 days");
+
+    await act(async () => {
+      confirm!.click();
+    });
+
+    expect(onDockLogMany).toHaveBeenCalledTimes(1);
+    const [payloads] = onDockLogMany.mock.calls[0];
+    expect(payloads.map((payload) => new Date(payload.startedISO).getTime())).toEqual([
+      new Date(2026, 5, 16, 14).getTime(),
+      new Date(2026, 5, 18, 14).getTime()
+    ]);
+    expect(payloads.every((payload) => payload.comment === "Investigated redirect loop")).toBe(true);
+    expect(document.body.querySelector(".quicklog-sheet")).toBeNull();
+  });
+
+  it("hides Several days when the week cannot batch-book, and ⌘-click still books one day", () => {
+    act(() => {
+      root.render(renderWeek());
+    });
+    act(() => copyButton()?.click());
+    const picker = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(picker.querySelector(".copy-pop-multi-toggle")).toBeNull();
+
+    const chips = Array.from(picker.querySelectorAll<HTMLButtonElement>(".copy-pop-day"));
+    act(() => {
+      chips[1].dispatchEvent(new MouseEvent("click", { bubbles: true, metaKey: true }));
+    });
+    expect(document.body.querySelector(".quicklog-sheet")?.textContent).toContain("Book 2h on Tuesday");
+  });
+
+  it("opens the picker centred when a book request arrives from the command palette", () => {
+    act(() => {
+      root.render(renderWeek());
+    });
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+
+    act(() => {
+      root.render(renderWeek({ bookRequest: { worklogIds: ["wl-1"], token: 1 } }));
+    });
+
+    const picker = document.body.querySelector<HTMLElement>('[role="dialog"][aria-label="Book YLOG-397 on another day"]');
+    expect(picker).not.toBeNull();
+  });
 });

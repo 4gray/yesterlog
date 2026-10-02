@@ -1980,3 +1980,69 @@
 .copy-pop-day.has-same-issue .copy-pop-day-same {
   color: var(--amber, var(--muted));
 }
+
+/* several days at once */
+.copy-pop-multi-toggle {
+  margin: -4px 0 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+.copy-pop-multi-toggle:hover,
+.copy-pop-multi-toggle:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.copy-pop-day.is-selected {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 18%, transparent);
+}
+
+.copy-pop-day.is-selected .copy-pop-day-name {
+  color: var(--blue);
+}
+
+.copy-pop-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.copy-pop-foot-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--dim);
+}
+
+.copy-pop-confirm {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--on-accent);
+  background: var(--blue);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: filter 150ms ease, opacity 150ms ease;
+}
+
+.copy-pop-confirm:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.copy-pop-confirm:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

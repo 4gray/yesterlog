@@ -30,6 +30,8 @@ import { projectWorklogsForWeek } from "./domain/worklogAllocation";
 import { useJiraActivitySync } from "./app/useJiraActivitySync";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
+import { buildBookCommands } from "./domain/worklogCopy";
+import type { WeekBookRequest } from "./components/WeekView";
 import { useMonthState } from "./app/useMonthState";
 import { usePersonalNotes } from "./app/usePersonalNotes";
 import { usePrevWorkingDay } from "./app/usePrevWorkingDay";
@@ -455,6 +457,7 @@ export const App = () => {
     setIsLogging,
     setLogError,
     handleAddWorklog,
+    handleAddWorklogs,
     handleUpdateWorklog,
     handleMoveWorklog,
     handleDeleteWorklog
@@ -607,6 +610,23 @@ export const App = () => {
   // TODO(nl-parsing): the brief's headline command is free-text ("Log 2h on
   // YLOG-352", "go to week 28"). Until the parser lands these are the static
   // fallbacks the palette offers.
+  const [weekBookRequest, setWeekBookRequest] = useState<WeekBookRequest | undefined>();
+  // One palette entry per logged ticket-day of the visible week, so "Book YLOG-204 on another day"
+  // is reachable without hunting for the card.
+  const bookCommands = useMemo<CommandPaletteCommand[]>(
+    () =>
+      buildBookCommands(visibleSyncResult).map((entry) => ({
+        id: entry.id,
+        label: entry.label,
+        hint: entry.hint,
+        disabled: !isConfigured,
+        run: () => {
+          handleViewChange("week");
+          setWeekBookRequest({ worklogIds: entry.worklogIds, token: Date.now() });
+        }
+      })),
+    [handleViewChange, isConfigured, visibleSyncResult]
+  );
   const commands = useMemo<CommandPaletteCommand[]>(
     () => [
       {
@@ -671,10 +691,12 @@ export const App = () => {
         id: "toggle-theme",
         label: effectiveTheme === "dark" ? "Switch to light theme" : "Switch to dark theme",
         run: () => selectTheme(effectiveTheme === "dark" ? "light" : "dark")
-      }
+      },
+      ...bookCommands
     ],
     [
       addTimeModalActions.openTrackingShortcut,
+      bookCommands,
       effectiveTheme,
       goToCurrentWeek,
       goToNextWeek,
@@ -843,6 +865,8 @@ export const App = () => {
         worklogAllocationPreferences={worklogAllocationPreferences}
         isImportingPersonalNotes={isImportingPersonalNotes}
         handleAddWorklog={handleAddWorklog}
+        handleAddWorklogs={handleAddWorklogs}
+        weekBookRequest={weekBookRequest}
         handleMoveWorklog={handleMoveWorklog}
         handleMoveRecurring={handleMoveRecurring}
         handleSync={handleSync}

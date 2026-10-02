@@ -31,6 +31,8 @@ export interface AppWeekRouteProps {
   openEditPersonalNote: WeekViewProps["onEditPersonalNote"];
   handleToggleSkipped: WeekViewProps["onToggleSkipped"];
   handleAddWorklog: NonNullable<WeekViewProps["onDockLog"]>;
+  handleAddWorklogs?: WeekViewProps["onDockLogMany"];
+  bookRequest?: WeekViewProps["bookRequest"];
   handleConfirmRecurring: WeekViewProps["onConfirmRecurring"];
   handleSkipRecurring: WeekViewProps["onSkipRecurring"];
   handleDeleteRecurringOccurrence: WeekViewProps["onDeleteRecurring"];
@@ -67,6 +69,8 @@ export const AppWeekRoute = ({
   openEditPersonalNote,
   handleToggleSkipped,
   handleAddWorklog,
+  handleAddWorklogs,
+  bookRequest,
   handleConfirmRecurring,
   handleSkipRecurring,
   handleDeleteRecurringOccurrence,
@@ -101,6 +105,8 @@ export const AppWeekRoute = ({
     onEditPersonalNote={openEditPersonalNote}
     onToggleSkipped={handleToggleSkipped}
     onDockLog={handleAddWorklog}
+    onDockLogMany={handleAddWorklogs}
+    bookRequest={bookRequest}
     onConfirmRecurring={handleConfirmRecurring}
     onSkipRecurring={handleSkipRecurring}
     onDeleteRecurring={handleDeleteRecurringOccurrence}

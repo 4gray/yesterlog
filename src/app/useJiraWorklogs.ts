@@ -43,6 +43,13 @@ export interface JiraWorklogsClient {
   moveWorklog(request: MoveWorklogRequest): Promise<MoveWorklogResult>;
 }
 
+/** Outcome of booking one worklog on several days in sequence. */
+export interface BatchWorklogResult {
+  created: number;
+  total: number;
+  error?: string;
+}
+
 export interface JiraWorklogPayload {
   issueKey: string;
   ticket: JiraTicket;
@@ -226,6 +233,92 @@ export const useJiraWorklogs = ({
       }
     },
     [client, isDemo, loadTickets, onSyncResult, rememberAllocationPreference, runSync, saveSyncResult, settings, showError, showSuccess, syncResult]
+  );
+
+  /**
+   * "Book on several days": one ordinary POST per day, in calendar order, stopping at the first
+   * Jira error so a transient failure cannot leave gaps in the middle of the batch. Optimistic
+   * merges accumulate into one cache update, one summary snackbar, one background reconcile.
+   */
+  const handleAddWorklogs = useCallback(
+    async (payloads: JiraWorklogPayload[]): Promise<BatchWorklogResult> => {
+      const total = payloads.length;
+      if (total === 0) {
+        return { created: 0, total: 0 };
+      }
+      const issueKey = payloads[0].issueKey;
+      const duration = formatDuration(payloads[0].timeSpentSeconds / 3600);
+      const dayNames = payloads.map((payload) =>
+        new Date(payload.startedISO).toLocaleDateString(undefined, { weekday: "long" })
+      );
+      setIsLogging(true);
+      setLogError(undefined);
+
+      try {
+        if (isDemo) {
+          showSuccess(`Demo booked ${duration} to ${issueKey} on ${dayNames.join(", ")}.`);
+          return { created: total, total };
+        }
+
+        type Created = Parameters<typeof mergeCreatedWorklogIntoSyncResult>[1];
+        const created: Created[] = [];
+        let current = syncResult;
+        let error: string | undefined;
+        for (const payload of payloads) {
+          try {
+            const { ticket, allocationDirection: _direction, ...worklogPayload } = payload;
+            const result = await client.addWorklog({ settings, ...worklogPayload });
+            const createdWorklog: Created = {
+              ticket,
+              worklogId: result.worklogId,
+              startedISO: payload.startedISO,
+              timeSpentSeconds: result.timeSpentSeconds,
+              comment: payload.comment,
+              syncedAtISO: new Date().toISOString()
+            };
+            created.push(createdWorklog);
+            current = mergeCreatedWorklogIntoSyncResult(current, createdWorklog) ?? current;
+          } catch (caught) {
+            error = caught instanceof Error ? caught.message : "Unable to log time to Jira.";
+            break;
+          }
+        }
+
+        if (current && current !== syncResult) {
+          const optimistic = current;
+          onSyncResult(optimistic);
+          runBackgroundTask("cache the newly booked Jira worklogs", () => saveSyncResult(optimistic));
+        }
+        if (created.length > 0) {
+          queueBackgroundJiraRefresh({
+            settings,
+            runSync,
+            loadTickets,
+            context: "booking worklogs on several days",
+            reconcile: async (syncedResult) =>
+              created.reduce<SyncResult>(
+                (accumulated, worklog) => mergeCreatedWorklogIntoSyncResult(accumulated, worklog) ?? accumulated,
+                syncedResult
+              )
+          });
+        }
+
+        if (error) {
+          const message =
+            created.length === 0
+              ? error
+              : `Booked ${duration} to ${issueKey} on ${created.length} of ${total} days. ${dayNames[created.length]} failed: ${error}`;
+          setLogError(message);
+          showError(message);
+        } else {
+          showSuccess(`Booked ${duration} to ${issueKey} on ${dayNames.join(", ")}.`);
+        }
+        return { created: created.length, total, error };
+      } finally {
+        setIsLogging(false);
+      }
+    },
+    [client, isDemo, loadTickets, onSyncResult, runSync, saveSyncResult, settings, showError, showSuccess, syncResult]
   );
 
   const handleUpdateWorklog = useCallback(
@@ -462,6 +555,7 @@ export const useJiraWorklogs = ({
     setIsLogging,
     setLogError,
     handleAddWorklog,
+    handleAddWorklogs,
     handleUpdateWorklog,
     handleMoveWorklog,
     handleDeleteWorklog

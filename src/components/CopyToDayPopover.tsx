@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent
+} from "react";
 import { createPortal } from "react-dom";
 import type { CopyTarget, CopyTargetBlockedReason } from "../domain/worklogCopy";
 import { formatHours } from "../utils/date";
@@ -18,6 +25,8 @@ interface CopyToDayPopoverProps {
   anchor: CopyPopoverAnchor;
   accentColor: string;
   onPick: (target: CopyTarget) => void;
+  /** Enables "several days": chips become toggles and a footer books them all at once. */
+  onPickMany?: (targets: CopyTarget[]) => void;
   onClose: () => void;
 }
 
@@ -41,9 +50,45 @@ const BLOCKED_LABEL: Record<CopyTargetBlockedReason, string> = {
  * stay visible but say why. Rendered through a fixed portal (like `.wl-pop-fixed`) so it escapes
  * the scrollable log list; closes on Escape, outside click, or scroll.
  */
-export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor, onPick, onClose }: CopyToDayPopoverProps) => {
+export const CopyToDayPopover = ({
+  issueKey,
+  hours,
+  targets,
+  anchor,
+  accentColor,
+  onPick,
+  onPickMany,
+  onClose
+}: CopyToDayPopoverProps) => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [placeAbove, setPlaceAbove] = useState(false);
+  const [multi, setMulti] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const canMulti = Boolean(onPickMany) && targets.filter((target) => target.enabled).length > 1;
+
+  const toggleSelected = (dateKey: string) =>
+    setSelected((current) =>
+      current.includes(dateKey) ? current.filter((key) => key !== dateKey) : [...current, dateKey]
+    );
+
+  const chooseChip = (target: CopyTarget, event: ReactMouseEvent<HTMLButtonElement>) => {
+    const modifier = event.metaKey || event.ctrlKey || event.shiftKey;
+    if (canMulti && (multi || modifier)) {
+      setMulti(true);
+      toggleSelected(target.dateKey);
+      return;
+    }
+    onPick(target);
+  };
+
+  const confirmMany = () => {
+    const chosen = targets.filter((target) => target.enabled && selected.includes(target.dateKey));
+    if (chosen.length === 1) {
+      onPick(chosen[0]);
+    } else if (chosen.length > 1) {
+      onPickMany?.(chosen);
+    }
+  };
   const width = Math.min(targets.length * CHIP_WIDTH + (targets.length - 1) * CHIP_GAP + PADDING, window.innerWidth - 20);
   const preferredLeft = anchor.align === "start" ? anchor.left : anchor.left - width + 32;
   const left = Math.min(Math.max(preferredLeft, 10), window.innerWidth - width - 10);
@@ -100,6 +145,7 @@ export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor
   const style = placeAbove
     ? { left, bottom: window.innerHeight - anchor.top + 8, width }
     : { left, top: anchor.bottom + 8, width };
+  const selectedCount = targets.filter((target) => target.enabled && selected.includes(target.dateKey)).length;
 
   return createPortal(
     <div
@@ -116,6 +162,20 @@ export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor
           <span style={{ color: accentColor }}>{issueKey}</span> · {formatHours(hours)}
         </span>
       </div>
+      {canMulti && (
+        <button
+          type="button"
+          className={`copy-pop-multi-toggle${multi ? " is-on" : ""}`}
+          aria-pressed={multi}
+          onClick={() => {
+            setMulti((current) => !current);
+            setSelected([]);
+          }}
+          title="Pick several days, then book them all at once (⌘-click a day also works)"
+        >
+          {multi ? "Pick one day" : "Several days"}
+        </button>
+      )}
       <div className="copy-pop-days" style={{ gridTemplateColumns: `repeat(${targets.length}, minmax(0, 1fr))` }}>
         {targets.map((target) => {
           const weekday = target.weekdayName.slice(0, 3);
@@ -127,15 +187,17 @@ export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor
             : `${target.weekdayName} · ${target.dateLabel} · ${
                 target.blockedReason === "source" ? "this is the day you are booking from" : `${reason} day`
               }`;
+          const isSelected = multi && selected.includes(target.dateKey);
           return (
             <button
               key={target.dateKey}
               type="button"
-              className={`copy-pop-day${target.isToday ? " is-today" : ""}${target.sameIssueHours > 0 ? " has-same-issue" : ""}`}
+              className={`copy-pop-day${target.isToday ? " is-today" : ""}${target.sameIssueHours > 0 ? " has-same-issue" : ""}${isSelected ? " is-selected" : ""}`}
               disabled={!target.enabled}
               title={title}
-              aria-label={`Book on ${target.weekdayName} ${target.dateLabel}`}
-              onClick={() => onPick(target)}
+              aria-label={multi ? `Select ${target.weekdayName} ${target.dateLabel}` : `Book on ${target.weekdayName} ${target.dateLabel}`}
+              aria-pressed={multi ? isSelected : undefined}
+              onClick={(event) => chooseChip(target, event)}
             >
               <span className="copy-pop-day-name">{weekday}</span>
               <span className="copy-pop-day-total">
@@ -148,6 +210,16 @@ export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor
           );
         })}
       </div>
+      {multi && (
+        <div className="copy-pop-foot">
+          <span className="copy-pop-foot-hint">
+            {selectedCount === 0 ? "Pick the days to book" : `${selectedCount} selected`}
+          </span>
+          <button type="button" className="copy-pop-confirm" disabled={selectedCount === 0} onClick={confirmMany}>
+            Book on {selectedCount} {selectedCount === 1 ? "day" : "days"}
+          </button>
+        </div>
+      )}
     </div>,
     document.body
   );

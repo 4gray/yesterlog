@@ -1,4 +1,5 @@
-import type { DayTrackingSummary, JiraTicket, JiraWorklog } from "../../shared/types";
+import type { DayTrackingSummary, JiraTicket, JiraWorklog, SyncResult } from "../../shared/types";
+import { formatHours, fromLocalDateKey } from "../utils/date";
 import {
   DEFAULT_WINDOW_END_MIN,
   DEFAULT_WINDOW_START_MIN,
@@ -165,4 +166,44 @@ export const copyDraftFromWorklogs = (logs: JiraWorklog[]): WorklogCopyDraft | u
     comment: comments.length === 1 ? comments[0] : "",
     sourceStartMinutes: Math.min(...logs.map((log) => minutesFromMidnight(new Date(log.started))))
   };
+};
+
+export interface BookCommandEntry {
+  id: string;
+  label: string;
+  hint: string;
+  worklogIds: string[];
+}
+
+/**
+ * One command-palette entry per logged ticket-day of the synced week ("Book YLOG-204 on another
+ * day · MON · 2.3h"), in calendar order. Bulk slices are skipped because they cannot be booked.
+ */
+export const buildBookCommands = (syncResult?: SyncResult): BookCommandEntry[] => {
+  if (!syncResult) {
+    return [];
+  }
+  const entries: BookCommandEntry[] = [];
+  for (const dateKey of Object.keys(syncResult.daySummaries).sort()) {
+    const byIssue = new Map<string, JiraWorklog[]>();
+    for (const worklog of syncResult.daySummaries[dateKey].worklogs) {
+      if (worklog.allocation) {
+        continue;
+      }
+      const list = byIssue.get(worklog.issueKey) ?? [];
+      list.push(worklog);
+      byIssue.set(worklog.issueKey, list);
+    }
+    const weekday = fromLocalDateKey(dateKey).toLocaleDateString(undefined, { weekday: "short" }).toUpperCase();
+    for (const [issueKey, logs] of byIssue) {
+      const seconds = logs.reduce((sum, log) => sum + log.timeSpentSeconds, 0);
+      entries.push({
+        id: `book-${dateKey}-${issueKey}`,
+        label: `Book ${issueKey} on another day`,
+        hint: `${weekday} · ${formatHours(seconds / 3600)}`,
+        worklogIds: logs.map((log) => log.id)
+      });
+    }
+  }
+  return entries;
 };
