@@ -1864,3 +1864,119 @@
   font-size: 10.5px;
   line-height: 1.35;
 }
+
+/* copy-to-day: second hover action next to the pencil, then a day-chip picker */
+.day-log-action-slot.has-copy {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.day-log:hover .day-log-copy,
+.day-log:focus-within .day-log-copy,
+.day-log-copy:focus-visible {
+  opacity: 1;
+}
+
+.copy-pop {
+  padding: 12px 14px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+}
+
+.copy-pop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.copy-pop-title {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.copy-pop-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.copy-pop-days {
+  display: grid;
+  gap: 6px;
+}
+
+.copy-pop-day {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  justify-items: center;
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-strong);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.copy-pop-day:hover:not(:disabled),
+.copy-pop-day:focus-visible {
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 9%, transparent);
+}
+
+.copy-pop-day:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.copy-pop-day:disabled {
+  color: var(--dim-2);
+  border-style: dashed;
+  cursor: default;
+}
+
+.copy-pop-day.is-today .copy-pop-day-name {
+  color: var(--blue);
+}
+
+.copy-pop-day-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.copy-pop-day-total,
+.copy-pop-day-same {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.copy-pop-day:disabled .copy-pop-day-total {
+  color: var(--dim-2);
+  font-style: italic;
+}
+
+.copy-pop-day.has-same-issue .copy-pop-day-same {
+  color: var(--amber, var(--muted));
+}

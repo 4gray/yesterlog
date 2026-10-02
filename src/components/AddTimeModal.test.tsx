@@ -292,4 +292,98 @@ describe("AddTimeModal", () => {
     expect(markup).toContain('<label class="active"><input type="radio" name="bulk-worklog-distribution" checked="" value="forward"/>');
     expect(markup).toContain("<span>Start on date</span>");
   });
+
+
+  it("offers Book on… next to Delete while editing a Jira worklog", () => {
+    const editingWorklog = {
+      id: "wl-1",
+      issueId: ticket.id,
+      issueKey: ticket.key,
+      issueSummary: ticket.summary,
+      authorAccountId: "account-1",
+      started: "2026-06-18T10:00:00.000Z",
+      timeSpentSeconds: 2 * 3600,
+      comment: "Access domain"
+    };
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date("2026-06-18T10:00:00.000Z")}
+        dateOptions={["2026-06-17", "2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        editingWorklog={editingWorklog}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onDelete={async () => true}
+        onCopyToAnotherDay={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Delete worklog");
+    expect(markup).toContain("Book this worklog on another day");
+    expect(markup).toContain("Book on…");
+  });
+
+  it("hides Book on… for bulk slices and local notes", () => {
+    const bulkMarkup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date("2026-06-18T10:00:00.000Z")}
+        dateOptions={["2026-06-17", "2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        editingWorklog={{
+          id: "wl-2",
+          issueId: ticket.id,
+          issueKey: ticket.key,
+          issueSummary: ticket.summary,
+          authorAccountId: "account-1",
+          started: "2026-06-18T10:00:00.000Z",
+          timeSpentSeconds: 16 * 3600,
+          allocation: {
+            dateKey: "2026-06-18",
+            started: "2026-06-18T10:00:00.000Z",
+            timeSpentSeconds: 8 * 3600,
+            direction: "forward",
+            partIndex: 1,
+            partCount: 2,
+            isApproximate: true
+          }
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onDelete={async () => true}
+        onCopyToAnotherDay={() => undefined}
+      />
+    );
+    const noteMarkup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date("2026-06-18T10:00:00.000Z")}
+        dateOptions={["2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={false}
+        isLogging={false}
+        editingPersonalNote={{
+          id: "note-1",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-18",
+          text: "Mentoring and planning",
+          timeSpentSeconds: 2 * 3600,
+          startedISO: "2026-06-18T10:00:00.000Z",
+          createdAt: "2026-06-18T10:00:00.000Z",
+          updatedAt: "2026-06-18T10:00:00.000Z"
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onDelete={async () => true}
+        onCopyToAnotherDay={() => undefined}
+        onUpdatePersonalNote={async () => true}
+      />
+    );
+
+    expect(bulkMarkup).toContain("Delete worklog");
+    expect(bulkMarkup).not.toContain("Book on…");
+    expect(noteMarkup).not.toContain("Book on…");
+  });
 });

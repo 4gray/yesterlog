@@ -153,4 +153,33 @@ describe("QuickLogSheet", () => {
     expect(markup).toContain("this interval is unavailable");
     expect(markup).toContain('class="quicklog-confirm" disabled=""');
   });
+
+
+  it("relabels the sheet as the confirm step of a copy to another day", () => {
+    const markup = renderToStaticMarkup(
+      <QuickLogSheet
+        context={{
+          ...context,
+          mode: "copy",
+          targetDayName: "Tuesday",
+          dayLabel: "TUE · 16 JUN",
+          comment: "Investigated redirect loop",
+          placementHint: "14:00–16:00 · same time as Monday"
+        }}
+        color={{ seg: "#5b8cff", text: "#8fb0ff" }}
+        isLogging={false}
+        onChangeHours={() => undefined}
+        onChangeComment={() => undefined}
+        onCancel={() => undefined}
+        onConfirm={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Book time");
+    expect(markup).toContain("Book 2h on Tuesday");
+    expect(markup).toContain("⌘⏎ TO BOOK");
+    expect(markup).toContain("14:00–16:00 · same time as Monday");
+    expect(markup).toContain("Investigated redirect loop");
+    expect(markup).not.toContain("Log 2h to ABC-1");
+  });
 });

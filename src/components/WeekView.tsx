@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, Check, CloudUpload, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
+import { Ban, CalendarPlus, Check, CloudUpload, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
 import type {
   DayTrackingSummary,
   JiraTicket,
@@ -27,6 +27,14 @@ import {
   type Range
 } from "../domain/dayCalendar";
 import { getWorklogDisplaySeconds, getWorklogDisplayStarted } from "../domain/worklogAllocation";
+import {
+  buildCopyTargets,
+  canCopyWorklogs,
+  copyDraftFromWorklogs,
+  copyStartMinutes,
+  type CopyTarget
+} from "../domain/worklogCopy";
+import { CopyToDayPopover, type CopyPopoverAnchor } from "./CopyToDayPopover";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
@@ -188,6 +196,7 @@ const DayColumn = ({
   worklogsByKey,
   onAddTime,
   onEditWorklog,
+  onCopyWorklogs,
   onEditPersonalNote,
   onToggleSkipped,
   onConfirmRecurring,
@@ -200,6 +209,8 @@ const DayColumn = ({
   worklogsByKey: Map<string, JiraWorklog[]>;
   onAddTime: (date?: Date) => void;
   onEditWorklog: (worklog: JiraWorklog) => void;
+  /** Opens the copy-to-day picker for a row's worklogs; absent when the week cannot write. */
+  onCopyWorklogs?: (logs: JiraWorklog[], anchor: HTMLElement) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
   onConfirmRecurring?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
@@ -395,7 +406,7 @@ const DayColumn = ({
                     {comments.length > 0 && <MessageSquare size={12} stroke="var(--dim)" strokeWidth={1.8} />}
                     {logs.some((log) => log.allocation) && <span className="day-log-bulk">BULK</span>}
                     <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
-                    <span className="day-log-action-slot">
+                    <span className={`day-log-action-slot${onCopyWorklogs && canCopyWorklogs(logs) ? " has-copy" : ""}`}>
                       {logs.length === 1 && (
                         <button
                           type="button"
@@ -405,6 +416,17 @@ const DayColumn = ({
                           aria-label={`Edit worklog for ${issue.key}`}
                         >
                           <Pencil size={12} strokeWidth={2} />
+                        </button>
+                      )}
+                      {onCopyWorklogs && canCopyWorklogs(logs) && (
+                        <button
+                          type="button"
+                          className="day-log-edit day-log-copy"
+                          onClick={(event) => onCopyWorklogs(logs, event.currentTarget)}
+                          title="Book on another day"
+                          aria-label={`Book ${issue.key} on another day`}
+                        >
+                          <CalendarPlus size={12} strokeWidth={2} />
                         </button>
                       )}
                     </span>
@@ -630,6 +652,7 @@ export const WeekView = ({
     dockTickets.length
   );
   const [quickLog, setQuickLog] = useState<QuickLogContext | null>(null);
+  const [copyPicker, setCopyPicker] = useState<{ logs: JiraWorklog[]; anchor: CopyPopoverAnchor } | null>(null);
 
   const dockColorMap = useMemo(() => buildDockColorMap(dockTickets), [dockTickets]);
   const dropDayMeta = useMemo(() => {
@@ -710,9 +733,11 @@ export const WeekView = ({
     onDrop: handleDrop
   });
 
-  const quickLogTicket = quickLog ? dockTickets.find((ticket) => ticket.key === quickLog.ticketKey) : undefined;
+  const quickLogTicket = quickLog
+    ? quickLog.ticket ?? dockTickets.find((ticket) => ticket.key === quickLog.ticketKey)
+    : undefined;
   const quickLogColor = quickLog
-    ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
+    ? dockColorMap.get(quickLog.ticketKey) ?? colorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
     : DOCK_PALETTE[0];
   const quickLogDurationSeconds = quickLog ? Math.round(quickLog.hours * 3600) : 0;
   const quickLogStarted = quickLog
@@ -784,6 +809,61 @@ export const WeekView = ({
     }
   }, [now, onDockLog, quickLog, quickLogTicket, quickLogValidationMessage]);
 
+  const openCopyPicker = useCallback((logs: JiraWorklog[], anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    setCopyPicker({ logs, anchor: { left: rect.left, top: rect.top, bottom: rect.bottom } });
+  }, []);
+  const closeCopyPicker = useCallback(() => setCopyPicker(null), []);
+
+  const copyDraft = useMemo(() => (copyPicker ? copyDraftFromWorklogs(copyPicker.logs) : undefined), [copyPicker]);
+  const copySourceDateKey = copyPicker ? toLocalDateKey(new Date(copyPicker.logs[0].started)) : undefined;
+  const copyTargets = useMemo(
+    () =>
+      copyDraft && copySourceDateKey
+        ? buildCopyTargets({ days: weekState.days, sourceDateKey: copySourceDateKey, todayKey, issueKey: copyDraft.ticketKey })
+        : [],
+    [copyDraft, copySourceDateKey, todayKey, weekState.days]
+  );
+
+  const pickCopyTarget = useCallback(
+    (target: CopyTarget) => {
+      if (!copyDraft || !copySourceDateKey) {
+        return;
+      }
+      const sourceDay = weekState.days.find((day) => day.dateKey === copySourceDateKey);
+      const durationMinutes = Math.max(15, Math.round(copyDraft.hours * 60));
+      const placement = copyStartMinutes({
+        sourceStartMinutes: copyDraft.sourceStartMinutes,
+        durationMinutes,
+        committed: committedByDay.get(target.dateKey) ?? []
+      });
+      const placementHint = placement
+        ? `${minuteToLabel(placement.startMinutes)}–${minuteToLabel(placement.startMinutes + durationMinutes)} · ${
+            placement.placement === "same-time"
+              ? `same time as ${sourceDay?.weekdayName ?? "the source day"}`
+              : placement.placement === "after-last"
+                ? "after your last entry"
+                : "first free slot"
+          }`
+        : undefined;
+      setCopyPicker(null);
+      setQuickLog({
+        ticketKey: copyDraft.ticketKey,
+        ticketSummary: copyDraft.ticketSummary,
+        ticket: copyDraft.ticket,
+        mode: "copy",
+        targetDayName: target.weekdayName,
+        dateKey: target.dateKey,
+        dayLabel: dropDayMeta.get(target.dateKey)?.label ?? target.dateKey,
+        hours: copyDraft.hours,
+        startedMinutes: placement?.startMinutes,
+        placementHint,
+        comment: copyDraft.comment
+      });
+    },
+    [committedByDay, copyDraft, copySourceDateKey, dropDayMeta, weekState.days]
+  );
+
   const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
   const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
   const hoverBlockedReason = hoverMeta?.droppable ? "occupied time" : hoverMeta?.blockedReason ?? "read-only";
@@ -845,6 +925,7 @@ export const WeekView = ({
                 worklogsByKey={worklogsByKey}
                 onAddTime={onAddTime}
                 onEditWorklog={onEditWorklog}
+                onCopyWorklogs={onDockLog ? openCopyPicker : undefined}
                 onEditPersonalNote={onEditPersonalNote}
                 onToggleSkipped={onToggleSkipped}
                 onConfirmRecurring={onConfirmRecurring}
@@ -960,6 +1041,18 @@ export const WeekView = ({
             </div>
           )}
         </>
+      )}
+
+      {copyPicker && copyDraft && (
+        <CopyToDayPopover
+          issueKey={copyDraft.ticketKey}
+          hours={copyDraft.hours}
+          targets={copyTargets}
+          anchor={copyPicker.anchor}
+          accentColor={colorOf(copyDraft.ticketKey).text}
+          onPick={pickCopyTarget}
+          onClose={closeCopyPicker}
+        />
       )}
 
       {quickLog && (

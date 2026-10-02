@@ -744,6 +744,7 @@ export const App = () => {
           onAddWorklog={handleAddWorklog}
           onUpdateWorklog={handleUpdateWorklog}
           onDeleteWorklog={handleDeleteWorklog}
+          onCopyWorklogToAnotherDay={addTimeModalActions.openCopyFromWorklog}
           onSearchTickets={searchTickets}
           onAddPersonalNote={handleAddPersonalNote}
           onUpdatePersonalNote={handleUpdatePersonalNote}

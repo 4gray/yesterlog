@@ -17,6 +17,14 @@ export interface QuickLogContext {
   startedMinutes?: number;
   timelineEndMinutes?: number;
   comment: string;
+  /** Set when the issue is not in the active-work dock, e.g. a worklog copied from another day. */
+  ticket?: JiraTicket;
+  /** "copy" turns the sheet into the confirm step of "book this worklog on another day". */
+  mode?: "log" | "copy";
+  /** Weekday name of the destination, shown in copy-mode labels. */
+  targetDayName?: string;
+  /** One line explaining where the copy lands ("14:00–16:00 · same time as Monday"). */
+  placementHint?: string;
 }
 
 export interface QuickLogTimelineContext {
@@ -74,6 +82,8 @@ export const QuickLogSheet = ({
   const [customUnit, setCustomUnit] = useState<JiraDurationUnit>("h");
 
   const presetMatch = HOUR_CHIPS.some((chip) => chip.hours === context.hours);
+  const isCopy = context.mode === "copy";
+  const targetDay = context.targetDayName ?? context.dayLabel;
 
   const openCustom = () => {
     setCustomMode(true);
@@ -136,10 +146,14 @@ export const QuickLogSheet = ({
   }, [context.hours, isLogging, onCancel, onConfirm, validationMessage]);
 
   return (
-    <Modal label="Log time" onClose={onCancel} panelClassName={`quicklog-sheet${timeline ? " has-side-timeline" : ""}`}>
+    <Modal
+      label={isCopy ? "Book time" : "Log time"}
+      onClose={onCancel}
+      panelClassName={`quicklog-sheet${timeline ? " has-side-timeline" : ""}`}
+    >
         <div className="quicklog-head">
           <div className="quicklog-title-row">
-            <span className="quicklog-title">Log time</span>
+            <span className="quicklog-title">{isCopy ? "Book time" : "Log time"}</span>
             <span className="quicklog-day">
               {context.dayLabel}
               {timeline ? ` · ${timeline.time}` : ""}
@@ -216,6 +230,10 @@ export const QuickLogSheet = ({
               </div>
             )}
 
+            {context.placementHint && !validationMessage && (
+              <div className="quicklog-placement">{context.placementHint}</div>
+            )}
+
             {validationMessage && (
               <div className="quicklog-validation" role="alert">
                 {validationMessage}
@@ -247,7 +265,7 @@ export const QuickLogSheet = ({
         </div>
 
         <div className="quicklog-foot">
-          <span className="quicklog-hint">⌘⏎ TO ADD · ESC TO CANCEL</span>
+          <span className="quicklog-hint">{isCopy ? "⌘⏎ TO BOOK · DRAG THE DAY MAP TO ADJUST" : "⌘⏎ TO ADD · ESC TO CANCEL"}</span>
           <div className="quicklog-actions">
             <button type="button" className="quicklog-cancel" onClick={onCancel}>
               CANCEL
@@ -259,7 +277,9 @@ export const QuickLogSheet = ({
               disabled={isLogging || context.hours <= 0 || Boolean(validationMessage)}
             >
               {isLogging ? <Loader2 className="spin" size={14} /> : null}
-              Log {formatDuration(context.hours)} to {context.ticketKey}
+              {isCopy
+                ? `Book ${formatDuration(context.hours)} on ${targetDay}`
+                : `Log ${formatDuration(context.hours)} to ${context.ticketKey}`}
             </button>
           </div>
         </div>

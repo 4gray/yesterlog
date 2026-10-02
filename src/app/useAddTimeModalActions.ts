@@ -2,6 +2,7 @@ import { useCallback, useEffect, type Dispatch, type SetStateAction } from "reac
 import type { JiraWorklog, PersonalNote, WeekState } from "../../shared/types";
 import type { AddTimePrefill } from "../components/AddTimeModal";
 import { getWeekBounds } from "../domain/week";
+import { ticketFromWorklog } from "../domain/worklogCopy";
 import {
   canOpenTrackingShortcut,
   createTrackingShortcutDate,
@@ -135,6 +136,25 @@ export const useAddTimeModalActions = ({
     [setAddModalDate, setAddTimePrefill, setEditingPersonalNote, setEditingWorklog, setLogError]
   );
 
+  /**
+   * "Copy to…" from the edit modal: close the edit and open Add Time prefilled with the
+   * worklog's issue, duration and comment, aimed at the nearest eligible day before the source
+   * so the date selector only needs a glance. Jira still receives one ordinary new worklog.
+   */
+  const openCopyFromWorklog = useCallback(
+    (worklog: JiraWorklog) => {
+      const dayBefore = new Date(worklog.started);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      openAddTime(dayBefore, {
+        ticket: ticketFromWorklog(worklog),
+        timeSpentSeconds: worklog.timeSpentSeconds,
+        comment: worklog.comment,
+        retrospective: true
+      });
+    },
+    [openAddTime]
+  );
+
   const closeAddTime = useCallback(() => {
     setAddModalDate(undefined);
     setAddTimePrefill(undefined);
@@ -153,6 +173,7 @@ export const useAddTimeModalActions = ({
     openTrackingShortcut,
     openEditWorklog,
     openEditPersonalNote,
+    openCopyFromWorklog,
     closeAddTime,
     closeEditingWorklog,
     closeEditingPersonalNote

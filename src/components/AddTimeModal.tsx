@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRightLeft, Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
+import { ArrowRightLeft, Calendar, CalendarPlus, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
 import type {
   JiraTicket,
   JiraWorklog,
@@ -69,6 +69,8 @@ export interface AddTimeModalProps {
   onClose: () => void;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onDelete?: () => Promise<boolean>;
+  /** Edit mode only: hands the worklog to the "book on another day" flow and closes this modal. */
+  onCopyToAnotherDay?: (worklog: JiraWorklog) => void;
   onSearchTickets?: TicketSearchHandler;
   onAddPersonalNote?: (payload: {
     title?: string;
@@ -245,6 +247,7 @@ export const AddTimeModal = ({
   onClose,
   onLog,
   onDelete,
+  onCopyToAnotherDay,
   onSearchTickets,
   onAddPersonalNote,
   onUpdatePersonalNote,
@@ -1067,16 +1070,30 @@ export const AddTimeModal = ({
 
         <div className="modal-foot">
           {(isEditingWorklog || isEditingPersonalNote) && onDelete && !isMovingWorklog ? (
-            <button
-              type="button"
-              className="modal-delete-action"
-              onClick={handleDelete}
-              disabled={isLogging || isDeleting}
-              title={isEditingPersonalNote ? "Delete note" : "Delete worklog"}
-            >
-              {isDeleting ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} strokeWidth={2} />}
-              Delete
-            </button>
+            <div className="modal-foot-secondary">
+              <button
+                type="button"
+                className="modal-delete-action"
+                onClick={handleDelete}
+                disabled={isLogging || isDeleting}
+                title={isEditingPersonalNote ? "Delete note" : "Delete worklog"}
+              >
+                {isDeleting ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} strokeWidth={2} />}
+                Delete
+              </button>
+              {editingWorklog && onCopyToAnotherDay && !editingWorklog.allocation && (
+                <button
+                  type="button"
+                  className="modal-copy-action"
+                  onClick={() => onCopyToAnotherDay(editingWorklog)}
+                  disabled={isLogging || isDeleting}
+                  title="Book this worklog on another day"
+                >
+                  <CalendarPlus size={14} strokeWidth={2} />
+                  Book on…
+                </button>
+              )}
+            </div>
           ) : (
             <span className="modal-foot-hint">
               {isMovingWorklog ? "SELECT A DIFFERENT TICKET · ⌘⏎ TO MOVE" : "⌘⏎ TO SAVE · ESC TO CANCEL"}

@@ -22,6 +22,7 @@ interface TimeEntryModalLayerProps {
   onAddWorklog: AddTimeModalProps["onLog"];
   onUpdateWorklog: AddTimeModalProps["onLog"];
   onDeleteWorklog: NonNullable<AddTimeModalProps["onDelete"]>;
+  onCopyWorklogToAnotherDay?: AddTimeModalProps["onCopyToAnotherDay"];
   onSearchTickets: AddTimeModalProps["onSearchTickets"];
   onAddPersonalNote: AddTimeModalProps["onAddPersonalNote"];
   onUpdatePersonalNote: AddTimeModalProps["onUpdatePersonalNote"];
@@ -51,6 +52,7 @@ export const TimeEntryModalLayer = ({
   onAddWorklog,
   onUpdateWorklog,
   onDeleteWorklog,
+  onCopyWorklogToAnotherDay,
   onSearchTickets,
   onAddPersonalNote,
   onUpdatePersonalNote,
@@ -98,6 +100,7 @@ export const TimeEntryModalLayer = ({
         onClose={onCloseEditingWorklog}
         onLog={onUpdateWorklog}
         onDelete={onDeleteWorklog}
+        onCopyToAnotherDay={onCopyWorklogToAnotherDay}
         onSearchTickets={onSearchTickets}
         onAddPersonalNote={onAddPersonalNote}
       />

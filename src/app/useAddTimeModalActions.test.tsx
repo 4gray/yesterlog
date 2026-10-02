@@ -353,4 +353,21 @@ describe("useAddTimeModalActions", () => {
     expect(editingPersonalNote).toBeUndefined();
     expect(logError).toBe("Keep this error visible");
   });
+
+
+  it("turns an edited worklog into a prefilled Add Time aimed at the previous eligible day", () => {
+    renderHarness({ initialEditingWorklog: worklog });
+
+    act(() => getApi().openCopyFromWorklog(worklog));
+
+    expect(editingWorklog).toBeUndefined();
+    expect(toLocalDateKey(addModalDate ?? new Date(0))).toBe("2026-06-16");
+    expect(addTimePrefill).toMatchObject({
+      timeSpentSeconds: 3600,
+      comment: "Existing worklog",
+      retrospective: true,
+      ticket: { key: "TB-42", summary: "Refactor modal actions", statusCategory: "unknown" }
+    });
+    expect(addTimePrefill?.startedISO).toBeUndefined();
+  });
 });
