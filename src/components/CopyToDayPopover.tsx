@@ -7,6 +7,8 @@ export interface CopyPopoverAnchor {
   left: number;
   top: number;
   bottom: number;
+  /** "end" hangs the panel to the left of a trailing icon button; "start" grows rightwards from a pointer. */
+  align?: "start" | "end";
 }
 
 interface CopyToDayPopoverProps {
@@ -43,7 +45,8 @@ export const CopyToDayPopover = ({ issueKey, hours, targets, anchor, accentColor
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [placeAbove, setPlaceAbove] = useState(false);
   const width = Math.min(targets.length * CHIP_WIDTH + (targets.length - 1) * CHIP_GAP + PADDING, window.innerWidth - 20);
-  const left = Math.min(Math.max(anchor.left - width + 32, 10), window.innerWidth - width - 10);
+  const preferredLeft = anchor.align === "start" ? anchor.left : anchor.left - width + 32;
+  const left = Math.min(Math.max(preferredLeft, 10), window.innerWidth - width - 10);
 
   useLayoutEffect(() => {
     const height = panelRef.current?.offsetHeight ?? 0;

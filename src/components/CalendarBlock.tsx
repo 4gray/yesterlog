@@ -16,6 +16,8 @@ interface CalendarBlockProps {
   dragging?: boolean;
   relocating?: boolean;
   preview?: boolean;
+  /** Preview of an Option-drag duplicate: the original stays, this block is the new booking. */
+  duplicatePreview?: boolean;
   /** The whole block can be moved by dragging its body. */
   draggable?: boolean;
   /** The corresponding edge can be dragged without making the body movable. */
@@ -77,6 +79,7 @@ const CalendarBlockImpl = ({
   dragging,
   relocating,
   preview,
+  duplicatePreview,
   draggable,
   resizeStart,
   resizeEnd,
@@ -101,8 +104,9 @@ const CalendarBlockImpl = ({
       role="button"
       tabIndex={preview ? -1 : 0}
       aria-hidden={preview || undefined}
-      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canMove ? " is-draggable" : ""}${canResize ? " is-resizable" : ""}${dragging ? " is-dragging" : ""}${relocating ? " is-relocating" : ""}${preview ? " is-cross-day-preview" : ""}`}
+      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canMove ? " is-draggable" : ""}${canResize ? " is-resizable" : ""}${dragging ? " is-dragging" : ""}${relocating ? " is-relocating" : ""}${preview ? " is-cross-day-preview" : ""}${duplicatePreview ? " is-duplicate-preview" : ""}`}
       style={{ top: `${top}px`, height: `${Math.max(height, 1)}px`, left, width }}
+      data-worklog-id={item.worklog && !allocation && !preview ? item.worklog.id : undefined}
       title={
         allocation
           ? `${title} · ${detail ?? "Jira worklog"} · ${allocation.isApproximate ? "estimated" : "chosen"} bulk allocation ${allocation.partIndex}/${allocation.partCount}`
@@ -130,6 +134,7 @@ const CalendarBlockImpl = ({
       )}
       <span className="cal-block-head">
         <span className="cal-block-title">{title}</span>
+        {duplicatePreview && <span className="cal-block-allocation is-book">+ BOOK</span>}
         {allocation && !compact && (
           <span className={`cal-block-allocation${allocation.isApproximate ? " is-estimate" : ""}`}>
             {allocation.isApproximate ? "EST." : "ALLOC."} {allocation.partIndex}/{allocation.partCount}

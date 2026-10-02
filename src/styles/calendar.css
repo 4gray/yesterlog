@@ -561,3 +561,20 @@ body.cal-dragging .cal-track {
     border-bottom: 1px solid var(--line);
   }
 }
+
+/* Option/Alt-drag books a second entry: the original stays put, the preview carries a badge */
+body.cal-duplicating,
+body.cal-duplicating .cal-track,
+body.cal-duplicating .cal-block.is-dragging {
+  cursor: copy;
+}
+
+.cal-block.is-duplicate-preview {
+  border-style: dashed;
+}
+
+.cal-block-allocation.is-book {
+  border-color: color-mix(in srgb, var(--blue) 60%, transparent);
+  background: color-mix(in srgb, var(--blue) 16%, transparent);
+  color: var(--blue-soft);
+}

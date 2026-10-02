@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Ban, CalendarPlus, Check, CloudUpload, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import type {
   DayTrackingSummary,
   JiraTicket,
@@ -35,6 +36,7 @@ import {
   type CopyTarget
 } from "../domain/worklogCopy";
 import { CopyToDayPopover, type CopyPopoverAnchor } from "./CopyToDayPopover";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
@@ -387,6 +389,7 @@ const DayColumn = ({
                     pop?.key === issue.key ? "is-popped" : ""
                   }`}
                   key={issue.key}
+                  data-worklog-ids={logs.length ? logs.map((log) => log.id).join(",") : undefined}
                   tabIndex={hasPop ? 0 : undefined}
                   onMouseEnter={hasPop ? (event) => openPop(issue.key, event.currentTarget) : undefined}
                   onMouseLeave={hasPop ? closePop : undefined}
@@ -653,6 +656,7 @@ export const WeekView = ({
   );
   const [quickLog, setQuickLog] = useState<QuickLogContext | null>(null);
   const [copyPicker, setCopyPicker] = useState<{ logs: JiraWorklog[]; anchor: CopyPopoverAnchor } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ logs: JiraWorklog[]; x: number; y: number } | null>(null);
 
   const dockColorMap = useMemo(() => buildDockColorMap(dockTickets), [dockTickets]);
   const dropDayMeta = useMemo(() => {
@@ -864,6 +868,92 @@ export const WeekView = ({
     [committedByDay, copyDraft, copySourceDateKey, dropDayMeta, weekState.days]
   );
 
+  /** Option-drag in Timeline dropped a duplicate at an exact slot: confirm it in the booking sheet. */
+  const bookWorklogAt = useCallback(
+    (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => {
+      const draft = copyDraftFromWorklogs([worklog]);
+      if (!draft) {
+        return;
+      }
+      const started = new Date(patch.startedISO);
+      const dateKey = toLocalDateKey(started);
+      const day = weekState.days.find((candidate) => candidate.dateKey === dateKey);
+      if (!day || !dropDayMeta.get(dateKey)?.droppable) {
+        return;
+      }
+      setQuickLog({
+        ticketKey: draft.ticketKey,
+        ticketSummary: draft.ticketSummary,
+        ticket: draft.ticket,
+        mode: "copy",
+        targetDayName: day.weekdayName,
+        dateKey,
+        dayLabel: dropDayMeta.get(dateKey)?.label ?? dateKey,
+        hours: patch.timeSpentSeconds / 3600,
+        startedMinutes: started.getHours() * 60 + started.getMinutes(),
+        comment: draft.comment
+      });
+    },
+    [dropDayMeta, weekState.days]
+  );
+
+  const allWorklogs = useMemo(
+    () => Object.values(syncResult?.daySummaries ?? {}).flatMap((bucket) => bucket.worklogs),
+    [syncResult]
+  );
+
+  /**
+   * One delegated right-click handler for both modes: Summary rows carry `data-worklog-ids`,
+   * Timeline blocks carry `data-worklog-id`, so the menu needs no extra props down the tree.
+   */
+  const openContextMenu = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (!onDockLog) {
+        return;
+      }
+      const host = (event.target as HTMLElement).closest<HTMLElement>("[data-worklog-ids], [data-worklog-id]");
+      if (!host) {
+        return;
+      }
+      const ids = (host.dataset.worklogIds ?? host.dataset.worklogId ?? "").split(",").filter(Boolean);
+      const logs = ids
+        .map((id) => allWorklogs.find((log) => log.id === id && !log.allocation))
+        .filter((log): log is JiraWorklog => Boolean(log));
+      if (logs.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      setCopyPicker(null);
+      setContextMenu({ logs, x: event.clientX, y: event.clientY });
+    },
+    [allWorklogs, onDockLog]
+  );
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+  const contextMenuItems = useMemo<ContextMenuItem[]>(() => {
+    if (!contextMenu) {
+      return [];
+    }
+    const { logs, x, y } = contextMenu;
+    const items: ContextMenuItem[] = [];
+    if (logs.length === 1) {
+      items.push({
+        id: "edit",
+        label: "Edit worklog",
+        icon: <Pencil size={13} strokeWidth={2} />,
+        onSelect: () => onEditWorklog(logs[0])
+      });
+    }
+    if (canCopyWorklogs(logs)) {
+      items.push({
+        id: "book",
+        label: "Book on another day",
+        icon: <CalendarPlus size={13} strokeWidth={2} />,
+        onSelect: () => setCopyPicker({ logs, anchor: { left: x, top: y, bottom: y, align: "start" } })
+      });
+    }
+    return items;
+  }, [contextMenu, onEditWorklog]);
+
   const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
   const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
   const hoverBlockedReason = hoverMeta?.droppable ? "occupied time" : hoverMeta?.blockedReason ?? "read-only";
@@ -875,7 +965,7 @@ export const WeekView = ({
   const dropTagRect = viewMode === "timeline" && hoverSlotRect ? hoverSlotRect : hoverRect;
 
   return (
-    <div className="view">
+    <div className="view" onContextMenu={openContextMenu}>
       <WeekHeader
         weekStart={weekStart}
         remainingWeekHours={weekState.remainingWeekHours}
@@ -945,6 +1035,7 @@ export const WeekView = ({
           timelineCenterOnNow={timelineCenterOnNow}
           onAddTime={onAddTime}
           onMoveWorklog={onMoveWorklog}
+          onBookWorklog={onDockLog ? bookWorklogAt : undefined}
           onMoveRecurring={onMoveRecurring}
           onResizePersonalNote={onResizePersonalNote}
           onEditWorklog={onEditWorklog}
@@ -1041,6 +1132,16 @@ export const WeekView = ({
             </div>
           )}
         </>
+      )}
+
+      {contextMenu && contextMenuItems.length > 0 && (
+        <ContextMenu
+          label={`Actions for ${contextMenu.logs[0].issueKey}`}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenuItems}
+          onClose={closeContextMenu}
+        />
       )}
 
       {copyPicker && copyDraft && (

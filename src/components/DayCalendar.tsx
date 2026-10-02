@@ -68,6 +68,8 @@ interface DayCalendarProps {
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a drag move/resize of an existing worklog (optimistic). */
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Option/Alt-drag of a worklog: book a second entry at the dropped time instead of moving. */
+  onBookWorklog?: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => void;
   /** Commit a local note edge resize directly to IndexedDB. */
   onResizePersonalNote?: (
     note: PersonalNote,
@@ -124,6 +126,7 @@ export const DayCalendar = ({
   relocatingItemId,
   onCreateAt,
   onMoveWorklog,
+  onBookWorklog,
   onResizePersonalNote,
   onMoveRecurring,
   onPromoteGhost,
@@ -245,7 +248,16 @@ export const DayCalendar = ({
     trackRef,
     onCreate: (range) =>
       onCreateAt({ startedISO: startedISOForMinute(date, range.startMin), timeSpentSeconds: rangeToSeconds(range) }),
-    onCommitMove: (item, range, target) => {
+    onCommitMove: (item, range, target, options) => {
+      if (options?.duplicate) {
+        if (item.worklog && onBookWorklog) {
+          onBookWorklog(item.worklog, {
+            startedISO: startedISOForMinute(target?.date ?? date, range.startMin),
+            timeSpentSeconds: Math.max(60, Math.round((range.endMin - range.startMin) * 60))
+          });
+        }
+        return;
+      }
       if (item.note) {
         const startUnchanged = range.startMin === item.startMin;
         void onResizePersonalNote?.(item.note, {
@@ -281,8 +293,17 @@ export const DayCalendar = ({
     sourceMoveTargetId: moveTargetId,
     resolveMoveTarget,
     canMoveAcrossTargets: canMoveAcrossDays,
+    canDuplicate: onBookWorklog
+      ? (item) => Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)
+      : undefined,
     onMovePreview
   });
+  // While Option-dragging, the original keeps its place and a "+ BOOK" preview follows the pointer.
+  // Over another column the destination renders the preview (externalMovePreview), so hide ours.
+  const duplicateDraft = draft?.kind === "move" && draft.duplicate ? draft : undefined;
+  const showLocalDuplicatePreview = Boolean(
+    duplicateDraft && (!duplicateDraft.targetId || !moveTargetId || duplicateDraft.targetId === moveTargetId)
+  );
 
   const nowY = minuteToY(nowMin, layout);
   const showNow = isToday && nowMin >= layout.startMin && nowMin <= layout.endMin;
@@ -344,7 +365,7 @@ export const DayCalendar = ({
             })}
             {positioned.map(({ item, column, columns }) => {
               const widthPct = 100 / columns;
-              const isDragging = draft?.itemId === item.id;
+              const isDragging = draft?.itemId === item.id && !duplicateDraft;
               const isRelocating = relocatingItemId === item.id;
               const range =
                 isDragging && !isRelocating
@@ -397,6 +418,29 @@ export const DayCalendar = ({
                 />
               );
             })}
+            {duplicateDraft && showLocalDuplicatePreview && (() => {
+              const source = items.find((item) => item.id === duplicateDraft.itemId);
+              if (!source) {
+                return null;
+              }
+              const previewRect = rectForRange(duplicateDraft.range.startMin, duplicateDraft.range.endMin, layout);
+              return (
+                <CalendarBlock
+                  item={source}
+                  top={previewRect.top}
+                  height={Math.max(previewRect.height, MIN_BLOCK_PX)}
+                  left="4px"
+                  width="calc(100% - 14px)"
+                  labelStartMin={duplicateDraft.range.startMin}
+                  labelEndMin={duplicateDraft.range.endMin}
+                  dragging
+                  preview
+                  duplicatePreview
+                  minimal={embedded}
+                  onSelect={selectItem}
+                />
+              );
+            })()}
             {externalMovePreview && (() => {
               const previewRect = rectForRange(
                 externalMovePreview.range.startMin,
@@ -414,6 +458,7 @@ export const DayCalendar = ({
                   labelEndMin={externalMovePreview.range.endMin}
                   dragging
                   preview
+                  duplicatePreview={externalMovePreview.duplicate}
                   minimal={embedded}
                   onSelect={selectItem}
                 />

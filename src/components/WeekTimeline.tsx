@@ -35,6 +35,8 @@ interface WeekTimelineProps {
   timelineCenterOnNow?: boolean;
   onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
+  /** Option/Alt-drag books a second entry for the worklog at the dropped day and time. */
+  onBookWorklog?: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => void;
   onMoveRecurring: (entry: RecurringEntry, patch: RecurringMovePatch) => Promise<boolean>;
   onResizePersonalNote?: (
     note: PersonalNote,
@@ -122,6 +124,7 @@ export const WeekTimeline = ({
   timelineCenterOnNow = true,
   onAddTime,
   onMoveWorklog,
+  onBookWorklog,
   onMoveRecurring,
   onResizePersonalNote,
   onEditWorklog,
@@ -275,12 +278,15 @@ export const WeekTimeline = ({
                           : undefined
                       }
                       relocatingItemId={
-                        movePreview?.sourceId === day.dateKey && movePreview.targetId !== day.dateKey
+                        movePreview?.sourceId === day.dateKey &&
+                        movePreview.targetId !== day.dateKey &&
+                        !movePreview.duplicate
                           ? movePreview.item.id
                           : undefined
                       }
                       onCreateAt={(prefill) => onAddTime(date, prefill)}
                       onMoveWorklog={onMoveWorklog}
+                      onBookWorklog={onBookWorklog}
                       onMoveRecurring={onMoveRecurring}
                       onResizePersonalNote={onResizePersonalNote}
                       onPromoteGhost={noGhostPromotion}

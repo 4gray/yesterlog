@@ -25,6 +25,14 @@ export interface DragDraft {
   kind: DragKind;
   itemId?: string;
   range: Range;
+  /** Option/Alt is held: the gesture books a second entry and leaves the original in place. */
+  duplicate?: boolean;
+  /** Cross-day moves: the column currently under the pointer, so the source column can hide its own preview. */
+  targetId?: string;
+}
+
+export interface CommitMoveOptions {
+  duplicate: boolean;
 }
 
 export interface CalendarMoveTarget {
@@ -40,6 +48,7 @@ export interface CalendarMovePreview {
   targetId: string;
   item: CalendarItem;
   range: Range;
+  duplicate?: boolean;
 }
 
 interface InternalDrag {
@@ -53,6 +62,9 @@ interface InternalDrag {
   moved: boolean;
   range: Range;
   moveTarget?: CalendarMoveTarget;
+  duplicate: boolean;
+  /** False while a same-day duplicate still overlaps its original, so release must not commit it. */
+  fitValid: boolean;
 }
 
 interface UseDayCalendarInteractionArgs {
@@ -61,11 +73,13 @@ interface UseDayCalendarInteractionArgs {
   trackRef: RefObject<HTMLDivElement | null>;
   snap?: number;
   onCreate: (range: Range) => void;
-  onCommitMove: (item: CalendarItem, range: Range, target?: CalendarMoveTarget) => void;
+  onCommitMove: (item: CalendarItem, range: Range, target?: CalendarMoveTarget, options?: CommitMoveOptions) => void;
   onSelect: (item: CalendarItem) => void;
   sourceMoveTargetId?: string;
   resolveMoveTarget?: (clientX: number, clientY: number) => CalendarMoveTarget | undefined;
   canMoveAcrossTargets?: (item: CalendarItem) => boolean;
+  /** Items that may be duplicated with Option/Alt-drag instead of moved. */
+  canDuplicate?: (item: CalendarItem) => boolean;
   onMovePreview?: (preview?: CalendarMovePreview) => void;
 }
 
@@ -89,6 +103,7 @@ export const useDayCalendarInteraction = ({
   sourceMoveTargetId,
   resolveMoveTarget,
   canMoveAcrossTargets,
+  canDuplicate,
   onMovePreview
 }: UseDayCalendarInteractionArgs) => {
   const [draft, setDraft] = useState<DragDraft | null>(null);
@@ -106,6 +121,7 @@ export const useDayCalendarInteraction = ({
     sourceMoveTargetId,
     resolveMoveTarget,
     canMoveAcrossTargets,
+    canDuplicate,
     onMovePreview
   });
   ctxRef.current = {
@@ -119,7 +135,15 @@ export const useDayCalendarInteraction = ({
     sourceMoveTargetId,
     resolveMoveTarget,
     canMoveAcrossTargets,
+    canDuplicate,
     onMovePreview
+  };
+
+  /** Option/Alt may be pressed or released mid-gesture, so re-read it on every pointer event. */
+  const syncDuplicate = (drag: InternalDrag, event: { altKey: boolean }) => {
+    const allowed = drag.kind === "move" && Boolean(drag.item && ctxRef.current.canDuplicate?.(drag.item));
+    drag.duplicate = allowed && event.altKey;
+    document.body.classList.toggle("cal-duplicating", drag.duplicate);
   };
 
   const readMinute = useCallback((clientY: number, target?: CalendarMoveTarget) => {
@@ -150,6 +174,9 @@ export const useDayCalendarInteraction = ({
       if (Math.hypot(event.clientX - drag.startClientX, event.clientY - drag.startClientY) > MOVE_THRESHOLD_PX) {
         drag.moved = true;
       }
+      syncDuplicate(drag, event);
+      // A duplicate must not overlap its own original, so the original stays a blocker.
+      const excludeId = drag.duplicate ? undefined : drag.item?.id;
 
       if (drag.kind === "create") {
         const pointer = readMinute(event.clientY);
@@ -168,7 +195,7 @@ export const useDayCalendarInteraction = ({
         drag.moveTarget = target;
         if (usesCrossDayTargets && !target) {
           previewMove?.();
-          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range });
+          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range, duplicate: drag.duplicate });
           return;
         }
         const pointer = readMinute(event.clientY, target);
@@ -179,16 +206,17 @@ export const useDayCalendarInteraction = ({
           desiredStart,
           drag.durationMin,
           targetItems,
-          drag.item.id,
+          excludeId,
           targetLayout.startMin,
           targetLayout.endMin
         );
+        drag.fitValid = Boolean(fit) || !drag.duplicate;
         if (fit) {
           drag.range = fit;
         } else if (usesCrossDayTargets) {
           drag.moveTarget = undefined;
           previewMove?.();
-          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range });
+          setDraft({ kind: drag.kind, itemId: drag.item.id, range: drag.range, duplicate: drag.duplicate });
           return;
         }
         if (usesCrossDayTargets && drag.moved && sourceId && target) {
@@ -196,7 +224,8 @@ export const useDayCalendarInteraction = ({
             sourceId,
             targetId: target.id,
             item: drag.item,
-            range: drag.range
+            range: drag.range,
+            duplicate: drag.duplicate
           });
         }
       } else if (drag.kind === "resize-end" && drag.item) {
@@ -211,15 +240,21 @@ export const useDayCalendarInteraction = ({
         drag.range = fitResizeStart(pointer, drag.item.endMin, blockers, drag.item.id, currentSnap, sourceLayout.startMin);
       }
 
-      setDraft({ kind: drag.kind, itemId: drag.item?.id, range: drag.range });
+      setDraft({
+        kind: drag.kind,
+        itemId: drag.item?.id,
+        range: drag.range,
+        duplicate: drag.duplicate,
+        targetId: drag.moveTarget?.id
+      });
     },
     [readMinute]
   );
 
-  const onWindowUp = useCallback(() => {
+  const onWindowUp = useCallback((event: PointerEvent) => {
     window.removeEventListener("pointermove", onWindowMove);
     window.removeEventListener("pointerup", onWindowUp);
-    document.body.classList.remove("cal-dragging");
+    document.body.classList.remove("cal-dragging", "cal-duplicating");
 
     const drag = dragRef.current;
     dragRef.current = null;
@@ -227,6 +262,10 @@ export const useDayCalendarInteraction = ({
     ctxRef.current.onMovePreview?.();
     if (!drag) {
       return;
+    }
+    if (drag.moved && typeof event.altKey === "boolean") {
+      syncDuplicate(drag, event);
+      document.body.classList.remove("cal-duplicating");
     }
     const {
       items: currentItems,
@@ -252,8 +291,8 @@ export const useDayCalendarInteraction = ({
         const requiresTarget =
           drag.kind === "move" &&
           Boolean(resolveTarget && (canMoveAcross?.(drag.item) ?? true));
-        if (!requiresTarget || drag.moveTarget) {
-          commit(drag.item, drag.range, drag.moveTarget);
+        if ((!requiresTarget || drag.moveTarget) && drag.fitValid) {
+          commit(drag.item, drag.range, drag.moveTarget, { duplicate: drag.duplicate });
         }
       } else {
         select(drag.item);
@@ -276,7 +315,7 @@ export const useDayCalendarInteraction = ({
     () => () => {
       window.removeEventListener("pointermove", onWindowMove);
       window.removeEventListener("pointerup", onWindowUp);
-      document.body.classList.remove("cal-dragging");
+      document.body.classList.remove("cal-dragging", "cal-duplicating");
       ctxRef.current.onMovePreview?.();
     },
     [onWindowMove, onWindowUp]
@@ -301,7 +340,9 @@ export const useDayCalendarInteraction = ({
         startClientX: event.clientX,
         startClientY: event.clientY,
         moved: false,
-        range: { startMin: anchor, endMin: anchor + DEFAULT_DRAFT_MINUTES }
+        range: { startMin: anchor, endMin: anchor + DEFAULT_DRAFT_MINUTES },
+        duplicate: false,
+        fitValid: true
       });
     },
     [begin, layout.endMin, layout.startMin, readMinute]
@@ -313,7 +354,7 @@ export const useDayCalendarInteraction = ({
         return;
       }
       event.stopPropagation();
-      begin({
+      const drag: InternalDrag = {
         kind,
         item,
         durationMin: item.endMin - item.startMin,
@@ -322,8 +363,12 @@ export const useDayCalendarInteraction = ({
         startClientX: event.clientX,
         startClientY: event.clientY,
         moved: false,
-        range: { startMin: item.startMin, endMin: item.endMin }
-      });
+        range: { startMin: item.startMin, endMin: item.endMin },
+        duplicate: false,
+        fitValid: true
+      };
+      syncDuplicate(drag, event);
+      begin(drag);
     },
     [begin, readMinute]
   );

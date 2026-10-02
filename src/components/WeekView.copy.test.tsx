@@ -237,4 +237,74 @@ describe("WeekView copy to another day", () => {
     expect(document.body.querySelector(".copy-pop")).toBeNull();
     expect(document.body.querySelector(".quicklog-sheet")).toBeNull();
   });
+
+
+  it("opens a right-click menu on a worklog row that leads to the day picker", () => {
+    const onEditWorklog = vi.fn();
+    act(() => {
+      root.render(renderWeek({ onEditWorklog }));
+    });
+    const row = document.body.querySelector<HTMLElement>('.day-log[data-worklog-ids="wl-1"]');
+    expect(row).not.toBeNull();
+
+    act(() => {
+      row!.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 300, clientY: 200 }));
+    });
+
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"][aria-label="Actions for YLOG-397"]');
+    expect(menu).not.toBeNull();
+    const items = Array.from(menu!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    expect(items.map((item) => item.textContent)).toEqual(["Edit worklog", "Book on another day"]);
+    expect(document.activeElement).toBe(items[0]);
+
+    act(() => items[1].click());
+
+    expect(document.body.querySelector('[role="menu"]')).toBeNull();
+    expect(document.body.querySelector('[role="dialog"][aria-label="Book YLOG-397 on another day"]')).not.toBeNull();
+    expect(onEditWorklog).not.toHaveBeenCalled();
+  });
+
+  it("confirms an Option-drag duplicate from the timeline in the booking sheet", async () => {
+    const onDockLog = vi.fn<NonNullable<Parameters<typeof WeekView>[0]["onDockLog"]>>(async () => true);
+    act(() => {
+      root.render(renderWeek({ onDockLog, viewMode: "timeline" }));
+    });
+    const block = document.body.querySelector<HTMLElement>('.cal-block[data-worklog-id="wl-1"]');
+    const track = block?.closest<HTMLElement>(".cal-track");
+    expect(block).not.toBeNull();
+    expect(track).not.toBeNull();
+    vi.spyOn(track!, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 200,
+      bottom: 1296,
+      left: 0,
+      width: 200,
+      height: 1296,
+      toJSON: () => undefined
+    });
+    // The week timeline resolves drop columns through elementFromPoint; point it at this track.
+    Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => track });
+
+    act(() => {
+      block!.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 50, clientY: 500, altKey: true }));
+      window.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, button: 0, clientX: 50, clientY: 720, altKey: true }));
+    });
+    const previews = Array.from(document.body.querySelectorAll<HTMLElement>(".cal-block.is-duplicate-preview"));
+    expect(previews).toHaveLength(1);
+    expect(previews[0].closest<HTMLElement>(".cal-track")?.dataset.worklogMoveDay).toBe("2026-06-15");
+    expect(block!.classList.contains("is-relocating")).toBe(false);
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0, clientX: 50, clientY: 720, altKey: true }));
+    });
+
+    const sheet = document.body.querySelector<HTMLElement>(".quicklog-sheet");
+    expect(sheet).not.toBeNull();
+    expect(sheet!.textContent).toContain("Book time");
+    expect(sheet!.textContent).toContain("Book 2h on Monday");
+    expect(sheet!.textContent).toContain("18:00");
+    expect(onDockLog).not.toHaveBeenCalled();
+  });
 });

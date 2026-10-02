@@ -147,8 +147,28 @@ pick the day, confirm the prefilled duration and comment.
 - Adjusting the time before booking: the sheet already embeds the Day Map (`AddTimeTimelineEditor`)
   with drag-to-move and resize handles plus the duration chips; the footer hint now says so.
 
+## Phase 2 (2026-10-02)
+
+- **Option/Alt-drag in Timeline books a duplicate.** `useDayCalendarInteraction` re-reads `altKey` on
+  every pointer event (`canDuplicate` gate), keeps the original as a blocker, refuses to commit a
+  same-day duplicate that still overlaps its source, and passes `{ duplicate }` to `onCommitMove`.
+  `DayCalendar` renders a dashed "+ BOOK" preview (local when the pointer is over the source column,
+  via `externalMovePreview` on the destination) and calls `onBookWorklog`; `WeekView.bookWorklogAt`
+  opens the booking sheet at the exact dropped slot. Cursor switches to `copy` via `body.cal-duplicating`.
+- **Right-click menu** (`ContextMenu.tsx`): one delegated handler on the Week root reads
+  `data-worklog-ids` (Summary rows) or `data-worklog-id` (Timeline blocks). Items: "Edit worklog"
+  (single, non-bulk) and "Book on another day", which opens the day picker anchored at the pointer.
+  Delete is intentionally not in the menu: the edit modal keeps the only confirmed delete path.
+- Verification: `npm run test` 137 files / 971 tests; `npm run build`; `npm run e2e:renderer` 8/8.
+  Browser (demo seed, dark): synthetic right-click opens the menu with both items, "Book on another
+  day" opens the picker at the pointer; synthetic Option-drag of UX-31 from Monday to Wednesday
+  19:00 shows exactly one "+ BOOK" preview in the destination column, leaves the original opaque,
+  and opens "Book 3h on Wednesday"; a drop onto occupied Wednesday time is refused like a move.
+  The browser pane's automated right-click and drag do not emit `contextmenu`/pointer events, so
+  those two gestures were driven with dispatched DOM events; the Electron app delivers real ones.
+
 ## Status
 
-Implemented 2026-10-02, uncommitted on `claude/worklog-copy-between-days-175511`. Known limit: the
+Phase 1 committed as 2238297; Phase 2 implemented 2026-10-02 on `claude/worklog-copy-between-days-175511`. Known limit: the
 Edit-modal path uses Add Time's retrospective default start, so on a busy target day it may show the
 existing overlap warning until the user moves the slot; the Week picker path places the copy itself.
