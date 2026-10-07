@@ -248,6 +248,15 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
+          # Match electron-updater's GitHub filenames. GitHub otherwise turns
+          # spaces in NSIS filenames into dots, breaking latest.yml URLs.
+          for asset in release-assets/*; do
+            if [[ "$asset" == *" "* ]]; then
+              target="${asset// /-}"
+              test ! -e "$target"
+              mv -- "$asset" "$target"
+            fi
+          done
           assets=(release-assets/*)
           if [ "${#assets[@]}" -eq 0 ]; then
             echo "No release assets were downloaded."

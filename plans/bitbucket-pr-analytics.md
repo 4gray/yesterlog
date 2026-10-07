@@ -341,7 +341,7 @@ GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve
 - [x] Capture release screenshots for PR Analytics and run release:dry-run.
 - [x] Commit feature, open PR #47, merge after CI and verify main CI.
 - [x] Run patch release scripts from an isolated main checkout. v3.3.1 CI passed; release run 37631217809 failed twice in macOS keychain setup and Snap desktop-file generation.
-- [ ] Verify all platform assets, curate notes from included PRs and compare range; keep draft.
+- [x] Verify all 14 platform assets, curate notes from PRs #46/#47 and v3.3.0...v3.3.2; GitHub release remains draft.
 - Snap edge is enabled in the existing workflow. Candidate/stable promotion requires
   a verified Ubuntu install per the release skill; this macOS host cannot perform that validation.
 
@@ -351,4 +351,12 @@ GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve
 - Fix CI keychain initialization: electron-builder 26.15.3 uses the certificate password to unlock its randomly passworded keychain. Prepare an explicit ephemeral keychain and retain mandatory signing/notarization. User is independently checking Apple Developer agreements.
 - Verify staged metadata, complete CI and signed cross-platform workflow, then curate the draft against the last shipped v3.3.0.
 
-- Recovery validation: production build and Linux x64 Snap staging passed locally; staged launcher/icon/organize mappings verified. Workflow YAML and Bash syntax passed, with a stubbed security CLI validating separate passwords, preserved keychain search entries and certificate cleanup. Full CI and hosted signing/packaging remain pending.
+- Recovery validation: production build and Linux x64 Snap staging passed locally; staged launcher/icon/organize mappings verified. Workflow YAML and Bash syntax passed, with a stubbed security CLI validating separate passwords, preserved keychain search entries and certificate cleanup. Full CI and hosted signing/packaging subsequently passed.
+
+### Release result
+
+- v3.3.2 release workflow 37634544494 passed on all platforms. Draft release has 14 assets and curated notes with the public Analytics screenshot. v3.3.1 remains a failed, unreleased tag.
+- Downloaded macOS build passed codesign --verify --deep --strict, Gatekeeper (Notarized Developer ID), and stapler validation. DMG/ZIP SHA-512 matches latest-mac.yml.
+- All three updater manifests match released version, asset names and sizes. Windows NSIS filenames were renamed in the draft to match latest.yml; future uploads now normalize spaces to hyphens with collision protection (checked using fixture assets).
+- Snap metadata and desktop launcher inspected from the exact built artifact. Store upload succeeded: revision 5 in edge. Ubuntu runtime verification and candidate/stable promotion were not performed on this macOS host.
+- Git author settings now match iptvnator: 4gray <fourgray@proton.me>, both in the main repository and isolated release clone. Previously pushed commits/tags were preserved.
