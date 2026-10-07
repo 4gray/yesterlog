@@ -72,6 +72,13 @@ sudo snap install yesterlog
 
 Bitbucket and local AI are optional. The core workflow works without either.
 
+With Bitbucket connected, **Reports → PR analytics** shows created and merged PRs,
+comments, and median/p75 turnaround by week or month. Choose one configured
+repository or all connected repositories, and PRs authored by **Me** or **All**.
+Use **Refresh** to load history; cached results remain available offline. Partial
+coverage is shown explicitly. Turnaround is elapsed calendar time, including waiting
+and rework, rather than hours spent reviewing.
+
 [Read the setup guide →](./docs/getting-started.md)
 
 ## Local-first by design

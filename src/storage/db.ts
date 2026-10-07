@@ -1,3 +1,5 @@
+import type { PrAnalyticsCache, PrAnalyticsRepository } from "../../shared/prAnalytics";
+import { analyticsUserKey } from "../../shared/prAnalytics";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
@@ -24,7 +26,7 @@ import {
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 15;
+const DB_VERSION = 16;
 const SETTINGS_KEY = "default";
 const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
@@ -39,6 +41,7 @@ type StoreName =
   | "favorites"
   | "personalNotes"
   | "bitbucketReviewResults"
+  | "prAnalytics"
   | "recurringEvents"
   | "recurringOccurrences"
   | "reconstructDrafts"
@@ -172,6 +175,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("personalNotes")) {
         db.createObjectStore("personalNotes", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("prAnalytics")) {
+        db.createObjectStore("prAnalytics", { keyPath: "cacheKey" });
       }
 
       if (!db.objectStoreNames.contains("bitbucketReviewResults")) {
@@ -1127,3 +1134,26 @@ export const getSavedRecaps = async (): Promise<SavedRecap[]> =>
   (await readAllStore<SavedRecap>("savedRecaps")).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
 
 export const saveSavedRecap = (recap: SavedRecap) => addStore("savedRecaps", recap);
+
+export const getPrAnalyticsCache = (cacheKey: string) => readStore<PrAnalyticsCache>("prAnalytics", cacheKey);
+
+/** Replace one repository atomically; a new verified account discards the old account's data. */
+export const savePrAnalyticsRepository = async (cacheKey: string, result: PrAnalyticsRepository) => {
+  const db = await openDatabase();
+  return new Promise<PrAnalyticsCache>((resolve, reject) => {
+    const transaction = db.transaction("prAnalytics", "readwrite");
+    const store = transaction.objectStore("prAnalytics");
+    const request = store.get(cacheKey);
+    let saved: PrAnalyticsCache;
+    request.onsuccess = () => {
+      const prior = request.result as PrAnalyticsCache | undefined;
+      const accountKey = analyticsUserKey(result.user);
+      const repositories = prior?.accountKey === accountKey ? prior.repositories : [];
+      saved = { cacheKey, accountKey, repositories: [...repositories.filter((r) => r.repository !== result.repository), result] };
+      store.put(saved);
+    };
+    transaction.oncomplete = () => resolve(saved);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error ?? new Error("Analytics cache write was interrupted."));
+  });
+};

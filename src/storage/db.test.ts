@@ -160,7 +160,8 @@ describe("notes workspace schema migration", () => {
       request.onsuccess = () => resolve(request.result);
     });
 
-    expect(db.version).toBe(15);
+    expect(db.version).toBe(16);
+    expect([...db.objectStoreNames]).toContain("prAnalytics");
     expect([...db.objectStoreNames]).toContain("workspaceNotes");
     expect([...db.objectStoreNames]).toContain("noteNotebooks");
     expect([...db.objectStoreNames]).toContain("personalNotes");

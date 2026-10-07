@@ -1,3 +1,4 @@
+import type { PrAnalyticsRequest, PrAnalyticsRepository, PrAnalyticsProgress } from "../shared/prAnalytics";
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
   AddWorklogRequest,
@@ -41,6 +42,13 @@ import type {
 } from "../shared/types";
 
 const yesterlogApi = {
+  syncPrAnalytics: (request: PrAnalyticsRequest): Promise<PrAnalyticsRepository> => ipcRenderer.invoke("bitbucket:sync-analytics", request),
+  cancelPrAnalytics: (requestId: string): Promise<void> => ipcRenderer.invoke("bitbucket:cancel-analytics", requestId),
+  onPrAnalyticsProgress: (callback: (value: PrAnalyticsProgress) => void) => {
+    const listener = (_event: IpcRendererEvent, value: PrAnalyticsProgress) => callback(value);
+    ipcRenderer.on("bitbucket:analytics-progress", listener);
+    return () => ipcRenderer.removeListener("bitbucket:analytics-progress", listener);
+  },
   testJiraConnection: (settings: AppSettings): Promise<JiraConnectionResult> => {
     return ipcRenderer.invoke("jira:test-connection", settings);
   },
