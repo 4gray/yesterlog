@@ -1,6 +1,6 @@
 {
   "name": "yesterlog",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "private": true,
   "description": "Yesterlog is a local-first work memory for developers who use Jira.",
   "license": "MIT",
