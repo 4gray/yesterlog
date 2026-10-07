@@ -336,11 +336,19 @@ Rendered QA artifacts: `/Users/fourgray/.codex/visualizations/2026/10/07/01a1163
 ## Release execution (2026-10-07)
 
 User authorized merging, triggering the release workflow, and preparing a **draft**
-GitHub release with curated notes. Default patch bump: 3.3.0 → 3.3.1.
+GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve the failed tag; a packaging repair will ship as v3.3.2.
 
 - [x] Capture release screenshots for PR Analytics and run release:dry-run.
-- [ ] Commit feature, open PR with Release note, merge after CI and verify main CI.
-- [ ] Run patch release scripts from an isolated main checkout and watch the tagged workflow.
+- [x] Commit feature, open PR #47, merge after CI and verify main CI.
+- [x] Run patch release scripts from an isolated main checkout. v3.3.1 CI passed; release run 37631217809 failed twice in macOS keychain setup and Snap desktop-file generation.
 - [ ] Verify all platform assets, curate notes from included PRs and compare range; keep draft.
 - Snap edge is enabled in the existing workflow. Candidate/stable promotion requires
   a verified Ubuntu install per the release skill; this macOS host cannot perform that validation.
+
+### Packaging recovery
+
+- Fix Snap staging: electron-builder writes snap/gui/yesterlog.desktop but adds an invalid apps.desktop reference to meta/gui; let Snapcraft discover the staged desktop entry.
+- Fix CI keychain initialization: electron-builder 26.15.3 uses the certificate password to unlock its randomly passworded keychain. Prepare an explicit ephemeral keychain and retain mandatory signing/notarization. User is independently checking Apple Developer agreements.
+- Verify staged metadata, complete CI and signed cross-platform workflow, then curate the draft against the last shipped v3.3.0.
+
+- Recovery validation: production build and Linux x64 Snap staging passed locally; staged launcher/icon/organize mappings verified. Workflow YAML and Bash syntax passed, with a stubbed security CLI validating separate passwords, preserved keychain search entries and certificate cleanup. Full CI and hosted signing/packaging remain pending.
