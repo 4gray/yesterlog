@@ -376,9 +376,9 @@ GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve
 
 - User requested the next patch release. Prepare a GitHub draft with curated notes; keep Snap in edge pending Ubuntu runtime verification.
 - [x] Review the three changed files: synthetic fixtures only, no real account/repository/PR data or credentials.
-- [ ] Run release:dry-run, commit the fix, merge after CI, and release from current main with the 4gray Git identity.
-- [ ] Verify hosted platform builds, signed/notarized macOS artifacts, updater manifests and Snap metadata.
-- [ ] Curate notes against v3.3.2, including the Refresh recovery instruction, and hand off the draft.
+- [x] Run release:dry-run, commit the fix, merge PR #48 after CI, and release from current main with the 4gray Git identity. Main/version CI passed; v3.3.3 tag points to dd8c2653da20fe61ec3c91e3f0ebba7bbf5285ac. Release workflow 37650804833 completed successfully on every job.
+- [x] Verify hosted platform builds, signed/notarized macOS artifacts, updater manifests and Snap metadata. All 14 assets are present; manifest names/sizes and downloaded SHA-512 hashes match. macOS codesign, Gatekeeper, stapler and embedded 3.3.3 version checks passed; Windows/macOS ZIP integrity and Linux archive metadata checks passed.
+- [x] Curate notes against PR #48, generated notes and the full v3.3.2 comparison, including the Refresh recovery instruction. Published on the user’s explicit request: https://github.com/4gray/yesterlog/releases/tag/v3.3.3
 
 ### Added release scope
 
@@ -387,3 +387,7 @@ GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve
 - Verify interactions in renderer E2E and inspect dark/light/narrow layouts with synthetic demo data; refresh the Analytics release screenshot.
 
 - Local release verification passed with the added UI scope: brand audit, 992 unit tests, 13 renderer E2E tests, and production build. Dark/light demo screenshots refreshed; tooltip and title/number search inspected using synthetic data, with no browser console errors.
+
+- AI review-flow analysis was discussed as a future feature only: deterministic comparisons/outliers with optional AI explanation and anonymized aggregates. It is explicitly outside v3.3.3.
+
+- Snap revision 6 was published to edge. Ubuntu runtime verification and candidate/stable promotion remain intentionally unperformed on this macOS host; Windows/Linux runtime tests were not run locally. AI analysis remains deferred.

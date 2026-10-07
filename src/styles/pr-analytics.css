@@ -672,3 +672,229 @@
   font-size: 11px;
   margin: -4px 0 12px;
 }
+
+/* Comparison and optional explanation use the same quiet report surfaces. */
+.pa-period-picker {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+.pa-filters .pa-period-picker label {
+  flex: none;
+  max-width: none;
+}
+.pa-date-popover {
+  position: relative;
+}
+.pa-date-popover summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  color: var(--text-strong);
+  font-size: 11px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+.pa-date-popover form {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: min(290px, calc(100vw - 48px));
+  max-width: 100%;
+  min-width: 240px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 12px;
+}
+.pa-date-popover input {
+  min-width: 0;
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font: 12px var(--font-sans);
+  color-scheme: dark;
+}
+.theme-light .pa-date-popover input {
+  color-scheme: light;
+}
+.pa-date-hint,
+.pa-date-error {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.pa-date-error {
+  color: var(--amber);
+}
+.pa-date-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.pa-comparison {
+  border-top: 1px solid var(--line);
+  padding: 22px 0;
+}
+.pa-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+.pa-comparison th,
+.pa-comparison td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+.pa-comparison th {
+  font-weight: 400;
+  color: var(--muted);
+}
+.pa-comparison thead th {
+  color: var(--text);
+}
+.pa-comparison th:first-child {
+  padding-left: 0;
+  width: 32%;
+}
+.pa-comparison small {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.pa-ai {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  padding: 18px;
+  margin-bottom: 28px;
+}
+.pa-ai .pa-panel-heading {
+  margin-bottom: 10px;
+}
+.pa-ai h2 .pa-badge {
+  margin-left: 6px;
+}
+.pa-ai-basis {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 7px 0;
+}
+.pa-ai-basis button {
+  margin: 7px 0 0 6px;
+}
+.pa-ai [role="status"] {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pa-ai-result h3 {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin: 20px 0 12px;
+}
+.pa-ai h4 {
+  font-size: 12px;
+  font-weight: 550;
+  margin: 0 0 7px;
+}
+.pa-ai-observations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 20px;
+}
+.pa-ai-result p {
+  margin: 0 0 9px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.pa-ai-result small {
+  display: block;
+  color: var(--muted);
+  font: 10px/1.7 var(--font-mono);
+}
+.pa-ai-evidence-link {
+  display: block;
+  background: none;
+  border: 0;
+  padding: 9px 0 0;
+  color: var(--text-strong);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pa-ai-suggestion,
+.pa-ai-evidence {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+.pa-ai-evidence ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.pa-ai-evidence li {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 9px 0;
+  font-size: 11px;
+}
+.pa-ai-evidence a,
+.pa-ai-evidence li > span {
+  overflow-wrap: anywhere;
+  min-width: 0;
+  color: var(--text-strong);
+}
+.pa-ai-evidence strong {
+  white-space: nowrap;
+  font-weight: 500;
+}
+.pa-ai-disclosure {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.pa-ai-disclosure summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.pa-ai-disclosure p {
+  margin: 8px 0 0;
+}
+@media (max-width: 720px) {
+  .pa-period-picker {
+    flex-basis: 100%;
+  }
+  .pa-period-picker > label {
+    max-width: 260px;
+  }
+  .pa-date-popover form {
+    max-width: 100%;
+  }
+  .pa-ai {
+    padding: 14px;
+  }
+}

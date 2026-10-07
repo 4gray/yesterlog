@@ -667,3 +667,43 @@ test("PR analytics shows chart values and searches cached PRs without changing t
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   });
 });
+
+test("PR analytics supports custom dates, repository comparison and explicit inline analysis", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "reports" }, async page => {
+    await page.getByRole("tab", { name: "PR analytics", exact: true }).click();
+    const ai = page.getByRole("region", { name: "AI review flow" });
+    assert.equal(await ai.locator(".pa-ai-result").count(), 0);
+    await ai.getByRole("button", { name: "Analyze review flow", exact: true }).click();
+    await ai.locator(".pa-ai-result").waitFor();
+    await ai.getByRole("button", { name: /Inspect .* supporting PRs/ }).first().click();
+    assert.ok(await ai.locator(".pa-ai-evidence").isVisible());
+    await ai.getByRole("button", { name: "Collapse", exact: true }).click();
+    assert.equal(await ai.locator(".pa-ai-result").count(), 0);
+    await page.getByRole("combobox", { name: "Repository", exact: true }).selectOption("explorer-web");
+    assert.equal(await ai.locator(".pa-ai-result").count(), 0, "scope changes clear previous analysis");
+    await page.getByRole("combobox", { name: "Compare with", exact: true }).selectOption("auth");
+    const comparison = page.getByRole("region", { name: "Repository comparison" });
+    assert.ok(await comparison.isVisible());
+    assert.deepEqual(await comparison.locator("thead th").allTextContents(), ["Metric", "explorer-web", "auth"]);
+    await page.getByRole("combobox", { name: "Period", exact: true }).selectOption("custom");
+    await page.getByLabel("From", { exact: true }).fill("2026-06-01");
+    await page.getByLabel("To", { exact: true }).fill("2026-06-03");
+    await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+    assert.ok((await page.locator(".pa-context").innerText()).includes("1 Jun 2026 – 3 Jun 2026"));
+    assert.ok((await ai.innerText()).includes("At least 5"));
+    assert.equal(await ai.getByRole("button", { name: "Analyze review flow", exact: true }).isDisabled(), true);
+    await page.locator(".pa-date-popover summary").click();
+    await page.getByLabel("From", { exact: true }).fill("2026-06-04");
+    assert.ok(await page.getByRole("button", { name: "Apply dates", exact: true }).isDisabled());
+    await page.getByLabel("From", { exact: true }).fill("2026-06-02");
+    await page.getByLabel("To", { exact: true }).fill("2026-06-02");
+    await page.getByRole("button", { name: "Apply dates", exact: true }).click();
+    assert.ok((await page.locator(".pa-context").innerText()).includes("2 Jun 2026 – 2 Jun 2026"));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator(".pa-date-popover summary").click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.keyboard.press("Escape");
+    await page.getByRole("combobox", { name: "Compare with", exact: true }).selectOption("");
+    assert.equal(await comparison.count(), 0);
+  });
+});

@@ -305,3 +305,10 @@ describe("Bitbucket analytics collector", () => {
   });
 
 });
+
+it("accepts a report year plus its comparison history but rejects unbounded scans", async () => {
+  api();
+  const result = await syncPrAnalytics({ ...request, rangeStart: "2024-07-01T00:00:00Z" });
+  expect(result.rangeStart).toBe("2024-07-01T00:00:00Z");
+  await expect(syncPrAnalytics({ ...request, rangeStart: "2020-01-01T00:00:00Z" })).rejects.toThrow("at most two years");
+});

@@ -152,3 +152,21 @@ describe("PR analytics orchestration", () => {
     expect(key).not.toBe(await prAnalyticsCacheKey({ ...settings, bitbucketWorkspace: "other" }));
   });
 });
+
+it("refreshes only the compared repositories and explicitly requested history window", async () => {
+  vi.mocked(nativeApi.syncPrAnalytics).mockImplementation(async request => ({ ...result(request.repository), rangeStart: request.rangeStart, rangeEnd: request.rangeEnd }));
+  await render({ ...settings, bitbucketRepositories: "a,b,c" });
+  const wider = { start: new Date("2026-05-01"), end: range.end };
+  await act(async () => { await hook.refresh(["a", "c"], wider); });
+  expect(vi.mocked(nativeApi.syncPrAnalytics).mock.calls.map(([r]) => r.repository)).toEqual(["a", "c"]);
+  expect(vi.mocked(nativeApi.syncPrAnalytics).mock.calls.every(([r]) => r.rangeStart === wider.start.toISOString() && r.rangeEnd === wider.end.toISOString())).toBe(true);
+});
+
+it("retains a wider comparison checkpoint on ordinary refresh", async () => {
+  const wider = { ...result(), rangeStart: "2026-05-01T00:00:00.000Z", complete: false };
+  vi.mocked(getPrAnalyticsCache).mockResolvedValue({ cacheKey: "key", accountKey: "me", repositories: [wider] });
+  vi.mocked(nativeApi.syncPrAnalytics).mockResolvedValue(wider);
+  await render();
+  await act(async () => { await hook.refresh("a"); });
+  expect(nativeApi.syncPrAnalytics).toHaveBeenCalledWith(expect.objectContaining({ rangeStart: wider.rangeStart, previous: wider }));
+});
