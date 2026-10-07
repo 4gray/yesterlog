@@ -569,3 +569,106 @@
     flex-wrap: wrap;
   }
 }
+
+.pa-chart-area {
+  position: relative;
+}
+.pa-chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -100%);
+  z-index: 5;
+  width: 180px;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-card);
+  color: var(--text-strong);
+  pointer-events: none;
+  font-size: 11px;
+}
+.pa-chart-tooltip > strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.pa-chart-tooltip > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+}
+.pa-chart-tooltip b {
+  font: 500 13px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pa-chart-tooltip i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 1px;
+  background: var(--blue-soft);
+}
+.pa-chart-tooltip small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.pa-table-controls {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.pa-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 0 9px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+.pa-search:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.pa-search input {
+  width: 175px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font: 11px var(--font-sans);
+  outline: none;
+}
+.pa-search input::placeholder {
+  color: var(--muted);
+}
+.pa-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.pa-search button {
+  display: flex;
+  border: 0;
+  padding: 2px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pa-search-summary {
+  color: var(--muted);
+  font-size: 11px;
+  margin: -4px 0 12px;
+}

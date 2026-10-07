@@ -360,3 +360,30 @@ GitHub release with curated notes. Initial patch bump: 3.3.0 → 3.3.1. Preserve
 - All three updater manifests match released version, asset names and sizes. Windows NSIS filenames were renamed in the draft to match latest.yml; future uploads now normalize spaces to hyphens with collision protection (checked using fixture assets).
 - Snap metadata and desktop launcher inspected from the exact built artifact. Store upload succeeded: revision 5 in edge. Ubuntu runtime verification and candidate/stable promotion were not performed on this macOS host.
 - Git author settings now match iptvnator: 4gray <fourgray@proton.me>, both in the main repository and isolated release clone. Previously pushed commits/tags were preserved.
+
+## Live-data investigation (3.3.2)
+
+- Investigate incomplete analytics reported after release: lower-bound counts and absent merge/review timing.
+- Privacy: inspect only necessary local diagnostics, keep real account/repository/PR data and credentials out of source, fixtures, plans and commits. Reproduce fixes with synthetic fixtures.
+- Confirm the collector failure, API pagination/event contract and coverage UX. Preserve actual merge timestamps rather than inferring from last update.
+- Confirmed through the installed app's read-only main-process API on the same PR: pagelen=100 returns HTTP 400 with incomplete activity/comments; pagelen=50 completes both feeds and recovers the merge timestamp. Only boolean diagnostic results were collected; the app cache was not written.
+- Corrected new history requests to pagelen=50 and restart oversized continuation checkpoints from the beginning, avoiding changed offsets or repeatedly cached HTTP 400s.
+- Error warnings identify the affected feed without retaining response bodies/URLs. The missing-merge-event warning now requires a completed activity feed.
+- Three synthetic regression tests cover accepted page size, recovery of old checkpoints, and private-response exclusion. Before the fix, both page-size/recovery cases failed; after it, full suite passes: 992 tests across 141 files. Production build passed (existing Vite chunk-size warning).
+- No renderer changes; native-app read-only comparison verified the endpoint behavior. No private profile/settings dumps, real PR fixtures, or names were written to source. Fix remains local and requires a new app build/release; installed 3.3.2 is unchanged.
+
+## Analytics hotfix release (3.3.3)
+
+- User requested the next patch release. Prepare a GitHub draft with curated notes; keep Snap in edge pending Ubuntu runtime verification.
+- [x] Review the three changed files: synthetic fixtures only, no real account/repository/PR data or credentials.
+- [ ] Run release:dry-run, commit the fix, merge after CI, and release from current main with the 4gray Git identity.
+- [ ] Verify hosted platform builds, signed/notarized macOS artifacts, updater manifests and Snap metadata.
+- [ ] Curate notes against v3.3.2, including the Refresh recovery instruction, and hand off the draft.
+
+### Added release scope
+
+- Add a visible, keyboard-accessible chart tooltip with Created/Merged counts (and values for other trend metrics), preserving incomplete-data markers.
+- Add local title/PR-number search within the current table scope. Keep aggregate metrics unchanged, reset pagination when searching, show match count and an explicit clear action.
+- Verify interactions in renderer E2E and inspect dark/light/narrow layouts with synthetic demo data; refresh the Analytics release screenshot.
+
+- Local release verification passed with the added UI scope: brand audit, 992 unit tests, 13 renderer E2E tests, and production build. Dark/light demo screenshots refreshed; tooltip and title/number search inspected using synthetic data, with no browser console errors.

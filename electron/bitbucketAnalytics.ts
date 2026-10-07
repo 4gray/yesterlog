@@ -11,6 +11,7 @@ import { withBitbucketSlot } from "./bitbucketTransport";
 
 const BASE = "https://api.bitbucket.org/2.0";
 const REQUEST_BUDGET = 450;
+const HISTORY_PAGE_SIZE = 50;
 interface User {
   account_id?: string;
   uuid?: string;
@@ -48,6 +49,14 @@ const user = (u?: User): PrAnalyticsUser => ({
 });
 const date = (s?: string) => (s && Number.isFinite(Date.parse(s)) ? new Date(s).toISOString() : undefined);
 const message = (e: unknown) => (e instanceof Error ? e.message : "Unable to read Bitbucket history.");
+const oversizedHistoryCursor = (cursor: string | null) => {
+  if (!cursor) return false;
+  try {
+    return Number(new URL(cursor).searchParams.get("pagelen")) > HISTORY_PAGE_SIZE;
+  } catch {
+    return false; // The request validator will reject malformed/unsafe URLs.
+  }
+};
 
 /** Persists only metadata; never fetches diff or commit content. */
 export async function syncPrAnalytics(
@@ -122,7 +131,15 @@ export async function syncPrAnalytics(
         continue;
       }
       if (response.status === 429 || response.status >= 500) stopped = true;
-      throw new Error(`Bitbucket request failed (${response.status}). Refresh to retry incomplete history.`);
+      const resource = url.pathname.endsWith("/activity")
+        ? "PR activity"
+        : url.pathname.endsWith("/comments")
+          ? "PR comments"
+          : url.pathname.endsWith("/pullrequests")
+            ? "the PR list"
+            : "the current user";
+      // Do not persist response bodies or URLs: they can contain private repository data.
+      throw new Error(`Bitbucket request failed (${response.status}) while loading ${resource}. Refresh to retry incomplete history.`);
     }
   }
   const currentUser = user(await read<User>("/user"));
@@ -247,10 +264,21 @@ export async function syncPrAnalytics(
       continue;
     }
     try {
+      // v3.3.2 cached rejected pagelen=100 URLs. Restart those feeds instead of
+      // replaying the same invalid request or changing page offsets mid-history.
+      if (pr.history && [pr.history.activityNext, pr.history.commentsNext].some(oversizedHistoryCursor)) {
+        delete pr.history;
+        pr.activityComplete = false;
+        pr.commentsComplete = false;
+        pr.mergedAt = undefined;
+        pr.firstResponseAt = undefined;
+        pr.comments = [];
+        pr.mergeTimeMissing = pr.state === "MERGED";
+      }
       const history = (pr.history ??= {
         startedAt: now,
-        activityNext: `${BASE}${prefix}/${pr.id}/activity?pagelen=100`,
-        commentsNext: `${BASE}${prefix}/${pr.id}/comments?pagelen=100`,
+        activityNext: `${BASE}${prefix}/${pr.id}/activity?pagelen=${HISTORY_PAGE_SIZE}`,
+        commentsNext: `${BASE}${prefix}/${pr.id}/comments?pagelen=${HISTORY_PAGE_SIZE}`,
         comments: []
       });
       const observeResponse = (at: string | undefined, author: PrAnalyticsUser) => {
@@ -329,7 +357,7 @@ export async function syncPrAnalytics(
     listComplete &&
     !missingDates &&
     pullRequests.every((p) => p.activityComplete && p.commentsComplete && !p.mergeTimeMissing);
-  if (pullRequests.some((p) => p.mergeTimeMissing))
+  if (pullRequests.some((p) => p.activityComplete && p.mergeTimeMissing))
     warnings.add("Some merged PRs have no dated merge event; they are excluded from merge totals.");
   return {
     workspace,

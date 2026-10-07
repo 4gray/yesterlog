@@ -619,3 +619,51 @@ test("PR analytics filters repositories and authors, drills into periods, and gr
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   });
 });
+
+
+test("PR analytics shows chart values and searches cached PRs without changing totals", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "reports" }, async (page) => {
+    await page.getByRole("tab", { name: "PR analytics", exact: true }).click();
+    const bar = page.locator(".pa-bars button").first();
+    const label = await bar.getAttribute("aria-label");
+    await bar.hover();
+    const tooltip = page.getByRole("tooltip");
+    await tooltip.waitFor();
+    const values = await tooltip.locator("b").allTextContents();
+    assert.deepEqual(values, label.match(/(\d+) created, (\d+) merged/).slice(1));
+    await bar.focus();
+    await page.keyboard.press("Escape");
+    assert.equal(await tooltip.count(), 0);
+    await page.keyboard.press("Tab");
+    await tooltip.waitFor();
+    const totals = await page.locator(".pa-kpis").innerText();
+    const originalCount = await page.locator(".pa-register h2 .pa-badge").innerText();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    const title = await page.locator(".pa-pr-title").first().evaluate(el => el.firstChild.textContent);
+    const id = (await page.locator(".pa-pr-title small").first().innerText()).match(/#(\d+)/)[1];
+    const search = page.getByRole("searchbox", { name: "Search pull requests" });
+    await search.fill(`  ${title.toUpperCase()}  `);
+    assert.ok(await page.locator(".pa-pr-title").count() > 0);
+    for (const text of await page.locator(".pa-pr-title").allTextContents()) {
+      assert.ok(text.toLowerCase().includes(title.toLowerCase()));
+    }
+    assert.equal(await page.getByRole("button", { name: "Previous", exact: true }).isDisabled(), true);
+    await search.fill(`#${id}`);
+    assert.ok(await page.locator(".pa-pr-title").count() > 0);
+    for (const text of await page.locator(".pa-pr-title small").allTextContents()) assert.ok(text.includes(`#${id}`));
+    await page.locator(".pa-pr-title").first().click();
+    assert.ok(await page.locator(".pa-detail").isVisible());
+    await search.fill("no-such-synthetic-pull-request");
+    assert.equal(await page.locator(".pa-pr-title").count(), 0);
+    assert.ok(await page.locator(".pa-table-empty").isVisible());
+    assert.equal(await page.locator(".pa-kpis").innerText(), totals);
+    await page.getByRole("button", { name: "Clear PR search" }).click();
+    assert.equal(await page.locator(".pa-register h2 .pa-badge").innerText(), originalCount);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await bar.hover();
+    await tooltip.waitFor();
+    const box = await tooltip.boundingBox();
+    assert.ok(box.x >= 0 && box.x + box.width <= 390, "tooltip fits narrow screen");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  });
+});
