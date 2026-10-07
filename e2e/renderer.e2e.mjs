@@ -591,3 +591,31 @@ test("mobile demo view renders without document overflow", { timeout: 60_000 }, 
     );
   });
 });
+
+
+test("PR analytics filters repositories and authors, drills into periods, and groups by month", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "reports" }, async (page) => {
+    await page.getByRole("tab", { name: "PR analytics", exact: true }).click();
+    await page.getByRole("heading", { name: "Pull request analytics", exact: true }).waitFor();
+    const created = () => page.locator(".pa-kpis button").first().locator("strong").innerText().then(Number);
+    const mine = await created();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    assert.ok(await created() > mine, "All includes other authors");
+    await page.getByRole("combobox", { name: "Repository", exact: true }).selectOption("auth");
+    assert.ok(await created() < mine, "One repository narrows the pooled cohort");
+    await page.getByRole("button", { name: "Month", exact: true }).click();
+    assert.ok(await page.locator(".pa-bars button").count() < 12);
+    const period = page.locator(".pa-bars button").first();
+    const count = Number((await period.getAttribute("aria-label")).match(/(\d+) created/)[1]);
+    await period.click();
+    assert.equal(Number(await page.locator(".pa-register h2 .pa-badge").innerText()), count);
+    await page.locator(".pa-pr-title").first().click();
+    assert.ok(await page.locator(".pa-detail").isVisible());
+    await page.getByRole("button", { name: "Clear period" }).click();
+    await page.getByRole("combobox", { name: "Trend metric", exact: true }).selectOption("comments");
+    await page.locator(".pa-bars button").first().click();
+    assert.equal(await page.getByRole("combobox", { name: "PR cohort", exact: true }).inputValue(), "comments");
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  });
+});

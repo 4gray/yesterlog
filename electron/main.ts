@@ -1,3 +1,5 @@
+import { syncPrAnalytics } from "./bitbucketAnalytics";
+import type { PrAnalyticsRequest } from "../shared/prAnalytics";
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import path from "node:path";
@@ -220,6 +222,27 @@ ipcMain.handle("jira:move-worklog", (_event, request: MoveWorklogRequest) => {
 
 ipcMain.handle("bitbucket:test-connection", (_event, settings: AppSettings) => {
   return testBitbucketConnection(settings);
+});
+
+const analyticsJobs = new Map<string, AbortController>();
+ipcMain.handle("bitbucket:sync-analytics", async (event, request: PrAnalyticsRequest) => {
+  const key = `${event.sender.id}:${request.requestId}`;
+  analyticsJobs.get(key)?.abort();
+  const controller = new AbortController();
+  analyticsJobs.set(key, controller);
+  const abort = () => controller.abort();
+  event.sender.once("destroyed", abort);
+  try {
+    return await syncPrAnalytics(request, controller.signal, (progress) => {
+      if (!event.sender.isDestroyed()) event.sender.send("bitbucket:analytics-progress", progress);
+    });
+  } finally {
+    if (analyticsJobs.get(key) === controller) analyticsJobs.delete(key);
+    event.sender.removeListener("destroyed", abort);
+  }
+});
+ipcMain.handle("bitbucket:cancel-analytics", (event, requestId: string) => {
+  analyticsJobs.get(`${event.sender.id}:${requestId}`)?.abort();
 });
 
 ipcMain.handle("bitbucket:sync-reviews", (_event, request: BitbucketReviewSyncRequest) => {

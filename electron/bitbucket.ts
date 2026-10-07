@@ -1,3 +1,4 @@
+import { withBitbucketSlot } from "./bitbucketTransport";
 import type {
   AppSettings,
   BitbucketCommitGroup,
@@ -212,14 +213,14 @@ const parseBitbucketError = async (response: Response) => {
 const bitbucketRequest = async <T>(settings: AppSettings, pathOrUrl: string, init: RequestInit = {}) => {
   ensureBitbucketSettings(settings);
   const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${API_BASE_URL}${pathOrUrl}`;
-  const response = await fetch(url, {
+  const response = await withBitbucketSlot(() => fetch(url, {
     ...init,
     headers: {
       Accept: "application/json",
       Authorization: authHeader(settings),
       ...(init.headers ?? {})
     }
-  });
+  }));
 
   if (!response.ok) {
     const message = await parseBitbucketError(response);

@@ -1,4 +1,6 @@
+import { PrAnalyticsView } from "./PrAnalyticsView";
 import type {
+  AppSettings,
   BitbucketReviewSyncResult,
   JiraIssueTypeInfo,
   WeekState
@@ -11,6 +13,9 @@ import { ReportsSummary } from "./ReportsSummary";
 import { ReportsTrends } from "./ReportsTrends";
 
 interface ReportsViewProps {
+  settings?: AppSettings;
+  currentDate?: Date;
+  isDemo?: boolean;
   reportTab: ReportTab;
   weekState: WeekState;
   /** Trailing window of weeks (ascending, ending at weekState) for insights. */
@@ -32,6 +37,7 @@ interface ReportsViewProps {
  * Every page shares the same scroll container so switching tabs keeps the layout.
  */
 export const ReportsView = ({
+  settings, currentDate, isDemo,
   reportTab,
   weekState,
   weekStates,
@@ -50,7 +56,7 @@ export const ReportsView = ({
   return (
     <div className="view view-scroll">
       <div className="report-tabs" role="tablist" aria-label="Reports pages">
-        {REPORT_TABS.filter((tab) => tab.id !== "reviews" || isBitbucketReady).map((tab) => (
+        {REPORT_TABS.filter((tab) => (tab.id !== "reviews" && tab.id !== "pr-analytics") || isBitbucketReady).map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -63,7 +69,9 @@ export const ReportsView = ({
           </button>
         ))}
       </div>
-      {reportTab === "composition" ? (
+      {reportTab === "pr-analytics" && isBitbucketReady && settings ? (
+        <PrAnalyticsView settings={settings} currentDate={currentDate ?? new Date()} isDemo={isDemo} />
+      ) : reportTab === "composition" ? (
         <ReportsComposition weekState={weekState} onOpenRecap={onOpenRecap} {...nav} />
       ) : reportTab === "focus" ? (
         <ReportsFocus weekState={weekState} weekStates={weekStates} {...nav} />

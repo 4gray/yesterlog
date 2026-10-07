@@ -1,3 +1,4 @@
+import type { PrAnalyticsRequest, PrAnalyticsRepository, PrAnalyticsProgress } from "../../shared/prAnalytics";
 import type {
   AddWorklogRequest,
   AddWorklogResult,
@@ -58,6 +59,19 @@ const getNativeBridgeWithMethod = <Method extends NativeBridgeMethod>(method: Me
 const rendererPreviewVersion = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const nativeApi = {
+  syncPrAnalytics(request: PrAnalyticsRequest): Promise<PrAnalyticsRepository> {
+    const bridge = getNativeBridgeWithMethod("syncPrAnalytics");
+    if (!bridge) return Promise.reject(new Error(getNativeBridge()
+      ? "Restart Yesterlog to enable PR analytics."
+      : "Open the Electron app to load Bitbucket PR analytics."));
+    return bridge.syncPrAnalytics(request);
+  },
+  cancelPrAnalytics(requestId: string): Promise<void> {
+    return getNativeBridgeWithMethod("cancelPrAnalytics")?.cancelPrAnalytics(requestId) ?? Promise.resolve();
+  },
+  onPrAnalyticsProgress(callback: (value: PrAnalyticsProgress) => void): () => void {
+    return getNativeBridgeWithMethod("onPrAnalyticsProgress")?.onPrAnalyticsProgress(callback) ?? (() => undefined);
+  },
   testJiraConnection(settings: AppSettings): Promise<JiraConnectionResult> {
     const bridge = getNativeBridge();
 
