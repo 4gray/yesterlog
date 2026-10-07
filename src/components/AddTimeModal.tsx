@@ -256,7 +256,7 @@ export const AddTimeModal = ({
   const isEditing = isEditingWorklog || isEditingPersonalNote;
   const activePrefill = isEditing ? undefined : prefill;
   const isRetrospectiveEntry = Boolean(activePrefill?.retrospective && !activePrefill.startedISO);
-  const requestedInitialSeconds = getInitialTicketSeconds(editingWorklog, activePrefill);
+  const requestedInitialSeconds = editingPersonalNote?.timeSpentSeconds ?? getInitialTicketSeconds(editingWorklog, activePrefill);
   const dailyTargetSeconds = dailyTargetHours * 3600;
   const isInitialBulkDuration = requestedInitialSeconds > dailyTargetSeconds;
   const retrospectiveInitial = isRetrospectiveEntry && !isInitialBulkDuration
@@ -268,9 +268,7 @@ export const AddTimeModal = ({
     (isRetrospectiveEntry && isInitialBulkDuration
       ? date
       : getInitialStart(date, initialSeconds, editingWorklog, editingPersonalNote, activePrefill));
-  const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
-  const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
   const initialDateKey = toLocalDateKey(initialStart);
   const shouldPreserveInitialDate = isEditingWorklog || isEditingPersonalNote;
   const selectableDateOptions =
@@ -280,25 +278,25 @@ export const AddTimeModal = ({
   const preferredDateKey = shouldPreserveInitialDate
     ? initialDateKey
     : chooseWorkingDateKey(initialDateKey, selectableDateOptions);
-  const dateOptionsKey = selectableDateOptions.join("|");
   const initialPrefillTicket = activePrefill?.ticket;
   const [mode, setMode] = useState<"ticket" | "note" | "recurring">(isEditingPersonalNote ? "note" : "ticket");
-  const [recSelectedId, setRecSelectedId] = useState<string | undefined>();
-  const [recMinutes, setRecMinutes] = useState(15);
-  const [recNote, setRecNote] = useState("");
+  // Recurring entries use their scheduled time, with independent drafts per occurrence.
+  const [recSelections, setRecSelections] = useState<Record<string, string>>({});
+  const [recDrafts, setRecDrafts] = useState<Record<string, { minutes: number; note: string }>>({});
   const [activeKey, setActiveKey] = useState<string | undefined>(
     editingWorklog?.issueKey ?? initialPrefillTicket?.key ?? ticketOptions[0]?.key
   );
   const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>(initialPrefillTicket);
+  // Date, start, and duration describe the same slot in both ticket and note tabs.
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
   const [allocationDirection, setAllocationDirection] = useState<WorklogAllocationDirection>(
     editingWorklog?.allocation?.direction ?? "backward"
   );
   const [isMovingWorklog, setIsMovingWorklog] = useState(false);
   const [estimateAdjustment, setEstimateAdjustment] = useState<WorklogEstimateAdjustment>("auto");
-  const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
-  const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
-  const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
+  const [durationMode, setDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
+  const [customAmount, setCustomAmount] = useState(customHoursAmount(initialSeconds));
+  const [customUnit, setCustomUnit] = useState<DurationUnit>("h");
   const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
   const [isStartEdited, setIsStartEdited] = useState(false);
@@ -308,10 +306,6 @@ export const AddTimeModal = ({
   const [personalNoteCategory, setPersonalNoteCategory] = useState<PersonalNoteCategory>(
     editingPersonalNote?.category ?? "firefighting"
   );
-  const [personalNoteSeconds, setPersonalNoteSeconds] = useState(initialPersonalSeconds);
-  const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>(initialPersonalPreset ? "preset" : "custom");
-  const [personalCustomAmount, setPersonalCustomAmount] = useState(customHoursAmount(initialPersonalSeconds));
-  const [personalCustomUnit, setPersonalCustomUnit] = useState<DurationUnit>("h");
 
   const ticketFromOptions = ticketOptions.find((ticket) => ticket.key === activeKey);
   const activeTicket =
@@ -343,7 +337,11 @@ export const AddTimeModal = ({
   );
   const isBulkDuration = isTicketView && durationSeconds > dailyTargetHours * 3600;
   const recurringCandidates = isRecurringView && getRecurringCandidates ? getRecurringCandidates(dateStr) : [];
-  const recEvent = recurringCandidates.find((event) => event.id === recSelectedId) ?? recurringCandidates[0];
+  const recEvent = recurringCandidates.find((event) => event.id === recSelections[dateStr]) ?? recurringCandidates[0];
+  const recDraftKey = recEvent ? `${dateStr}:${recEvent.id}` : undefined;
+  const recDraft = recDraftKey ? recDrafts[recDraftKey] : undefined;
+  const recMinutes = recDraft?.minutes ?? recEvent?.durationMinutes ?? 15;
+  const recNote = recDraft?.note ?? recEvent?.defaultNote ?? "";
   const modalTitle = isMovingWorklog
     ? "Move worklog"
     : isEditingWorklog
@@ -362,7 +360,7 @@ export const AddTimeModal = ({
           hasWorkingDate &&
             (isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote) &&
             personalNote.trim() &&
-            personalNoteSeconds > 0 &&
+            durationSeconds > 0 &&
             !isLogging
         )
       : Boolean(
@@ -413,7 +411,7 @@ export const AddTimeModal = ({
       const ok = await savePersonalNote({
         title: personalNoteTitle,
         text: personalNote,
-        timeSpentSeconds: personalNoteSeconds,
+        timeSpentSeconds: durationSeconds,
         startedISO,
         category: personalNoteCategory
       });
@@ -476,7 +474,7 @@ export const AddTimeModal = ({
 
   useEffect(() => {
     const nextPrefill = editingWorklog || editingPersonalNote ? undefined : prefill;
-    const requestedSeconds = getInitialTicketSeconds(editingWorklog, nextPrefill);
+    const requestedSeconds = editingPersonalNote?.timeSpentSeconds ?? getInitialTicketSeconds(editingWorklog, nextPrefill);
     const isBulkRequest = requestedSeconds > dailyTargetSeconds;
     const retrospectiveStart = nextPrefill?.retrospective && !nextPrefill.startedISO && !isBulkRequest
       ? getSelectableRetrospectiveStart(date, requestedSeconds, dateOptions)
@@ -487,18 +485,16 @@ export const AddTimeModal = ({
       (nextPrefill?.retrospective && !nextPrefill.startedISO && isBulkRequest
         ? date
         : getInitialStart(date, seconds, editingWorklog, editingPersonalNote, nextPrefill));
-    const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
-    const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
     const prefillTicket = nextPrefill?.ticket;
 
     setMode(editingPersonalNote ? "note" : "ticket");
     setActiveKey(editingPersonalNote ? undefined : editingWorklog?.issueKey ?? prefillTicket?.key ?? ticketOptions[0]?.key);
     setSelectedTicketOverride(prefillTicket);
     setDurationSeconds(seconds);
-    setTicketDurationMode(hasPreset ? "preset" : "custom");
-    setTicketCustomAmount(customHoursAmount(seconds));
-    setTicketCustomUnit("h");
+    setDurationMode(hasPreset ? "preset" : "custom");
+    setCustomAmount(customHoursAmount(seconds));
+    setCustomUnit("h");
     const startDateKey = toLocalDateKey(start);
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
@@ -510,26 +506,20 @@ export const AddTimeModal = ({
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
     setPersonalNoteCategory(editingPersonalNote?.category ?? "firefighting");
-    setPersonalNoteSeconds(localNoteSeconds);
-    setPersonalDurationMode(hasPersonalPreset ? "preset" : "custom");
-    setPersonalCustomAmount(customHoursAmount(localNoteSeconds));
-    setPersonalCustomUnit("h");
-    // Re-init only when the edit target or working day actually changes — keying on
-    // the date string (not the live-clock Date object) and dropping the ticketOptions
-    // reference avoids clobbering an in-progress edit on every parent re-render. The
-    // default ticket is set by the effect below.
+    setRecSelections({});
+    setRecDrafts({});
+    // Reset only for a new entry target/prefill. Refreshes of working-day options,
+    // daily targets, tickets, or the live clock must not erase a session's drafts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     toLocalDateKey(date),
-    dateOptionsKey,
     editingPersonalNote?.id,
     editingWorklog?.id,
     prefill?.comment,
     prefill?.retrospective,
     prefill?.startedISO,
     prefill?.ticket?.key,
-    prefill?.timeSpentSeconds,
-    dailyTargetSeconds
+    prefill?.timeSpentSeconds
   ]);
 
   useEffect(() => {
@@ -538,26 +528,16 @@ export const AddTimeModal = ({
     }
   }, [activeKey, isEditing, ticketOptions]);
 
-  // Re-seed the recurring selection (and its default duration/note) whenever the
-  // recurring tab opens or the chosen day changes, dropping selections that no
-  // longer match a candidate for the day.
-  useEffect(() => {
-    if (mode !== "recurring" || !getRecurringCandidates) {
-      return;
-    }
-    const candidates = getRecurringCandidates(dateStr);
-    const current = candidates.find((event) => event.id === recSelectedId) ?? candidates[0];
-    setRecSelectedId(current?.id);
-    setRecMinutes(current ? current.durationMinutes : 15);
-    setRecNote(current ? current.defaultNote : "");
-    // recSelectedId intentionally omitted: manual selection is handled inline.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, dateStr]);
-
   const selectRecurring = (event: RecurringEvent) => {
-    setRecSelectedId(event.id);
-    setRecMinutes(event.durationMinutes);
-    setRecNote(event.defaultNote);
+    setRecSelections((selections) => ({ ...selections, [dateStr]: event.id }));
+  };
+
+  const updateRecurringDraft = (patch: Partial<{ minutes: number; note: string }>) => {
+    if (!recDraftKey) return;
+    setRecDrafts((drafts) => ({
+      ...drafts,
+      [recDraftKey]: { ...(drafts[recDraftKey] ?? { minutes: recMinutes, note: recNote }), ...patch }
+    }));
   };
 
   // Escape is handled by the Modal shell; this only owns ⌘/Ctrl+Enter submit.
@@ -588,51 +568,54 @@ export const AddTimeModal = ({
     setDateStr(nextDateKey);
   };
 
-  const updateTicketDuration = (seconds: number) => {
+  const updateDuration = (seconds: number) => {
     const nextSeconds = updateRetrospectiveStart(seconds);
     setDurationSeconds(nextSeconds);
     return nextSeconds;
   };
 
-  const updatePersonalDuration = (seconds: number) => {
-    const nextSeconds = updateRetrospectiveStart(seconds);
-    setPersonalNoteSeconds(nextSeconds);
-    return nextSeconds;
+  const applyDurationPreset = (seconds: number) => {
+    setDurationMode("preset");
+    const nextSeconds = updateDuration(seconds);
+    setCustomAmount(customHoursAmount(nextSeconds));
+    setCustomUnit("h");
   };
 
-  const applyTicketPreset = (seconds: number) => {
-    setTicketDurationMode("preset");
-    updateTicketDuration(seconds);
+  const openCustomDuration = () => {
+    if (durationMode === "custom") return;
+    setDurationMode("custom");
+    setCustomAmount(customHoursAmount(durationSeconds));
+    setCustomUnit("h");
   };
 
-  const applyTicketCustom = (amount: string, unit = ticketCustomUnit) => {
-    setTicketDurationMode("custom");
-    setTicketCustomAmount(amount);
+  const applyCustomDuration = (amount: string, unit = customUnit) => {
+    setDurationMode("custom");
+    setCustomAmount(amount);
     const requestedSeconds = customDurationToSeconds(amount, unit);
-    const nextSeconds = updateTicketDuration(requestedSeconds);
+    const nextSeconds = updateDuration(requestedSeconds);
     if (nextSeconds !== requestedSeconds) {
-      setTicketCustomAmount(customHoursAmount(nextSeconds));
-      setTicketCustomUnit("h");
+      setCustomAmount(customHoursAmount(nextSeconds));
+      setCustomUnit("h");
     }
   };
 
-  const setTicketCustomUnitAndDuration = (unit: DurationUnit) => {
-    setTicketDurationMode("custom");
-    setTicketCustomUnit(unit);
-    const requestedSeconds = customDurationToSeconds(ticketCustomAmount, unit);
-    const nextSeconds = updateTicketDuration(requestedSeconds);
+  const setCustomUnitAndDuration = (unit: DurationUnit) => {
+    setDurationMode("custom");
+    setCustomUnit(unit);
+    const requestedSeconds = customDurationToSeconds(customAmount, unit);
+    const nextSeconds = updateDuration(requestedSeconds);
     if (nextSeconds !== requestedSeconds) {
-      setTicketCustomAmount(customHoursAmount(nextSeconds));
-      setTicketCustomUnit("h");
+      setCustomAmount(customHoursAmount(nextSeconds));
+      setCustomUnit("h");
     }
   };
 
-  const normalizeTicketCustomAmount = () => {
+  const normalizeCustomAmount = () => {
     if (durationSeconds > 0) {
       return;
     }
-    setTicketCustomAmount("1");
-    updateTicketDuration(customDurationToSeconds("1", ticketCustomUnit));
+    setCustomAmount("1");
+    updateDuration(customDurationToSeconds("1", customUnit));
   };
 
   const applyTimelineRange = (range: Range) => {
@@ -641,52 +624,17 @@ export const AddTimeModal = ({
     setIsStartEdited(true);
     setTimeStr(minutesToClockTime(range.startMin));
     setDurationSeconds(seconds);
-    setTicketDurationMode(hasPreset ? "preset" : "custom");
-    setTicketCustomAmount(customHoursAmount(seconds));
-    setTicketCustomUnit("h");
-  };
-
-  const applyPersonalPreset = (seconds: number) => {
-    setPersonalDurationMode("preset");
-    updatePersonalDuration(seconds);
-  };
-
-  const applyPersonalCustom = (amount: string, unit = personalCustomUnit) => {
-    setPersonalDurationMode("custom");
-    setPersonalCustomAmount(amount);
-    const requestedSeconds = customDurationToSeconds(amount, unit);
-    const nextSeconds = updatePersonalDuration(requestedSeconds);
-    if (nextSeconds !== requestedSeconds) {
-      setPersonalCustomAmount(customHoursAmount(nextSeconds));
-      setPersonalCustomUnit("h");
-    }
-  };
-
-  const setPersonalCustomUnitAndDuration = (unit: DurationUnit) => {
-    setPersonalDurationMode("custom");
-    setPersonalCustomUnit(unit);
-    const requestedSeconds = customDurationToSeconds(personalCustomAmount, unit);
-    const nextSeconds = updatePersonalDuration(requestedSeconds);
-    if (nextSeconds !== requestedSeconds) {
-      setPersonalCustomAmount(customHoursAmount(nextSeconds));
-      setPersonalCustomUnit("h");
-    }
-  };
-
-  const normalizePersonalCustomAmount = () => {
-    if (personalNoteSeconds > 0) {
-      return;
-    }
-    setPersonalCustomAmount("1");
-    updatePersonalDuration(customDurationToSeconds("1", personalCustomUnit));
+    setDurationMode(hasPreset ? "preset" : "custom");
+    setCustomAmount(customHoursAmount(seconds));
+    setCustomUnit("h");
   };
 
   const applyPersonalExactMinutes = (minutes: number) => {
     const seconds = Math.max(5, minutes) * 60;
-    setPersonalDurationMode("custom");
-    setPersonalCustomAmount(customHoursAmount(seconds));
-    setPersonalCustomUnit("h");
-    updatePersonalDuration(seconds);
+    const nextSeconds = updateDuration(seconds);
+    setDurationMode("custom");
+    setCustomAmount(customHoursAmount(nextSeconds));
+    setCustomUnit("h");
   };
 
   return (
@@ -714,20 +662,14 @@ export const AddTimeModal = ({
                 <button
                   type="button"
                   className={mode === "ticket" ? "active" : ""}
-                  onClick={() => {
-                    setMode("ticket");
-                    updateTicketDuration(durationSeconds);
-                  }}
+                  onClick={() => setMode("ticket")}
                 >
                   Log to ticket
                 </button>
                 <button
                   type="button"
                   className={mode === "note" ? "active" : ""}
-                  onClick={() => {
-                    setMode("note");
-                    updatePersonalDuration(personalNoteSeconds);
-                  }}
+                  onClick={() => setMode("note")}
                 >
                   Personal note
                 </button>
@@ -751,8 +693,8 @@ export const AddTimeModal = ({
               minutes={recMinutes}
               note={recNote}
               onSelect={selectRecurring}
-              onMinutesChange={setRecMinutes}
-              onNoteChange={setRecNote}
+              onMinutesChange={(minutes) => updateRecurringDraft({ minutes })}
+              onNoteChange={(note) => updateRecurringDraft({ note })}
             />
           ) : isTicketView ? (
             <>
@@ -866,15 +808,15 @@ export const AddTimeModal = ({
                         seconds={durationSeconds}
                         presets={PRESETS}
                         valueClassName="modal-duration"
-                        customMode={ticketDurationMode}
-                        customAmount={ticketCustomAmount}
-                        customUnit={ticketCustomUnit}
+                        customMode={durationMode === "preset" && PRESETS.some((preset) => preset.seconds === durationSeconds) ? "preset" : "custom"}
+                        customAmount={customAmount}
+                        customUnit={customUnit}
                         customAmountLabel="Custom ticket duration amount"
-                        onPreset={applyTicketPreset}
-                        onCustomOpen={() => applyTicketCustom(ticketCustomAmount)}
-                        onCustomAmountChange={(amount) => applyTicketCustom(amount)}
-                        onCustomAmountBlur={normalizeTicketCustomAmount}
-                        onCustomUnitChange={setTicketCustomUnitAndDuration}
+                        onPreset={applyDurationPreset}
+                        onCustomOpen={openCustomDuration}
+                        onCustomAmountChange={(amount) => applyCustomDuration(amount)}
+                        onCustomAmountBlur={normalizeCustomAmount}
+                        onCustomUnitChange={setCustomUnitAndDuration}
                       />
                     </div>
                     <div className="modal-col">
@@ -1016,23 +958,23 @@ export const AddTimeModal = ({
               <div className="personal-note-duration">
                 <div className="modal-label">TIME SPENT</div>
                 <AddTimeDurationPicker
-                  seconds={personalNoteSeconds}
+                  seconds={durationSeconds}
                   presets={PERSONAL_NOTE_PRESETS}
                   valueClassName="personal-note-time"
-                  customMode={personalDurationMode}
-                  customAmount={personalCustomAmount}
-                  customUnit={personalCustomUnit}
+                  customMode={durationMode === "preset" && PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === durationSeconds) ? "preset" : "custom"}
+                  customAmount={customAmount}
+                  customUnit={customUnit}
                   customAmountLabel="Custom personal note duration amount"
                   exactMinutes={{
-                    value: Math.max(5, Math.round(personalNoteSeconds / 60)),
+                    value: Math.max(5, Math.round(durationSeconds / 60)),
                     label: "Exact personal note duration in minutes",
                     onChange: applyPersonalExactMinutes
                   }}
-                  onPreset={applyPersonalPreset}
-                  onCustomOpen={() => applyPersonalCustom(personalCustomAmount)}
-                  onCustomAmountChange={(amount) => applyPersonalCustom(amount)}
-                  onCustomAmountBlur={normalizePersonalCustomAmount}
-                  onCustomUnitChange={setPersonalCustomUnitAndDuration}
+                  onPreset={applyDurationPreset}
+                  onCustomOpen={openCustomDuration}
+                  onCustomAmountChange={(amount) => applyCustomDuration(amount)}
+                  onCustomAmountBlur={normalizeCustomAmount}
+                  onCustomUnitChange={setCustomUnitAndDuration}
                 />
               </div>
               <div className="local-note-callout">

@@ -57,7 +57,7 @@ describe("AddTimeModal retrospective start", () => {
       (button) => button.textContent?.trim() === "Personal note"
     );
     act(() => personalNoteButton?.click());
-    expect(readTime()).toBe("14:07");
+    expect(readTime()).toBe("12:37");
 
     const ticketButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
       (button) => button.textContent?.trim() === "Log to ticket"
@@ -158,6 +158,14 @@ describe("AddTimeModal retrospective start", () => {
 
     expect(container.querySelector(".modal-duration")?.textContent).toBe("3h 30m");
     expect(container.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe("10:00");
+    expect(container.querySelector(".add-time-timeline-head strong")?.textContent).toContain("10:00 → 13:30");
+
+    const tab = (label: string) => [...container.querySelectorAll<HTMLButtonElement>(".modal-mode-tabs button")]
+      .find((button) => button.textContent?.trim() === label);
+    act(() => tab("Personal note")?.click());
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="Exact personal note duration in minutes"]')?.value).toBe("210");
+    expect(container.querySelector<HTMLInputElement>('input[type="time"]')?.value).toBe("10:00");
+    act(() => tab("Log to ticket")?.click());
     expect(container.querySelector(".add-time-timeline-head strong")?.textContent).toContain("10:00 → 13:30");
   });
 
