@@ -79,6 +79,19 @@ Use **Refresh** to load history; cached results remain available offline. Partia
 coverage is shown explicitly. Turnaround is elapsed calendar time, including waiting
 and rework, rather than hours spent reviewing.
 
+Use **Custom dates** for an inclusive local date range (up to 366 days), or
+**Compare with** to place two repositories' metrics side by side using the same
+author filter and dates. Each repository shows its own coverage and timing sample sizes.
+
+With AI enabled in Settings, **Analyze review flow** adds a collapsible explanation
+of the selected repository (or pooled scope), compared with the preceding equal-length
+period. **Load previous period** explicitly fetches missing comparison history.
+Analysis requires complete history and at least five measured merged PRs in each period;
+comparisons including today are provisional. Only aggregate counts and durations go
+to the configured provider; supporting PR links stay on-device. Cloud CLI providers
+send those aggregates to OpenAI or Anthropic. Results are cleared when the scope,
+data or provider changes; metrics remain usable when AI fails.
+
 [Read the setup guide →](./docs/getting-started.md)
 
 ## Local-first by design

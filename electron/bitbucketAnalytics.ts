@@ -70,10 +70,11 @@ export async function syncPrAnalytics(
     throw new Error("Connect Bitbucket in Settings first.");
   if (!analyticsRepositories(settings.bitbucketRepositories).includes(repository))
     throw new Error("Choose a configured Bitbucket repository.");
+  // A report can cover one year plus its equal-length comparison period.
   const start = Date.parse(rangeStart),
     end = Date.parse(rangeEnd);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || end - start > 370 * 86400000)
-    throw new Error("Choose a valid range of at most one year.");
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || end - start > 740 * 86400000)
+    throw new Error("Choose a valid range of at most two years, including comparison history.");
   const prefix = `/repositories/${encodeURIComponent(workspace)}/${encodeURIComponent(repository)}/pullrequests`;
   const warnings = new Set<string>();
   let requests = 0,

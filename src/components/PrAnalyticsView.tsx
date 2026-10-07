@@ -14,7 +14,13 @@ import {
   type AnalyticsGrouping,
   type AnalyticsPeriod
 } from "../domain/prAnalytics";
-import { addDays } from "../utils/date";
+import { addDays, toLocalDateKey } from "../utils/date";
+import { PrAnalyticsPeriodPicker } from "./PrAnalyticsPeriodPicker";
+import { PrAnalyticsComparison } from "./PrAnalyticsComparison";
+import { PrReviewFlow } from "./PrReviewFlow";
+import { customAnalyticsRange, previousAnalyticsRange } from "../domain/prAnalyticsPeriods";
+import { reviewFlowEvidence } from "../domain/prReviewFlow";
+import { demoPrAnalytics } from "../demo/prAnalytics";
 
 interface Props {
   settings: AppSettings;
@@ -24,7 +30,10 @@ interface Props {
 interface Preferences {
   repository: string;
   author: AnalyticsAuthor;
-  period: AnalyticsPeriod;
+  period: AnalyticsPeriod | "custom";
+  customFrom?: string;
+  customTo?: string;
+  compare?: string;
   grouping: AnalyticsGrouping;
 }
 const defaults: Preferences = {
@@ -40,7 +49,10 @@ const loadPreferences = (settings: AppSettings, demo: boolean): Preferences => {
     return {
       repository: typeof value.repository === "string" ? value.repository : ALL_ANALYTICS_REPOSITORIES,
       author: value.author === "all" ? "all" : "me",
-      period: ["4w", "12w", "6m", "12m"].includes(value.period) ? value.period : "12w",
+      period: ["4w", "12w", "6m", "12m", "custom"].includes(value.period) ? value.period : "12w",
+      customFrom: typeof value.customFrom === "string" ? value.customFrom : undefined,
+      customTo: typeof value.customTo === "string" ? value.customTo : undefined,
+      compare: typeof value.compare === "string" ? value.compare : undefined,
       grouping: value.grouping === "month" ? "month" : "week"
     };
   } catch {
@@ -61,13 +73,71 @@ export const PrAnalyticsView = (props: Props) => (
 function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
   const [preferences, setPreferences] = useState(() => loadPreferences(settings, isDemo));
   const { author, period, grouping } = preferences;
-  const range = useMemo(() => analyticsRange(currentDate, period), [currentDate, period]);
+  const range = useMemo(
+    () =>
+      period === "custom"
+        ? (customAnalyticsRange(preferences.customFrom ?? "", preferences.customTo ?? "", currentDate)
+            .range ?? analyticsRange(currentDate, "12w"))
+        : analyticsRange(currentDate, period),
+    [currentDate, period, preferences.customFrom, preferences.customTo]
+  );
+  const previousRange = useMemo(() => previousAnalyticsRange(range), [range]);
   const source = usePrAnalytics(settings, range, isDemo);
-  const repository = source.repositories.includes(preferences.repository) ? preferences.repository : ALL_ANALYTICS_REPOSITORIES;
+  const repository = source.repositories.includes(preferences.repository)
+    ? preferences.repository
+    : ALL_ANALYTICS_REPOSITORIES;
   const report = useMemo(
     () => buildPrAnalytics(source.results, source.repositories, repository, author, range, grouping),
     [source.results, source.repositories, repository, author, range, grouping]
   );
+  const comparisonRepository =
+    repository !== ALL_ANALYTICS_REPOSITORIES &&
+    preferences.compare !== repository &&
+    source.repositories.includes(preferences.compare ?? "")
+      ? preferences.compare
+      : undefined;
+  const comparisonReport = useMemo(
+    () =>
+      comparisonRepository
+        ? buildPrAnalytics(source.results, source.repositories, comparisonRepository, author, range, grouping)
+        : undefined,
+    [source.results, source.repositories, comparisonRepository, author, range, grouping]
+  );
+  const previousReport = useMemo(
+    () =>
+      buildPrAnalytics(
+        isDemo ? demoPrAnalytics(settings, previousRange) : source.results,
+        source.repositories,
+        repository,
+        author,
+        previousRange,
+        grouping
+      ),
+    [isDemo, settings, source.results, source.repositories, repository, author, previousRange, grouping]
+  );
+  const evidence = useMemo(
+    () => reviewFlowEvidence(report, previousReport, range, previousRange, currentDate),
+    [report, previousReport, range, previousRange, currentDate]
+  );
+  const refreshScope = comparisonRepository ? [repository, comparisonRepository] : repository;
+  const analysisKey = JSON.stringify([
+    repository,
+    author,
+    +range.start,
+    +range.end,
+    settings.aiEnabled,
+    settings.aiProvider,
+    settings.ollamaEndpoint,
+    settings.ollamaModel,
+    settings.claudeModel,
+    settings.claudeCliPath,
+    settings.codexModel,
+    settings.codexCliPath,
+    settings.bitbucketApiToken,
+    source.syncing,
+    evidence.payload,
+    source.results.map((r) => [r.repository, r.syncedAt])
+  ]);
   const [cohort, setCohort] = useState<AnalyticsCohort>("created");
   const [bucketKey, setBucketKey] = useState<string>();
   const [chart, setChart] = useState<"throughput" | "comments" | "merge" | "response" | "review">(
@@ -92,7 +162,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
     setTooltip(undefined);
     setPage(0);
     setExpanded(undefined);
-  }, [repository, author, period, grouping]);
+  }, [repository, author, period, grouping, +range.start, +range.end]);
   const change = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPreferences((p) => ({ ...p, [key]: value }));
   const selectedBucket = report.buckets.find((b) => b.key === bucketKey);
@@ -101,8 +171,12 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
     (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
   );
   const query = search.trim().toLocaleLowerCase();
-  const rows = cohortRows.filter((p) => !query || p.title.toLocaleLowerCase().includes(query) ||
-    (query.startsWith("#") ? `#${p.id}`.includes(query) : String(p.id).includes(query)));
+  const rows = cohortRows.filter(
+    (p) =>
+      !query ||
+      p.title.toLocaleLowerCase().includes(query) ||
+      (query.startsWith("#") ? `#${p.id}`.includes(query) : String(p.id).includes(query))
+  );
   const searchPrs = (value: string) => {
     setSearch(value);
     setPage(0);
@@ -146,7 +220,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
           className="pa-button"
           type="button"
           disabled={source.loadingCache || isDemo || !source.repositories.length}
-          onClick={() => (source.syncing ? source.cancel() : void source.refresh(repository))}
+          onClick={() => (source.syncing ? source.cancel() : void source.refresh(refreshScope))}
         >
           {source.syncing ? <X size={14} /> : <RefreshCw size={14} />}
           {source.syncing ? "Stop sync" : "Refresh"}
@@ -164,6 +238,26 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
             ))}
           </select>
         </label>
+        <label>
+          Compare with
+          <select
+            aria-label="Compare with"
+            value={comparisonRepository ?? ""}
+            disabled={repository === ALL_ANALYTICS_REPOSITORIES || source.repositories.length < 2}
+            onChange={(e) => change("compare", e.target.value || undefined)}
+          >
+            <option value="">
+              {repository === ALL_ANALYTICS_REPOSITORIES ? "Select one repository first" : "No comparison"}
+            </option>
+            {source.repositories
+              .filter((r) => r !== repository)
+              .map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+          </select>
+        </label>
         <fieldset>
           <legend>PR author</legend>
           <div className="pa-segment">
@@ -179,15 +273,26 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
             ))}
           </div>
         </fieldset>
-        <label>
-          Period
-          <select value={period} onChange={(e) => change("period", e.target.value as AnalyticsPeriod)}>
-            <option value="4w">Last 4 weeks</option>
-            <option value="12w">Last 12 weeks</option>
-            <option value="6m">Last 6 months</option>
-            <option value="12m">Last 12 months</option>
-          </select>
-        </label>
+        <PrAnalyticsPeriodPicker
+          period={period}
+          range={range}
+          today={currentDate}
+          onPeriod={(value) =>
+            setPreferences((p) => ({
+              ...p,
+              period: value,
+              ...(value === "custom"
+                ? {
+                    customFrom: toLocalDateKey(range.start),
+                    customTo: toLocalDateKey(addDays(range.end, -1))
+                  }
+                : {})
+            }))
+          }
+          onApply={(customFrom, customTo) =>
+            setPreferences((p) => ({ ...p, period: "custom", customFrom, customTo }))
+          }
+        />
         <fieldset>
           <legend>Group by</legend>
           <div className="pa-segment">
@@ -273,6 +378,14 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
           ))}
         </ul>
       </details>
+      {comparisonRepository && comparisonReport && (
+        <PrAnalyticsComparison
+          first={repository}
+          second={comparisonRepository}
+          left={report}
+          right={comparisonReport}
+        />
+      )}
       {!hasData ? (
         <div className="pa-empty">
           <GitPullRequest size={28} />
@@ -289,7 +402,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
               type="button"
               className="pa-button"
               disabled={source.syncing || source.loadingCache}
-              onClick={() => void source.refresh(repository)}
+              onClick={() => void source.refresh(refreshScope)}
             >
               Load analytics
             </button>
@@ -297,6 +410,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
         </div>
       ) : (
         <>
+          {comparisonRepository && <p className="pa-ai-basis">Charts and pull request list: {repository}</p>}
           <div className="pa-kpis">
             <button
               type="button"
@@ -347,6 +461,21 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
               <small>Published in this period</small>
             </button>
           </div>
+          <PrReviewFlow
+            key={analysisKey}
+            settings={settings}
+            evidence={evidence}
+            range={range}
+            previousRange={previousRange}
+            repository={repository === ALL_ANALYTICS_REPOSITORIES ? "All connected repositories" : repository}
+            author={author}
+            isDemo={isDemo}
+            previousComplete={previousReport.complete}
+            syncing={source.syncing}
+            onLoadHistory={() =>
+              void source.refresh(refreshScope, { start: previousRange.start, end: range.end })
+            }
+          />
           <div className="pa-charts">
             <section className="pa-throughput" aria-label="PR trends">
               <div className="pa-panel-heading">
@@ -363,7 +492,10 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 <select
                   aria-label="Trend metric"
                   value={chart}
-                  onChange={(e) => { setChart(e.target.value as typeof chart); setTooltip(undefined); }}
+                  onChange={(e) => {
+                    setChart(e.target.value as typeof chart);
+                    setTooltip(undefined);
+                  }}
                 >
                   <option value="throughput">Created & merged</option>
                   <option value="comments">Comments</option>
@@ -432,7 +564,9 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                             setTooltip({ key: b.key, x: bar.left + bar.width / 2 - area.left });
                           }}
                           onBlur={() => setTooltip(undefined)}
-                          onKeyDown={(e) => { if (e.key === "Escape") setTooltip(undefined); }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") setTooltip(undefined);
+                          }}
                           onClick={() => {
                             setBucketKey(b.key === bucketKey ? undefined : b.key);
                             chooseCohort(
@@ -467,19 +601,52 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                   </div>
                 </div>
                 {hoveredBucket && tooltip && (
-                  <div id={tooltipId} role="tooltip" className="pa-chart-tooltip"
-                    style={{ left: `clamp(90px, ${tooltip.x}px, calc(100% - 90px))` }}>
-                    <strong>{hoveredBucket.label}{hoveredBucket.partial ? " · Partial period" : ""}</strong>
-                    {chart === "throughput" ? <>
-                      <span><span><i />Created</span><b>{count(hoveredBucket.created)}</b></span>
-                      <span><span><i className="pa-merged" />Merged</span><b>{count(hoveredBucket.merged)}</b></span>
-                    </> : chart === "comments" ? (
-                      <span>Comments<b>{count(hoveredBucket.comments)}</b></span>
-                    ) : <>
-                      <span>{chart === "merge" ? "Time to merge" : chart === "response" ? "First response" : "Review → merge"}
-                        <b>{duration(hoveredBucket[chart].median)}</b></span>
-                      <small>{hoveredBucket[chart].n} PRs · p75 {duration(hoveredBucket[chart].p75)}</small>
-                    </>}
+                  <div
+                    id={tooltipId}
+                    role="tooltip"
+                    className="pa-chart-tooltip"
+                    style={{ left: `clamp(90px, ${tooltip.x}px, calc(100% - 90px))` }}
+                  >
+                    <strong>
+                      {hoveredBucket.label}
+                      {hoveredBucket.partial ? " · Partial period" : ""}
+                    </strong>
+                    {chart === "throughput" ? (
+                      <>
+                        <span>
+                          <span>
+                            <i />
+                            Created
+                          </span>
+                          <b>{count(hoveredBucket.created)}</b>
+                        </span>
+                        <span>
+                          <span>
+                            <i className="pa-merged" />
+                            Merged
+                          </span>
+                          <b>{count(hoveredBucket.merged)}</b>
+                        </span>
+                      </>
+                    ) : chart === "comments" ? (
+                      <span>
+                        Comments<b>{count(hoveredBucket.comments)}</b>
+                      </span>
+                    ) : (
+                      <>
+                        <span>
+                          {chart === "merge"
+                            ? "Time to merge"
+                            : chart === "response"
+                              ? "First response"
+                              : "Review → merge"}
+                          <b>{duration(hoveredBucket[chart].median)}</b>
+                        </span>
+                        <small>
+                          {hoveredBucket[chart].n} PRs · p75 {duration(hoveredBucket[chart].p75)}
+                        </small>
+                      </>
+                    )}
                     {partial && <small>Incomplete data · counts are minimums</small>}
                   </div>
                 )}
@@ -534,7 +701,10 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
             <div className="pa-panel-heading">
               <div>
                 <h2>
-                  Pull requests <span className="pa-badge">{query ? `${rows.length} / ${cohortRows.length}` : rows.length}</span>
+                  Pull requests{" "}
+                  <span className="pa-badge">
+                    {query ? `${rows.length} / ${cohortRows.length}` : rows.length}
+                  </span>
                 </h2>
                 <p>
                   {selectedBucket ? `${selectedBucket.label} · ` : ""}
@@ -546,10 +716,21 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
               <div className="pa-table-controls">
                 <div className="pa-search">
                   <Search size={13} aria-hidden="true" />
-                  <input type="search" aria-label="Search pull requests" placeholder="Search title or #number"
-                    value={search} onChange={(e) => searchPrs(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Escape") searchPrs(""); }} />
-                  {search && <button type="button" aria-label="Clear PR search" onClick={() => searchPrs("")}><X size={13} /></button>}
+                  <input
+                    type="search"
+                    aria-label="Search pull requests"
+                    placeholder="Search title or #number"
+                    value={search}
+                    onChange={(e) => searchPrs(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") searchPrs("");
+                    }}
+                  />
+                  {search && (
+                    <button type="button" aria-label="Clear PR search" onClick={() => searchPrs("")}>
+                      <X size={13} />
+                    </button>
+                  )}
                 </div>
                 {selectedBucket && (
                   <button
@@ -574,9 +755,12 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 </select>
               </div>
             </div>
-            {query && <p className="pa-search-summary" role="status">
-              {rows.length} matching {rows.length === 1 ? "PR" : "PRs"} in this table · Charts and totals show the full selected scope.
-            </p>}
+            {query && (
+              <p className="pa-search-summary" role="status">
+                {rows.length} matching {rows.length === 1 ? "PR" : "PRs"} in this table · Charts and totals
+                show the full selected scope.
+              </p>
+            )}
             <div className="pa-table-scroll">
               <table>
                 <thead>

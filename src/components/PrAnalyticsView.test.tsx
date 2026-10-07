@@ -93,3 +93,23 @@ describe("PR analytics view", () => {
     expect(syncing.cancel).toHaveBeenCalledTimes(1);
   });
 });
+
+it("compares independent repositories, applies the shared author filter and exposes missing coverage", async () => {
+  const selected = source();
+  selected.results = selected.results.slice(0, 1);
+  vi.mocked(usePrAnalytics).mockReturnValue(selected);
+  await render();
+  const repository = host.querySelector<HTMLSelectElement>(".pa-filters select")!;
+  await act(async () => { repository.value = "a"; repository.dispatchEvent(new Event("change", { bubbles: true })); });
+  const compare = host.querySelector<HTMLSelectElement>('select[aria-label="Compare with"]')!;
+  await act(async () => { compare.value = "b"; compare.dispatchEvent(new Event("change", { bubbles: true })); });
+  const table = host.querySelector(".pa-comparison")!;
+  expect(table.textContent).toContain("Not loaded · Refresh");
+  const createdRow = table.querySelectorAll("tbody tr")[1];
+  const before = Number(createdRow.querySelectorAll("td")[0].textContent);
+  expect(createdRow.querySelectorAll("td")[1].textContent).toBe("—");
+  const all = [...host.querySelectorAll("button")].find(b => b.textContent === "All")!;
+  await act(async () => all.click());
+  expect(Number(table.querySelectorAll("tbody tr")[1].querySelectorAll("td")[0].textContent)).toBeGreaterThan(before);
+  expect([...compare.options].some(o => o.value === "a")).toBe(false);
+});

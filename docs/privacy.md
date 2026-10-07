@@ -141,3 +141,17 @@ local.
 Import and export actions occur only when you choose them.
 
 For setup instructions, see [Getting started](./getting-started.md).
+
+### PR review-flow analysis
+
+PR Analytics invokes AI only when you choose **Analyze review flow** with AI enabled.
+The prompt includes aggregate counts, median/p75 durations, sample sizes, coverage and
+whether the selected period includes today. It excludes repository names, PR numbers,
+titles, comments, code, author identities, links and exact event timestamps for every
+provider. Supporting PR links are resolved locally from the cached history.
+
+Ollama uses your configured endpoint. Claude CLI and Codex CLI send these aggregates
+to Anthropic and OpenAI respectively using your existing CLI authentication. Explanations
+remain in the current view rather than being saved to the analytics cache. Changing the
+scope, source data or provider discards them. AI is optional; all metrics and repository
+comparisons are calculated without it.

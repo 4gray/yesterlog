@@ -111,7 +111,7 @@ export function usePrAnalytics(settings: AppSettings, range: AnalyticsRange, isD
   }, [start, end]);
 
   const refresh = useCallback(
-    async (repository: string) => {
+    async (repository: string | string[], requestedRange?: AnalyticsRange) => {
       if (isDemo || current.current.id || loadingCache) return;
       const generation = ++current.current.generation;
       current.current.id = "connecting";
@@ -121,18 +121,39 @@ export function usePrAnalytics(settings: AppSettings, range: AnalyticsRange, isD
       setProgress(undefined);
       try {
         const cacheKey = await prAnalyticsCacheKey(settings);
-        for (const name of repositories.filter((r) => repository === ALL_ANALYTICS_REPOSITORIES || r === repository)) {
+        for (const name of repositories.filter((r) =>
+          Array.isArray(repository)
+            ? repository.includes(r)
+            : repository === ALL_ANALYTICS_REPOSITORIES || r === repository
+        )) {
           if (current.current.cancelled || generation !== current.current.generation) break;
           const id = crypto.randomUUID();
           current.current.id = id;
           try {
+            const previous = resultsRef.current.find((r) => r.repository === name);
+            // Preserve explicitly loaded comparison history and its continuation cursor.
+            let requestStart = requestedRange?.start.toISOString() ?? start;
+            let requestEnd = requestedRange?.end.toISOString() ?? end;
+            if (
+              !requestedRange &&
+              previous &&
+              Date.parse(previous.rangeStart) < Date.parse(end) &&
+              Date.parse(previous.rangeEnd) > Date.parse(start)
+            ) {
+              const mergedStart = Math.min(Date.parse(previous.rangeStart), Date.parse(start));
+              const mergedEnd = Math.max(Date.parse(previous.rangeEnd), Date.parse(end));
+              if (mergedEnd - mergedStart <= 740 * 86400000) {
+                requestStart = new Date(mergedStart).toISOString();
+                requestEnd = new Date(mergedEnd).toISOString();
+              }
+            }
             const result = await nativeApi.syncPrAnalytics({
               settings,
               repository: name,
-              rangeStart: start,
-              rangeEnd: end,
+              rangeStart: requestStart,
+              rangeEnd: requestEnd,
               requestId: id,
-              previous: resultsRef.current.find((r) => r.repository === name)
+              previous
             });
             if (generation !== current.current.generation) break;
             const accountKey = analyticsUserKey(result.user);
