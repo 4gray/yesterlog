@@ -448,6 +448,85 @@ test("today calendar creates a local note via the Add Time modal", { timeout: 60
   });
 });
 
+for (const view of ["today", "week"]) {
+  test(`${view} drag-created slot survives entry-tab changes and saves the selected interval`, { timeout: 60_000 }, async () => {
+    await withDemoPage({ view }, async (page) => {
+      if (view === "week") {
+        await page.getByRole("button", { name: "TIMELINE", exact: true }).click();
+      }
+      const track = page.locator('.cal-track[title="Drag an empty slot to log time"]').first();
+      await track.waitFor();
+      const scroll = page.locator(view === "week" ? ".week-timeline-scroll" : ".cal-scroll").first();
+      await scroll.evaluate((element) => { element.scrollTop = 0; });
+      // Use the first, empty hours of the actual day grid; one hour spans adjacent grid lines.
+      const lines = track.locator(".cal-line");
+      const first = await lines.nth(0).boundingBox();
+      const second = await lines.nth(1).boundingBox();
+      const box = await track.boundingBox();
+      assert.ok(first && second && box);
+      const hourHeight = second.y - first.y;
+      const x = box.x + box.width / 2;
+      await page.mouse.move(x, box.y + hourHeight / 2);
+      await page.mouse.down();
+      await page.mouse.move(x, box.y + hourHeight * 1.75, { steps: 10 });
+      await page.mouse.up();
+      const dialog = page.getByRole("dialog");
+      await dialog.waitFor();
+      assert.equal(await dialog.locator('input[type="time"]').inputValue(), "00:30");
+      assert.equal(await dialog.locator(".modal-duration").innerText(), "1h 15m");
+      await dialog.locator("textarea").fill("Keep the Jira draft");
+      await dialog.getByRole("button", { name: "Personal note", exact: true }).click();
+      assert.equal(await dialog.getByLabel("Exact personal note duration in minutes").inputValue(), "75");
+      await dialog.getByLabel("Personal note title").fill(`${view} slot regression`);
+      await dialog.locator("textarea").fill("Keep the private draft");
+      await dialog.getByRole("radio", { name: "Meeting", exact: true }).click();
+      await dialog.getByRole("button", { name: "Recurring", exact: true }).click();
+      await dialog.getByRole("button", { name: "Log to ticket", exact: true }).click();
+      assert.equal(await dialog.locator("textarea").inputValue(), "Keep the Jira draft");
+      assert.equal(await dialog.locator(".modal-duration").innerText(), "1h 15m");
+      await dialog.getByRole("button", { name: "Personal note", exact: true }).click();
+      assert.equal(await dialog.locator('input[type="time"]').inputValue(), "00:30");
+      assert.equal(await dialog.locator("textarea").inputValue(), "Keep the private draft");
+      assert.equal(await dialog.getByLabel("Exact personal note duration in minutes").inputValue(), "75");
+      await dialog.getByRole("button", { name: "Save note", exact: true }).click();
+      await dialog.waitFor({ state: "detached" });
+      const savedNote = page.locator(".cal-block", { hasText: `${view} slot regression` });
+      await savedNote.waitFor();
+      assert.match(await savedNote.innerText(), /0:30–1:45/);
+    });
+  });
+}
+
+test("Reconstruction prefill survives tabs with its ticket, comment, and duration", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "recon", today: "2026-06-18" }, async (page) => {
+    await page.getByRole("button", { name: "Place", exact: true }).first().click();
+    await page.locator(".recon-send-btn").click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor();
+    const start = await dialog.locator('input[type="time"]').inputValue();
+    const duration = await dialog.locator(".modal-duration").innerText();
+    const comment = await dialog.locator("textarea").inputValue();
+    const selectedTicket = await dialog.locator(".modal-ticket").innerText();
+    assert.ok(comment.length > 0);
+    assert.match(selectedTicket, /Interrupt-safe queue draining/);
+    assert.ok(await dialog.getByRole("button", { name: /Log .* to YLOG-410/ }).isVisible());
+    await dialog.getByRole("button", { name: "Personal note", exact: true }).click();
+    assert.equal(await dialog.locator(".personal-note-time").innerText(), duration);
+    assert.equal(await dialog.locator('input[type="time"]').inputValue(), start);
+    await dialog.getByRole("button", { name: "Recurring", exact: true }).click();
+    await dialog.getByLabel("Exact recurring duration in minutes").fill("40");
+    await dialog.locator("textarea").fill("Recurring draft from Reconstruction");
+    await dialog.getByRole("button", { name: "Log to ticket", exact: true }).click();
+    assert.equal(await dialog.locator(".modal-duration").innerText(), duration);
+    assert.equal(await dialog.locator('input[type="time"]').inputValue(), start);
+    assert.equal(await dialog.locator("textarea").inputValue(), comment);
+    assert.equal(await dialog.locator(".modal-ticket").innerText(), selectedTicket);
+    await dialog.getByRole("button", { name: "Recurring", exact: true }).click();
+    assert.equal(await dialog.getByLabel("Exact recurring duration in minutes").inputValue(), "40");
+    assert.equal(await dialog.locator("textarea").inputValue(), "Recurring draft from Reconstruction");
+  });
+});
+
 test("today calendar confirms a pending recurring ritual into a committed block", { timeout: 60_000 }, async () => {
   // Thursday seeds a confirmed daily standup plus an unconfirmed "Weekly Team Sync".
   await withDemoPage({ view: "today", today: "2026-06-18" }, async (page) => {
