@@ -57,6 +57,48 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("Bitbucket analytics collector", () => {
+  it("loads activity and comments when Bitbucket rejects history pages larger than 50", async () => {
+    api((url) =>
+      /\/(activity|comments)$/.test(url.pathname) && Number(url.searchParams.get("pagelen")) > 50
+        ? json({ error: { message: "Invalid pagelen" } }, 400)
+        : undefined
+    );
+    const result = await syncPrAnalytics(request);
+    expect(result.complete).toBe(true);
+    expect(result.pullRequests[0]).toMatchObject({
+      activityComplete: true,
+      commentsComplete: true,
+      mergedAt: "2026-06-03T10:00:00.000Z"
+    });
+  });
+
+  it("recovers an oversized history cursor cached by an earlier app version", async () => {
+    api((url) => url.pathname.endsWith("/activity") ? json({}, 400) : undefined);
+    const previous = await syncPrAnalytics(request);
+    previous.pullRequests[0].history!.activityNext = `${base}/1/activity?pagelen=100`;
+    previous.pullRequests[0].history!.commentsNext = `${base}/1/comments?pagelen=100`;
+    api((url) =>
+      /\/(activity|comments)$/.test(url.pathname) && Number(url.searchParams.get("pagelen")) > 50
+        ? json({ error: { message: "Invalid pagelen" } }, 400)
+        : undefined
+    );
+    const result = await syncPrAnalytics({ ...request, previous });
+    expect(result.complete).toBe(true);
+    expect(result.warnings).toEqual([]);
+    expect(result.pullRequests[0].history).toBeUndefined();
+  });
+
+  it("identifies the failing feed without retaining private response bodies or claiming merge events are absent", async () => {
+    api((url) => url.pathname.endsWith("/activity")
+      ? json({ error: { message: "Synthetic private response content" } }, 400)
+      : undefined);
+    const result = await syncPrAnalytics(request);
+    expect(result.warnings).toEqual([
+      "Bitbucket request failed (400) while loading PR activity. Refresh to retry incomplete history."
+    ]);
+    expect(result.pullRequests[0].activityComplete).toBe(false);
+  });
+
   it("reads all four states and uses the first dated merge, never last update", async () => {
     api();
     const result = await syncPrAnalytics(request);

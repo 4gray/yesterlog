@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ExternalLink, GitPullRequest, RefreshCw, X } from "lucide-react";
+import { Fragment, useEffect, useId, useMemo, useState } from "react";
+import { ChevronDown, ExternalLink, GitPullRequest, RefreshCw, Search, X } from "lucide-react";
 import type { AppSettings } from "../../shared/types";
 import { ALL_ANALYTICS_REPOSITORIES, analyticsConnectionKey } from "../../shared/prAnalytics";
 import { usePrAnalytics } from "../app/usePrAnalytics";
@@ -73,6 +73,9 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
   const [chart, setChart] = useState<"throughput" | "comments" | "merge" | "response" | "review">(
     "throughput"
   );
+  const [search, setSearch] = useState("");
+  const [tooltip, setTooltip] = useState<{ key: string; x: number }>();
+  const tooltipId = useId();
   const [page, setPage] = useState(0);
   const [expanded, setExpanded] = useState<string>();
   useEffect(() => {
@@ -86,6 +89,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
   }, [preferences, settings, isDemo]);
   useEffect(() => {
     setBucketKey(undefined);
+    setTooltip(undefined);
     setPage(0);
     setExpanded(undefined);
   }, [repository, author, period, grouping]);
@@ -93,9 +97,18 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
     setPreferences((p) => ({ ...p, [key]: value }));
   const selectedBucket = report.buckets.find((b) => b.key === bucketKey);
   const tableRange = selectedBucket?.range ?? range;
-  const rows = analyticsCohort(report.prs, tableRange, cohort).sort((a, b) =>
+  const cohortRows = analyticsCohort(report.prs, tableRange, cohort).sort((a, b) =>
     (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
   );
+  const query = search.trim().toLocaleLowerCase();
+  const rows = cohortRows.filter((p) => !query || p.title.toLocaleLowerCase().includes(query) ||
+    (query.startsWith("#") ? `#${p.id}`.includes(query) : String(p.id).includes(query)));
+  const searchPrs = (value: string) => {
+    setSearch(value);
+    setPage(0);
+    setExpanded(undefined);
+  };
+  const hoveredBucket = report.buckets.find((b) => b.key === tooltip?.key);
   const pageCount = Math.max(1, Math.ceil(rows.length / 15)),
     activePage = Math.min(page, pageCount - 1);
   const hasData = report.coverage.some((c) => c.coversRange);
@@ -350,7 +363,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 <select
                   aria-label="Trend metric"
                   value={chart}
-                  onChange={(e) => setChart(e.target.value as typeof chart)}
+                  onChange={(e) => { setChart(e.target.value as typeof chart); setTooltip(undefined); }}
                 >
                   <option value="throughput">Created & merged</option>
                   <option value="comments">Comments</option>
@@ -378,66 +391,98 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 )}
                 <span>∗ Partial period</span>
               </div>
-              <div className="pa-chart-scroll">
-                <div
-                  className="pa-bars"
-                  style={{
-                    gridTemplateColumns: `repeat(${report.buckets.length}, minmax(34px, 1fr))`
-                  }}
-                >
-                  {report.buckets.map((b) => {
-                    const values =
-                      chart === "throughput"
-                        ? [b.created, b.merged]
-                        : chart === "comments"
-                          ? [b.comments]
-                          : [b[chart].median];
-                    const label =
-                      chart === "throughput"
-                        ? `${b.created} created, ${b.merged} merged`
-                        : chart === "comments"
-                          ? `${b.comments} comments`
-                          : `${duration(b[chart].median)}, ${b[chart].n} PRs`;
-                    return (
-                      <button
-                        className={b.key === bucketKey ? "selected" : ""}
-                        key={b.key}
-                        type="button"
-                        aria-pressed={b.key === bucketKey}
-                        aria-label={`${b.label}${b.partial ? ", partial period" : ""}: ${label}${partial ? ", incomplete data" : ""}`}
-                        title={`${b.label}: ${label}`}
-                        onClick={() => {
-                          setBucketKey(b.key === bucketKey ? undefined : b.key);
-                          chooseCohort(
-                            chart === "comments"
-                              ? "comments"
-                              : chart === "merge" || chart === "review"
-                                ? "merged"
-                                : "created"
-                          );
-                        }}
-                      >
-                        <span className="pa-bar-pair">
-                          {values.map((v, i) => (
-                            <span
-                              key={i}
-                              className={`pa-bar${i === 1 || chart !== "throughput" ? " pa-merged" : ""}`}
-                              style={{
-                                height:
-                                  v === undefined ? 0 : `${Math.max(v > 0 ? 2 : 0, (v / maxBar) * 100)}%`
-                              }}
-                            />
-                          ))}
-                          {values.every((v) => v === undefined) && <span className="pa-no-sample">—</span>}
-                        </span>
-                        <small>
-                          {b.label}
-                          {b.partial ? "*" : ""}
-                        </small>
-                      </button>
-                    );
-                  })}
+              <div className="pa-chart-area">
+                <div className="pa-chart-scroll" onScroll={() => setTooltip(undefined)}>
+                  <div
+                    className="pa-bars"
+                    style={{
+                      gridTemplateColumns: `repeat(${report.buckets.length}, minmax(34px, 1fr))`
+                    }}
+                  >
+                    {report.buckets.map((b) => {
+                      const values =
+                        chart === "throughput"
+                          ? [b.created, b.merged]
+                          : chart === "comments"
+                            ? [b.comments]
+                            : [b[chart].median];
+                      const label =
+                        chart === "throughput"
+                          ? `${b.created} created, ${b.merged} merged`
+                          : chart === "comments"
+                            ? `${b.comments} comments`
+                            : `${duration(b[chart].median)}, ${b[chart].n} PRs`;
+                      return (
+                        <button
+                          className={b.key === bucketKey ? "selected" : ""}
+                          key={b.key}
+                          type="button"
+                          aria-pressed={b.key === bucketKey}
+                          aria-label={`${b.label}${b.partial ? ", partial period" : ""}: ${label}${partial ? ", incomplete data" : ""}`}
+                          aria-describedby={tooltip?.key === b.key ? tooltipId : undefined}
+                          onMouseEnter={(e) => {
+                            const area = e.currentTarget.closest(".pa-chart-area")!.getBoundingClientRect();
+                            const bar = e.currentTarget.getBoundingClientRect();
+                            setTooltip({ key: b.key, x: bar.left + bar.width / 2 - area.left });
+                          }}
+                          onMouseLeave={() => setTooltip(undefined)}
+                          onFocus={(e) => {
+                            const area = e.currentTarget.closest(".pa-chart-area")!.getBoundingClientRect();
+                            const bar = e.currentTarget.getBoundingClientRect();
+                            setTooltip({ key: b.key, x: bar.left + bar.width / 2 - area.left });
+                          }}
+                          onBlur={() => setTooltip(undefined)}
+                          onKeyDown={(e) => { if (e.key === "Escape") setTooltip(undefined); }}
+                          onClick={() => {
+                            setBucketKey(b.key === bucketKey ? undefined : b.key);
+                            chooseCohort(
+                              chart === "comments"
+                                ? "comments"
+                                : chart === "merge" || chart === "review"
+                                  ? "merged"
+                                  : "created"
+                            );
+                          }}
+                        >
+                          <span className="pa-bar-pair">
+                            {values.map((v, i) => (
+                              <span
+                                key={i}
+                                className={`pa-bar${i === 1 || chart !== "throughput" ? " pa-merged" : ""}`}
+                                style={{
+                                  height:
+                                    v === undefined ? 0 : `${Math.max(v > 0 ? 2 : 0, (v / maxBar) * 100)}%`
+                                }}
+                              />
+                            ))}
+                            {values.every((v) => v === undefined) && <span className="pa-no-sample">—</span>}
+                          </span>
+                          <small>
+                            {b.label}
+                            {b.partial ? "*" : ""}
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                {hoveredBucket && tooltip && (
+                  <div id={tooltipId} role="tooltip" className="pa-chart-tooltip"
+                    style={{ left: `clamp(90px, ${tooltip.x}px, calc(100% - 90px))` }}>
+                    <strong>{hoveredBucket.label}{hoveredBucket.partial ? " · Partial period" : ""}</strong>
+                    {chart === "throughput" ? <>
+                      <span><span><i />Created</span><b>{count(hoveredBucket.created)}</b></span>
+                      <span><span><i className="pa-merged" />Merged</span><b>{count(hoveredBucket.merged)}</b></span>
+                    </> : chart === "comments" ? (
+                      <span>Comments<b>{count(hoveredBucket.comments)}</b></span>
+                    ) : <>
+                      <span>{chart === "merge" ? "Time to merge" : chart === "response" ? "First response" : "Review → merge"}
+                        <b>{duration(hoveredBucket[chart].median)}</b></span>
+                      <small>{hoveredBucket[chart].n} PRs · p75 {duration(hoveredBucket[chart].p75)}</small>
+                    </>}
+                    {partial && <small>Incomplete data · counts are minimums</small>}
+                  </div>
+                )}
               </div>
             </section>
             <section className="pa-timing" aria-label="Review timing">
@@ -489,7 +534,7 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
             <div className="pa-panel-heading">
               <div>
                 <h2>
-                  Pull requests <span className="pa-badge">{rows.length}</span>
+                  Pull requests <span className="pa-badge">{query ? `${rows.length} / ${cohortRows.length}` : rows.length}</span>
                 </h2>
                 <p>
                   {selectedBucket ? `${selectedBucket.label} · ` : ""}
@@ -499,6 +544,13 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 </p>
               </div>
               <div className="pa-table-controls">
+                <div className="pa-search">
+                  <Search size={13} aria-hidden="true" />
+                  <input type="search" aria-label="Search pull requests" placeholder="Search title or #number"
+                    value={search} onChange={(e) => searchPrs(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") searchPrs(""); }} />
+                  {search && <button type="button" aria-label="Clear PR search" onClick={() => searchPrs("")}><X size={13} /></button>}
+                </div>
                 {selectedBucket && (
                   <button
                     type="button"
@@ -522,6 +574,9 @@ function AnalyticsOverview({ settings, currentDate, isDemo = false }: Props) {
                 </select>
               </div>
             </div>
+            {query && <p className="pa-search-summary" role="status">
+              {rows.length} matching {rows.length === 1 ? "PR" : "PRs"} in this table · Charts and totals show the full selected scope.
+            </p>}
             <div className="pa-table-scroll">
               <table>
                 <thead>
