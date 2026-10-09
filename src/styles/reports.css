@@ -2,6 +2,7 @@
 .report-tabs {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 10px var(--header-pad-x) 0;

@@ -37,7 +37,8 @@ const parseArgs = (argv) => {
     outDir: path.join(repoRoot, "screenshots", `v${packageJson.version}`),
     fullPage: false,
     headed: false,
-    baseUrl: undefined
+    baseUrl: undefined,
+    reportTab: undefined
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -55,6 +56,9 @@ const parseArgs = (argv) => {
       index += 1;
     } else if (arg === "--views" && next) {
       options.views = parseList(next, DEFAULT_VIEWS, "views");
+      index += 1;
+    } else if (arg === "--report-tab" && next) {
+      options.reportTab = next;
       index += 1;
     } else if (arg === "--themes" && next) {
       options.themes = parseList(next, DEFAULT_THEMES, "themes");
@@ -117,6 +121,7 @@ Options:
   --seed <value>        Deterministic fixture seed. Default: release
   --today <date>        Demo date, YYYY-MM-DD or ISO. Default: 2026-06-17
   --viewport <size>     Browser viewport, WIDTHxHEIGHT. Default: ${DEFAULT_VIEWPORT}
+  --report-tab <name>   Report sub-page (for example pr-analytics)
   --views <list>        Comma-separated views: ${DEFAULT_VIEWS.join(", ")}
   --themes <list>       Comma-separated themes: ${DEFAULT_THEMES.join(", ")}
   --out <dir>           Output directory. Default: screenshots/v${packageJson.version}
@@ -268,8 +273,10 @@ const captureOne = async ({ browser, options, baseUrl, view, theme }) => {
     seed: options.seed,
     today: options.today
   });
+  if (view === "reports" && options.reportTab) params.set("reportTab", options.reportTab);
   const url = `${baseUrl}/?${params.toString()}`;
-  const fileName = `${theme}-${view}.png`;
+  const suffix = view === "reports" && options.reportTab ? `-${options.reportTab.replace(/[^a-z0-9-]/gi, "")}` : "";
+  const fileName = `${theme}-${view}${suffix}.png`;
   const filePath = path.join(options.outDir, fileName);
 
   await page.goto(url, { waitUntil: "networkidle" });

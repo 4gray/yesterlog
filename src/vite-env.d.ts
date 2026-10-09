@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import type { PrAnalyticsRequest, PrAnalyticsRepository, PrAnalyticsProgress } from "../shared/prAnalytics";
+
 import type {
   AddWorklogRequest,
   AddWorklogResult,
@@ -42,6 +44,9 @@ import type {
 } from "../shared/types";
 
 interface YesterlogNativeApi {
+  syncPrAnalytics?: (request: PrAnalyticsRequest) => Promise<PrAnalyticsRepository>;
+  cancelPrAnalytics?: (requestId: string) => Promise<void>;
+  onPrAnalyticsProgress?: (callback: (value: PrAnalyticsProgress) => void) => () => void;
   testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
   testBitbucketConnection: (settings: AppSettings) => Promise<BitbucketConnectionResult>;
   syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;

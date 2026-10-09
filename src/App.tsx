@@ -205,7 +205,7 @@ export const App = () => {
 
   const { isConfigured, isBitbucketReady } = useAppConnectionState(settings);
   useEffect(() => {
-    if (!isBitbucketReady && reportTab === "reviews") {
+    if (!isBitbucketReady && (reportTab === "reviews" || reportTab === "pr-analytics")) {
       setReportTab("summary");
     }
   }, [isBitbucketReady, reportTab, setReportTab]);

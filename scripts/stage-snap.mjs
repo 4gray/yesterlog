@@ -1,4 +1,4 @@
-import { access, appendFile, readFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { Arch, Platform, build } from "electron-builder";
@@ -10,7 +10,7 @@ const packageJson = JSON.parse(
   await readFile(resolve(projectDir, "package.json"), "utf8"),
 );
 const sourceCodeUrl = packageJson.repository.url.replace(/\.git$/, "");
-let snapOptionsComputed = false;
+let snapDescriptor;
 
 await build({
   projectDir,
@@ -21,26 +21,34 @@ await build({
       return false;
     }
 
-    snapOptionsComputed = true;
+    snapDescriptor = options.snap;
     return true;
   },
 });
 
-if (!snapOptionsComputed) {
+if (!snapDescriptor) {
   throw new Error("electron-builder did not compute Snap packaging options");
 }
 
-await access(snapcraftYaml);
-await appendFile(
+// electron-builder 26.15.3 points apps.desktop at the final installed
+// meta/gui path. The source already lives in snap/gui; Snapcraft discovers
+// it there automatically and rewrites its Exec entry for the installed snap.
+for (const [name, app] of Object.entries(snapDescriptor.apps)) {
+  await access(resolve(snapcraftProject, "snap", "gui", `${name}.desktop`));
+  delete app.desktop;
+}
+
+// JSON is valid YAML, and preserves the generated descriptor without relying
+// on electron-builder's transitive YAML serializer.
+await writeFile(
   snapcraftYaml,
-  [
-    "",
-    `license: ${JSON.stringify(packageJson.license)}`,
-    `contact: ${JSON.stringify(packageJson.bugs.url)}`,
-    `issues: ${JSON.stringify(packageJson.bugs.url)}`,
-    `source-code: ${JSON.stringify(sourceCodeUrl)}`,
-    `website: ${JSON.stringify(packageJson.homepage)}`,
-    "",
-  ].join("\n"),
+  JSON.stringify({
+    ...snapDescriptor,
+    license: packageJson.license,
+    contact: packageJson.bugs.url,
+    issues: packageJson.bugs.url,
+    "source-code": sourceCodeUrl,
+    website: packageJson.homepage,
+  }, null, 2) + "\n",
 );
 console.log(`Snapcraft project staged at ${snapcraftProject}`);

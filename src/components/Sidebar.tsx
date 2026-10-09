@@ -33,7 +33,7 @@ export type AppView =
   | "reports"
   | "recap"
   | "settings";
-export type ReportTab = "summary" | "composition" | "focus" | "trends" | "reviews";
+export type ReportTab = "summary" | "composition" | "focus" | "trends" | "reviews" | "pr-analytics";
 export type ThemeMode = "light" | "dark";
 
 const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
@@ -58,7 +58,8 @@ export const REPORT_TABS: Array<{ id: ReportTab; label: string }> = [
   { id: "composition", label: "Composition" },
   { id: "focus", label: "Focus" },
   { id: "trends", label: "Trends" },
-  { id: "reviews", label: "Code review" }
+  { id: "reviews", label: "Code review" },
+  { id: "pr-analytics", label: "PR analytics" }
 ];
 
 interface SidebarProps {

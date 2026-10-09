@@ -4,6 +4,9 @@ import { ReportsView } from "../components/ReportsView";
 type ReportsViewProps = ComponentProps<typeof ReportsView>;
 
 export interface AppReportsRouteProps {
+  settings?: ReportsViewProps["settings"];
+  currentDate?: Date;
+  isDemo?: boolean;
   reportTab: ReportsViewProps["reportTab"];
   weekState: ReportsViewProps["weekState"];
   weekStates?: ReportsViewProps["weekStates"];
@@ -19,6 +22,7 @@ export interface AppReportsRouteProps {
 }
 
 export const AppReportsRoute = ({
+  settings, currentDate, isDemo,
   reportTab,
   weekState,
   weekStates,
@@ -33,6 +37,9 @@ export const AppReportsRoute = ({
   onOpenRecap
 }: AppReportsRouteProps) => (
   <ReportsView
+    settings={settings}
+    currentDate={currentDate}
+    isDemo={isDemo}
     reportTab={reportTab}
     weekState={weekState}
     weekStates={weekStates}

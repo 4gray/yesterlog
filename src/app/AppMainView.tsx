@@ -423,6 +423,9 @@ export const AppMainView = ({
   } else if (view === "reports") {
     content = (
       <AppReportsRoute
+        settings={settings}
+        currentDate={currentDate}
+        isDemo={isDemo}
         reportTab={reportTab}
         weekState={weekState}
         weekStates={reportsWeekStates}
