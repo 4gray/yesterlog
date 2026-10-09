@@ -6,6 +6,7 @@ import type {
   AppSettings,
   BitbucketReviewSession,
   BitbucketReviewSyncResult,
+  JiraTicket,
   SyncResult
 } from "../../shared/types";
 import {
@@ -110,10 +111,18 @@ let client: BitbucketReviewLoggingClient;
 
 function Harness({
   sourceResult = buildResult(),
-  isDemo = false
+  isDemo = false,
+  currentSyncResult,
+  onSyncResult,
+  saveSyncResult,
+  resolveTicket
 }: {
   sourceResult?: BitbucketReviewSyncResult;
   isDemo?: boolean;
+  currentSyncResult?: SyncResult;
+  onSyncResult?: (result: SyncResult) => void;
+  saveSyncResult?: (result: SyncResult) => Promise<void>;
+  resolveTicket?: (issueKey: string) => JiraTicket | undefined;
 }) {
   api = useBitbucketReviewLogging({
     settings,
@@ -121,6 +130,10 @@ function Harness({
     isDemo,
     client,
     saveBitbucketReviewResult,
+    syncResult: currentSyncResult,
+    onSyncResult,
+    saveSyncResult,
+    resolveTicket,
     runSync,
     loadTickets,
     onReviewResult,
@@ -374,5 +387,79 @@ describe("useBitbucketReviewLogging", () => {
     expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({ queueAfterCurrent: true, mode: "delta" }));
     expect(loadTickets).toHaveBeenCalledTimes(1);
     expect(getApi().isLoggingReview).toBe(false);
+  });
+
+
+  it("shows logged review time in the week cache immediately and keeps it through the next sync", async () => {
+    const onSyncResult = vi.fn<(result: SyncResult) => void>();
+    const saveSyncResult = vi.fn(async () => undefined);
+    const knownTicket: JiraTicket = {
+      id: "10022",
+      key: "TB-22",
+      summary: "Wire immediate worklog refresh",
+      projectKey: "TB",
+      projectName: "Yesterlog",
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      loggedSecondsTotal: 0,
+      url: "https://example.atlassian.net/browse/TB-22"
+    };
+    addWorklog
+      .mockResolvedValueOnce({ ok: true, worklogId: "wl-1", issueKey: "TB-22", timeSpentSeconds: 1800 })
+      .mockResolvedValueOnce({ ok: true, worklogId: "wl-2", issueKey: "REV-1", timeSpentSeconds: 2400 });
+    const sessions = [
+      buildSession("s1"),
+      buildSession("s2", { jiraIssueKey: "REV-1", startedISO: "2026-06-19T09:00:00.000Z", estimatedSeconds: 2400 })
+    ];
+    renderHarness({
+      sourceResult: buildResult(sessions),
+      currentSyncResult: syncResult(),
+      onSyncResult,
+      saveSyncResult,
+      resolveTicket: (issueKey) => (issueKey === "TB-22" ? knownTicket : undefined)
+    });
+
+    await act(async () => {
+      await expect(getApi().handleLogReviewSessions(["s1", "s2"], "reviewed-ticket")).resolves.toBe(true);
+    });
+
+    // Optimistic cache update: both worklogs land on their days without waiting for Jira sync.
+    expect(onSyncResult).toHaveBeenCalledTimes(1);
+    const optimistic = onSyncResult.mock.calls[0][0];
+    expect(optimistic.daySummaries["2026-06-18"].worklogs.map((worklog) => worklog.id)).toEqual(["wl-1"]);
+    expect(optimistic.daySummaries["2026-06-18"].worklogs[0]).toMatchObject({
+      issueKey: "TB-22",
+      issueSummary: "Wire immediate worklog refresh",
+      timeSpentSeconds: 1800,
+      comment: expect.stringContaining("Reviewed Bitbucket PR #1")
+    });
+    // The review bucket is not a dock ticket: a stub keeps the key and a Jira link until sync fills it.
+    expect(optimistic.daySummaries["2026-06-19"].worklogs[0]).toMatchObject({
+      issueKey: "REV-1",
+      issueSummary: "Code review",
+      issueUrl: "https://example.atlassian.net/browse/REV-1",
+      timeSpentSeconds: 2400
+    });
+    expect(saveSyncResult).toHaveBeenCalledWith(optimistic);
+
+    // A delta sync whose search index has not caught up yet still ends with both worklogs present.
+    const reconcile = runSync.mock.calls[0][1]?.reconcile;
+    expect(reconcile).toBeTypeOf("function");
+    const reconciled = await reconcile!(syncResult());
+    expect(Object.values(reconciled.daySummaries).flatMap((bucket) => bucket.worklogs.map((worklog) => worklog.id))).toEqual([
+      "wl-1",
+      "wl-2"
+    ]);
+  });
+
+  it("leaves the week cache alone when logging is not wired to it", async () => {
+    addWorklog.mockResolvedValue({ ok: true, worklogId: "wl-1", issueKey: "TB-22", timeSpentSeconds: 1800 });
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(getApi().handleLogReviewSessions(["s1"], "reviewed-ticket")).resolves.toBe(true);
+    });
+
+    expect(runSync).toHaveBeenCalledWith(settings, expect.objectContaining({ reconcile: expect.any(Function) }));
   });
 });

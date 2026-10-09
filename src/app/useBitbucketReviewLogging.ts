@@ -7,6 +7,7 @@ import type {
   BitbucketReviewSession,
   BitbucketReviewSyncResult,
   BitbucketReviewTargetMode,
+  JiraTicket,
   SyncResult
 } from "../../shared/types";
 import { nativeApi } from "../api/native";
@@ -15,7 +16,11 @@ import {
   getReviewTargetIssueKey,
   markReviewSessionsLogged
 } from "../domain/bitbucketReview";
-import { saveBitbucketReviewResult as saveBitbucketReviewResultToStorage } from "../storage/db";
+import { mergeCreatedWorklogIntoSyncResult } from "../domain/syncResult";
+import {
+  saveBitbucketReviewResult as saveBitbucketReviewResultToStorage,
+  saveSyncResult as saveSyncResultToStorage
+} from "../storage/db";
 import {
   queueBackgroundJiraRefresh,
   runBackgroundTask,
@@ -32,6 +37,12 @@ interface UseBitbucketReviewLoggingOptions {
   isDemo: boolean;
   client?: BitbucketReviewLoggingClient;
   saveBitbucketReviewResult?: (result: BitbucketReviewSyncResult) => Promise<void>;
+  /** Current Jira week cache; logged reviews are merged into it optimistically like Add Time does. */
+  syncResult?: SyncResult;
+  onSyncResult?: (result: SyncResult) => void;
+  saveSyncResult?: (result: SyncResult) => Promise<void>;
+  /** Known ticket metadata for the issue the review time goes to (dock/recent/search tickets). */
+  resolveTicket?: (issueKey: string) => JiraTicket | undefined;
   runSync: RunJiraSync;
   loadTickets: (settingsForLoad?: AppSettings) => Promise<unknown>;
   onReviewResult: (result: BitbucketReviewSyncResult) => void;
@@ -47,6 +58,10 @@ export const useBitbucketReviewLogging = ({
   isDemo,
   client = nativeApi,
   saveBitbucketReviewResult = saveBitbucketReviewResultToStorage,
+  syncResult,
+  onSyncResult,
+  saveSyncResult = saveSyncResultToStorage,
+  resolveTicket,
   runSync,
   loadTickets,
   onReviewResult,
@@ -56,6 +71,41 @@ export const useBitbucketReviewLogging = ({
   showError
 }: UseBitbucketReviewLoggingOptions) => {
   const [isLoggingReview, setIsLoggingReview] = useState(false);
+
+  /**
+   * The ticket the optimistic week entry is built from. Review targets are often the shared
+   * review bucket issue, which rarely appears in the dock, so fall back to what the week cache
+   * already knows about the issue and finally to a minimal stub; the background reconcile
+   * replaces the stub with Jira's own metadata.
+   */
+  const ticketForIssue = useCallback(
+    (issueKey: string): JiraTicket => {
+      const known = resolveTicket?.(issueKey);
+      if (known) {
+        return known;
+      }
+      const cached = syncResult
+        ? Object.values(syncResult.daySummaries)
+            .flatMap((bucket) => bucket.issues)
+            .find((issue) => issue.key === issueKey)
+        : undefined;
+      const baseUrl = settings.jiraBaseUrl.trim().replace(/\/+$/, "");
+      return {
+        id: cached?.id ?? issueKey,
+        key: issueKey,
+        summary: cached?.summary ?? "Code review",
+        projectKey: issueKey.split("-")[0] ?? "",
+        projectName: "",
+        statusName: "",
+        statusCategory: "unknown",
+        loggedSecondsTotal: 0,
+        issueType: cached?.issueType,
+        epic: cached?.epic,
+        url: cached?.url ?? (baseUrl ? `${baseUrl}/browse/${issueKey}` : "")
+      };
+    },
+    [resolveTicket, settings.jiraBaseUrl, syncResult]
+  );
 
   const handleLogReviewSessions = useCallback(
     async (
@@ -83,6 +133,8 @@ export const useBitbucketReviewLogging = ({
       setLogError(undefined);
 
       const loggedSessions: Array<{ sessionId: string; logged: BitbucketLoggedReview }> = [];
+      type CreatedWorklog = Parameters<typeof mergeCreatedWorklogIntoSyncResult>[1];
+      const createdWorklogs: CreatedWorklog[] = [];
       let failure: string | undefined;
 
       try {
@@ -132,12 +184,21 @@ export const useBitbucketReviewLogging = ({
           }
 
           try {
+            const comment = buildReviewWorklogComment(session);
             const result = await client.addWorklog({
               settings,
               issueKey,
               timeSpentSeconds,
               startedISO,
-              comment: buildReviewWorklogComment(session)
+              comment
+            });
+            createdWorklogs.push({
+              ticket: ticketForIssue(issueKey),
+              worklogId: result.worklogId,
+              startedISO,
+              timeSpentSeconds: result.timeSpentSeconds,
+              comment,
+              syncedAtISO: new Date().toISOString()
             });
             loggedSessions.push({
               sessionId: session.id,
@@ -161,11 +222,25 @@ export const useBitbucketReviewLogging = ({
           onReviewResult(updated);
           runBackgroundTask("save the logged review sessions", () => saveBitbucketReviewResult(updated));
           showSuccess(`Logged ${loggedSessions.length} review ${loggedSessions.length === 1 ? "session" : "sessions"} to Jira.`);
+
+          // Show the new worklogs in Week/Today right away instead of waiting for the next
+          // Jira sync (whose search index may also lag behind the write).
+          const mergeAll = (base: SyncResult | undefined) =>
+            createdWorklogs.reduce<SyncResult | undefined>(
+              (accumulated, worklog) => mergeCreatedWorklogIntoSyncResult(accumulated, worklog) ?? accumulated,
+              base
+            );
+          const optimistic = mergeAll(syncResult);
+          if (optimistic && optimistic !== syncResult && onSyncResult) {
+            onSyncResult(optimistic);
+            runBackgroundTask("cache the logged review worklogs", () => saveSyncResult(optimistic));
+          }
           queueBackgroundJiraRefresh({
             settings,
             runSync,
             loadTickets,
-            context: "logging review sessions"
+            context: "logging review sessions",
+            reconcile: async (syncedResult) => mergeAll(syncedResult) ?? syncedResult
           });
         }
 
@@ -190,14 +265,18 @@ export const useBitbucketReviewLogging = ({
       isDemo,
       loadTickets,
       onReviewResult,
+      onSyncResult,
       runSync,
       saveBitbucketReviewResult,
+      saveSyncResult,
       setLogError,
       settings,
       showError,
       showInfo,
       showSuccess,
-      sourceResult
+      sourceResult,
+      syncResult,
+      ticketForIssue
     ]
   );
 
