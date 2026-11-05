@@ -57,8 +57,9 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       onDownloadUpdate={() => undefined}
       onInstallUpdate={() => undefined}
       onOpenReleasePage={() => undefined}
-      weekRangeLabel="Jun 15 - 21, 2026"
-      onExportWeekCsv={() => undefined}
+      onExportBackup={() => undefined}
+      onRestoreBackup={() => undefined}
+      dataTransferDisabled={false}
       onImportPersonalNotes={() => undefined}
       isImportingPersonalNotes={false}
       recurringEvents={[]}
@@ -183,10 +184,18 @@ describe("SettingsView", () => {
     const markup = renderSettings({ initialSection: "data" });
 
     expect(markup).toContain("Data");
-    expect(markup).toContain("Current week CSV");
-    expect(markup).toContain("Jun 15 - 21, 2026");
-    expect(markup).toContain("Export CSV");
+    expect(markup).toContain("All saved data");
+    expect(markup).not.toContain("Current week CSV");
+    expect(markup).toContain("Export all data");
+    expect(markup).toContain("Restore from backup");
     expect(markup).toContain("Personal notes");
+    expect(markup).toContain("Import CSV");
+  });
+
+  it("disables full data transfer in demo mode while keeping legacy CSV import available", () => {
+    const markup = renderSettings({ initialSection: "data", dataTransferDisabled: true });
+    expect(markup).toMatch(/disabled=""[^>]*>[\s\S]*?Export all data/);
+    expect(markup).toContain("Full data transfer is unavailable in demo mode.");
     expect(markup).toContain("Import CSV");
   });
 

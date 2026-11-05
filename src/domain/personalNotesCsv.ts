@@ -1,4 +1,4 @@
-import type { PersonalNote, WeekState } from "../../shared/types";
+import type { PersonalNote } from "../../shared/types";
 import { fromLocalDateKey, startOfWeekMonday, toLocalDateKey } from "../utils/date";
 
 const LOCAL_NOTE_KEYS = new Set(["LOCAL-NOTE", "LOCAL"]);
@@ -13,40 +13,6 @@ interface PersonalNotesCsvImportOptions {
   importedAtISO?: string;
   idPrefix?: string;
 }
-
-const escapeCsvField = (value: string | number) => {
-  const text = String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
-
-export const buildWeekCsv = (weekState: WeekState) => {
-  // Title is appended last so older importers (and existing exports without it)
-  // keep working — columns are matched by header name, not position.
-  const rows: Array<Array<string | number>> = [["Date", "Weekday", "Issue", "Summary", "Hours", "Title"]];
-
-  for (const day of weekState.days) {
-    if (day.issues.length === 0 && day.personalNotes.length === 0) {
-      continue;
-    }
-
-    for (const issue of day.issues) {
-      rows.push([day.dateKey, day.weekdayName, issue.key, issue.summary, (issue.loggedSeconds / 3600).toFixed(2), ""]);
-    }
-
-    for (const note of day.personalNotes) {
-      rows.push([
-        day.dateKey,
-        day.weekdayName,
-        "LOCAL-NOTE",
-        note.text,
-        (note.timeSpentSeconds / 3600).toFixed(2),
-        note.title ?? ""
-      ]);
-    }
-  }
-
-  return rows.map((row) => row.map(escapeCsvField).join(",")).join("\n");
-};
 
 const pushCsvRow = (rows: string[][], row: string[], field: string) => {
   const completedRow = [...row, field];

@@ -1,66 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { WeekState } from "../../shared/types";
-import { buildWeekCsv, parsePersonalNotesCsv } from "./personalNotesCsv";
-
-const weekState: WeekState = {
-  weekKey: "2026-06-15",
-  weekStartISO: "2026-06-15T00:00:00.000Z",
-  weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
-  weekRangeLabel: "Jun 15 - 21, 2026",
-  weeklyTargetHours: 40,
-  trackedWeekHours: 3.25,
-  jiraTrackedWeekHours: 2,
-  personalNoteHours: 1.25,
-  remainingWeekHours: 36.75,
-  dailyTargetHours: 8,
-  activeWorkingDates: ["2026-06-18"],
-  skippedDates: [],
-  days: [
-    {
-      dateKey: "2026-06-18",
-      dateLabel: "Jun 18",
-      weekdayName: "Thursday",
-      isToday: false,
-      isConfiguredWorkingDay: true,
-      isSkipped: false,
-      targetHours: 8,
-      trackedHours: 3.25,
-      missingHours: 4.75,
-      issues: [
-        {
-          id: "10001",
-          key: "TB-12",
-          summary: 'Fix CSV, including "quotes"',
-          loggedSeconds: 7200
-        }
-      ],
-      personalNotes: [
-        {
-          id: "note-1",
-          weekKey: "2026-06-15",
-          dateKey: "2026-06-18",
-          text: "Planning, notes",
-          timeSpentSeconds: 4500,
-          startedISO: "2026-06-18T09:00:00.000Z",
-          createdAt: "2026-06-18T09:00:00.000Z",
-          updatedAt: "2026-06-18T09:00:00.000Z"
-        }
-      ],
-      recurringEntries: [],
-      pendingRecurring: []
-    }
-  ],
-  recurringTrackedHours: 0
-};
+import { parsePersonalNotesCsv } from "./personalNotesCsv";
 
 describe("personal notes CSV", () => {
-  it("exports weekly rows with escaped Jira summaries and local note rows", () => {
-    const csv = buildWeekCsv(weekState);
-
-    expect(csv).toContain('TB-12,"Fix CSV, including ""quotes""",2.00');
-    expect(csv).toContain('LOCAL-NOTE,"Planning, notes",1.25');
-  });
-
   it("imports only local personal note rows from Yesterlog CSV", () => {
     const csv = [
       "Date,Weekday,Issue,Summary,Hours",
@@ -94,27 +35,11 @@ describe("personal notes CSV", () => {
     });
   });
 
-  it("round-trips a personal note title through export and import", () => {
-    const titledWeek: WeekState = {
-      ...weekState,
-      days: [
-        {
-          ...weekState.days[0],
-          personalNotes: [
-            {
-              ...weekState.days[0].personalNotes[0],
-              title: "Sprint planning",
-              text: "Planning, notes"
-            }
-          ]
-        }
-      ]
-    };
-
-    const csv = buildWeekCsv(titledWeek);
-    expect(csv).toContain("Date,Weekday,Issue,Summary,Hours,Title");
-    expect(csv).toContain('LOCAL-NOTE,"Planning, notes",1.25,Sprint planning');
-
+  it("imports personal note titles from older exports", () => {
+    const csv = [
+      "Date,Weekday,Issue,Summary,Hours,Title",
+      '2026-06-18,Thursday,LOCAL-NOTE,"Planning, notes",1.25,Sprint planning'
+    ].join("\n");
     const result = parsePersonalNotesCsv(csv, { idPrefix: "note-roundtrip" });
     expect(result.notes).toHaveLength(1);
     expect(result.notes[0]).toMatchObject({ title: "Sprint planning", text: "Planning, notes" });

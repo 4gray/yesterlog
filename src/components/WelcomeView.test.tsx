@@ -48,7 +48,7 @@ describe("WelcomeView", () => {
       />
     );
 
-    expect(markup).toContain("Upgrading?");
-    expect(markup).toContain("Personal notes can be imported later from Settings.");
+    expect(markup).toContain("Moving computers?");
+    expect(markup).toContain("Restore a full backup here, or import older CSV notes later in Settings.");
   });
 });

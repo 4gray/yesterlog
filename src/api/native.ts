@@ -1,3 +1,4 @@
+import { trackDataOperation } from "../storage/dataTransfer";
 import type { PrAnalyticsRequest, PrAnalyticsRepository, PrAnalyticsProgress } from "../../shared/prAnalytics";
 import type {
   AddWorklogRequest,
@@ -58,7 +59,7 @@ const getNativeBridgeWithMethod = <Method extends NativeBridgeMethod>(method: Me
 
 const rendererPreviewVersion = import.meta.env.VITE_APP_VERSION || "unknown";
 
-export const nativeApi = {
+const nativeClient = {
   syncPrAnalytics(request: PrAnalyticsRequest): Promise<PrAnalyticsRepository> {
     const bridge = getNativeBridgeWithMethod("syncPrAnalytics");
     if (!bridge) return Promise.reject(new Error(getNativeBridge()
@@ -409,3 +410,17 @@ export const nativeApi = {
     return bridge.openCursorPrompt(url);
   }
 };
+
+
+const transferOperations = new Set([
+  "syncPrAnalytics", "syncJiraWorklogs", "syncJiraActivity", "syncBitbucketReviews",
+  "addWorklog", "updateWorklog", "deleteWorklog", "moveWorklog", "generateWithAi",
+  "testJiraConnection", "testBitbucketConnection", "setBitbucketPullRequestTaskState"
+]);
+
+export const nativeApi = nativeClient;
+const transferMethods = nativeClient as unknown as Record<string, (...args: unknown[]) => Promise<unknown>>;
+for (const name of transferOperations) {
+  const method = transferMethods[name];
+  transferMethods[name] = (...args) => trackDataOperation(() => method(...args));
+}

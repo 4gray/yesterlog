@@ -121,8 +121,7 @@ and are never included in Jira writes or AI briefing prompts.
 
 Summary, Composition, Focus, and Trends pages show daily averages, days on
 target, ticket totals, billable percentage, work composition, approximate focus
-blocks, and week-over-week change. Export weekly data to CSV when a spreadsheet
-is still required.
+blocks, and week-over-week change. Full saved-data backups are available in Settings.
 
 <p align="center">
   <img src="./screenshots/v3.0.0/dark-reports.png" alt="Yesterlog Reports view with weekly metrics, charts, and per-ticket breakdowns." width="900" />
@@ -132,7 +131,8 @@ is still required.
 
 Connect Jira and optional Bitbucket, configure working days and targets,
 schedule reminders, manage recurring rituals, choose an optional AI provider,
-import or export local notes, and use light, dark, or system appearance.
+export or restore all saved data, import older CSV personal notes, and use light,
+dark, or system appearance.
 
 <p align="center">
   <img src="./screenshots/v3.0.0/dark-settings.png" alt="Yesterlog Settings view with connection, tracking, recurring, appearance, data, and about sections." width="900" />
@@ -211,7 +211,7 @@ import or export local notes, and use light, dark, or system appearance.
 - Target redistribution across the remaining active week.
 - Recurring local rituals for standups, planning, and ceremonies.
 - Month gap discovery.
-- Multi-page reports and CSV export.
+- Multi-page reports and full saved-data backups.
 - Deterministic projection of unusually long Jira worklogs across the days they
   represent without creating extra Jira writes.
 
@@ -223,7 +223,7 @@ import or export local notes, and use light, dark, or system appearance.
 - Sync, save, and update notifications.
 - In-app release notes and update handling.
 - Remembered window position and size.
-- Import and export for personal notes.
+- Portable full-data backup and restore, plus legacy CSV personal-note import.
 
 For connection instructions, see [Getting started](./getting-started.md). For
 storage and network behavior, see [Data and privacy](./privacy.md).

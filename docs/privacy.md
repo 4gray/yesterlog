@@ -138,7 +138,12 @@ Reconstruct placements, durations, and AI drafts are cached per day. Recap
 drafts, version histories, trusted CV outcomes, and brag-doc snapshots remain
 local.
 
-Import and export actions occur only when you choose them.
+Import and export actions occur only when you choose them. Full JSON backups
+include all locally saved history, notes, notebooks, drafts and preferences, but
+exclude Jira/Bitbucket API tokens and CLI authentication. These files are not
+encrypted; store them privately. Restoring replaces local data after confirmation,
+clears API tokens and CLI paths, and disables AI. It makes no Jira writes.
+Reconnect Jira after restoring; Bitbucket and AI are configured separately.
 
 For setup instructions, see [Getting started](./getting-started.md).
 

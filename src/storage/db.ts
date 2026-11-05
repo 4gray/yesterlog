@@ -1,3 +1,6 @@
+import { BACKUP_DB_VERSION, BACKUP_STORE_KEYS, RESTORE_PREFERENCES_KEY, isBackupPreference,
+  readBackupPreferences, sanitizeBackupStores, validateBackup, type AppBackup, type BackupStores } from "../domain/backup";
+import { trackDataOperation } from "./dataTransfer";
 import type { PrAnalyticsCache, PrAnalyticsRepository } from "../../shared/prAnalytics";
 import { analyticsUserKey } from "../../shared/prAnalytics";
 import type {
@@ -26,7 +29,7 @@ import {
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 16;
+const DB_VERSION = BACKUP_DB_VERSION;
 const SETTINGS_KEY = "default";
 const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
@@ -372,7 +375,7 @@ const readStore = async <T>(storeName: StoreName, key: IDBValidKey) => {
   });
 };
 
-const writeStore = async <T>(storeName: StoreName, value: T) => {
+const writeStore = async <T>(storeName: StoreName, value: T) => trackDataOperation(async () => {
   const db = await openDatabase();
 
   return new Promise<void>((resolve, reject) => {
@@ -382,9 +385,9 @@ const writeStore = async <T>(storeName: StoreName, value: T) => {
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => resolve();
   });
-};
+});
 
-const addStore = async <T>(storeName: StoreName, value: T) => {
+const addStore = async <T>(storeName: StoreName, value: T) => trackDataOperation(async () => {
   const db = await openDatabase();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(storeName, "readwrite");
@@ -392,9 +395,9 @@ const addStore = async <T>(storeName: StoreName, value: T) => {
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => resolve();
   });
-};
+});
 
-const deleteStore = async (storeName: StoreName, key: IDBValidKey) => {
+const deleteStore = async (storeName: StoreName, key: IDBValidKey) => trackDataOperation(async () => {
   const db = await openDatabase();
 
   return new Promise<void>((resolve, reject) => {
@@ -404,7 +407,7 @@ const deleteStore = async (storeName: StoreName, key: IDBValidKey) => {
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => resolve();
   });
-};
+});
 
 const readAllStore = async <T>(storeName: StoreName) => {
   const db = await openDatabase();
@@ -804,13 +807,16 @@ export const getSyncResult = async (weekKey: string) => {
   } satisfies SyncResult;
 };
 
-export const saveSyncResult = async (result: SyncResult) => {
-  await Promise.all([
+export const saveSyncResult = async (result: SyncResult) => trackDataOperation(async () => {
+  // A failed week write must not leave its parallel ledger write running past a restore.
+  const writes = await Promise.allSettled([
     writeStore("syncResults", result),
     reconcileJiraWorklogCache(result),
     saveActiveJiraContext(result)
   ]);
-};
+  const failed = writes.find((write) => write.status === "rejected");
+  if (failed?.status === "rejected") throw failed.reason;
+});
 
 export const getWorklogAllocationPreferences = () =>
   readAllStore<WorklogAllocationPreference>("worklogAllocationPreferences");
@@ -923,7 +929,7 @@ export const getWorkspaceNoteBuckets = async (
 export const saveWorkspaceNoteBucket = async (
   bucket: WorkspaceNoteBucket,
   scope?: WorkspaceNoteJiraScope | null
-) => {
+) => trackDataOperation(async () => {
   const resolvedScope = isGlobalWorkspaceNoteContainerId(bucket.containerId)
     ? undefined
     : await resolveWorkspaceNoteJiraScope(scope);
@@ -931,12 +937,12 @@ export const saveWorkspaceNoteBucket = async (
     "workspaceNotes",
     encodeWorkspaceNoteBucket(bucket, resolvedScope)
   );
-};
+});
 
 export const saveWorkspaceNoteBuckets = async (
   buckets: WorkspaceNoteBucket[],
   scope?: WorkspaceNoteJiraScope | null
-) => {
+) => trackDataOperation(async () => {
   const needsJiraScope = buckets.some(
     (bucket) => !isGlobalWorkspaceNoteContainerId(bucket.containerId)
   );
@@ -957,12 +963,12 @@ export const saveWorkspaceNoteBuckets = async (
       reject(transaction.error ?? new Error("Could not save local notes."));
     transaction.oncomplete = () => resolve();
   });
-};
+});
 
 export const deleteWorkspaceNoteBucket = async (
   containerId: string,
   scope?: WorkspaceNoteJiraScope | null
-) => {
+) => trackDataOperation(async () => {
   if (isGlobalWorkspaceNoteContainerId(containerId)) {
     return deleteStore("workspaceNotes", containerId);
   }
@@ -976,7 +982,7 @@ export const deleteWorkspaceNoteBucket = async (
     "workspaceNotes",
     workspaceNoteStorageKey(resolvedScope, containerId)
   );
-};
+});
 
 export const getNoteNotebooks = async (): Promise<NoteNotebook[]> => {
   const stored = await readStore<{ id: string; notebooks: NoteNotebook[] }>(
@@ -1138,7 +1144,7 @@ export const saveSavedRecap = (recap: SavedRecap) => addStore("savedRecaps", rec
 export const getPrAnalyticsCache = (cacheKey: string) => readStore<PrAnalyticsCache>("prAnalytics", cacheKey);
 
 /** Replace one repository atomically; a new verified account discards the old account's data. */
-export const savePrAnalyticsRepository = async (cacheKey: string, result: PrAnalyticsRepository) => {
+export const savePrAnalyticsRepository = async (cacheKey: string, result: PrAnalyticsRepository) => trackDataOperation(async () => {
   const db = await openDatabase();
   return new Promise<PrAnalyticsCache>((resolve, reject) => {
     const transaction = db.transaction("prAnalytics", "readwrite");
@@ -1156,4 +1162,87 @@ export const savePrAnalyticsRepository = async (cacheKey: string, result: PrAnal
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error ?? new Error("Analytics cache write was interrupted."));
   });
+});
+
+
+/** Raw records preserve all weeks and account scopes, including quarantined legacy notes. */
+export const createBackupSnapshot = async (appVersion: string, storage: Storage): Promise<AppBackup> => {
+  const db = await openDatabase();
+  const names = Object.keys(BACKUP_STORE_KEYS) as (keyof BackupStores)[];
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(names, "readonly");
+    const stores = {} as BackupStores;
+    const preferences = readBackupPreferences(storage);
+    for (const name of names) {
+      const request = transaction.objectStore(name).getAll();
+      request.onsuccess = () => { stores[name] = request.result; };
+    }
+    transaction.oncomplete = () => {
+      try {
+        resolve(validateBackup({ format: "yesterlog-backup", version: 1, appVersion,
+          dbVersion: DB_VERSION, exportedAt: new Date().toISOString(),
+          stores: sanitizeBackupStores(stores), preferences }));
+      } catch (error) { reject(error); }
+    };
+    transaction.onabort = () => reject(transaction.error ?? new Error("Could not read the backup."));
+  });
 };
+
+export const restoreBackupSnapshot = async (input: AppBackup) => {
+  const backup = validateBackup(input);
+  const db = await openDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(Object.keys(BACKUP_STORE_KEYS), "readwrite");
+    transaction.onabort = () => reject(transaction.error ?? new Error("Restore failed; your previous data was preserved."));
+    transaction.oncomplete = () => { invalidateJiraWorklogCache(); resolve(); };
+    try {
+      for (const name of Object.keys(BACKUP_STORE_KEYS) as (keyof BackupStores)[]) {
+        const store = transaction.objectStore(name);
+        store.clear();
+        for (const row of backup.stores[name]) store.add(row);
+      }
+      transaction.objectStore("settings").put({ id: RESTORE_PREFERENCES_KEY, preferences: backup.preferences });
+    } catch (error) {
+      transaction.abort();
+      reject(error);
+    }
+  });
+};
+
+/** Durable handoff: retry on startup if localStorage was unavailable after the DB commit. */
+export const applyRestoredPreferences = async (storage: Storage) => {
+  const pending = await readStore<{ id: string; preferences: Record<string, string> }>("settings", RESTORE_PREFERENCES_KEY);
+  if (!pending) return;
+  if (!pending.preferences || Object.entries(pending.preferences).some(([key, value]) => !isBackupPreference(key) || typeof value !== "string")) {
+    throw new Error("The restored UI preferences are invalid.");
+  }
+  const keys = Array.from({ length: storage.length }, (_, i) => storage.key(i));
+  for (const key of keys) if (key && isBackupPreference(key)) storage.removeItem(key);
+  for (const [key, value] of Object.entries(pending.preferences)) storage.setItem(key, value);
+  await deleteStore("settings", RESTORE_PREFERENCES_KEY);
+};
+
+export const hasAnalyticsCacheForConnection = async (connection: string) =>
+  (await readAllStore<PrAnalyticsCache>("prAnalytics")).some((cache) => {
+    try { return JSON.parse(cache.cacheKey)[0] === connection; } catch { return false; }
+  });
+
+/** Rebind only after the native Bitbucket identity has been verified. */
+export const reuseVerifiedAnalyticsCache = async (connection: string, cacheKey: string, accountId: string) => trackDataOperation(async () => {
+  const caches = await readAllStore<PrAnalyticsCache>("prAnalytics");
+  const repositories = new Map<string, PrAnalyticsRepository>();
+  for (const cache of caches) {
+    let cacheConnection: unknown;
+    try { [cacheConnection] = JSON.parse(cache.cacheKey); } catch { continue; }
+    if (cacheConnection !== connection || cache.accountKey !== accountId) continue;
+    for (const repository of cache.repositories) {
+      if (analyticsUserKey(repository.user) !== accountId) continue;
+      const existing = repositories.get(repository.repository);
+      if (!existing || repository.syncedAt > existing.syncedAt) repositories.set(repository.repository, repository);
+    }
+  }
+  if (!repositories.size) return undefined;
+  const rebound: PrAnalyticsCache = { cacheKey, accountKey: accountId, repositories: [...repositories.values()] };
+  await writeStore("prAnalytics", rebound);
+  return rebound;
+});

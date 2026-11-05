@@ -9,7 +9,7 @@ import {
   type PrAnalyticsRepository
 } from "../../shared/prAnalytics";
 import { nativeApi } from "../api/native";
-import { getPrAnalyticsCache, savePrAnalyticsRepository } from "../storage/db";
+import { getPrAnalyticsCache, savePrAnalyticsRepository, reuseVerifiedAnalyticsCache, hasAnalyticsCacheForConnection } from "../storage/db";
 import { demoPrAnalytics } from "../demo/prAnalytics";
 import type { AnalyticsRange } from "../domain/prAnalytics";
 
@@ -70,7 +70,13 @@ export function usePrAnalytics(settings: AppSettings, range: AnalyticsRange, isD
       return;
     }
     void prAnalyticsCacheKey(settings)
-      .then(getPrAnalyticsCache)
+      .then(async (key) => {
+        const cache = await getPrAnalyticsCache(key);
+        if (cache || !settings.bitbucketApiToken.trim() || !(await hasAnalyticsCacheForConnection(connection))) return cache;
+        const identity = await nativeApi.testBitbucketConnection(settings);
+        if (disposed || !identity.ok || !identity.accountId) return undefined;
+        return reuseVerifiedAnalyticsCache(connection, key, identity.accountId);
+      })
       .then((cache) => {
         if (!disposed) setState({ scope, results: cache?.repositories ?? [] });
       })

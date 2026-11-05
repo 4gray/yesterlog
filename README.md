@@ -94,6 +94,24 @@ data or provider changes; metrics remain usable when AI fails.
 
 [Read the setup guide →](./docs/getting-started.md)
 
+## Moving to another computer
+
+In **Settings → Data**, choose **Export all data** to download one JSON backup of
+all locally saved weeks, notes and notebooks, activity history, recurring events,
+drafts, saved recaps and preferences. Transfer the file to your new computer and
+choose **Restore from backup** on the welcome screen, or in **Settings → Data**.
+Use a compatible Yesterlog version on both computers.
+
+Restore replaces the destination's local data after a preview and confirmation.
+You can export its current data before replacing it. API tokens are excluded:
+reconnect Jira after restoring, then configure Bitbucket and AI as needed. CLI
+paths reset for the new machine and AI starts disabled. Import makes no Jira writes.
+
+The backup is not encrypted and includes work history and note contents. Keep it
+somewhere private. It contains saved local history, rather than fetching any
+additional history from Jira. Older weekly CSV files remain supported through
+**Import CSV**, which imports personal notes only.
+
 ## Local-first by design
 
 - There is no Yesterlog account, hosted backend, or telemetry.

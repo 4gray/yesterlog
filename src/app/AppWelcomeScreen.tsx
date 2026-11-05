@@ -13,6 +13,7 @@ interface AppWelcomeScreenProps {
   connectedSettings: WelcomeViewProps["connectedSettings"];
   onConnect: WelcomeViewProps["onConnect"];
   onEnterApp: WelcomeViewProps["onEnterApp"];
+  onRestoreBackup?: WelcomeViewProps["onRestoreBackup"];
   notifications: SnackbarStackProps["notifications"];
   onDismissNotification: SnackbarStackProps["onDismiss"];
 }
@@ -24,6 +25,7 @@ export const AppWelcomeScreen = ({
   connectedSettings,
   onConnect,
   onEnterApp,
+  onRestoreBackup,
   notifications,
   onDismissNotification
 }: AppWelcomeScreenProps) => (
@@ -34,6 +36,7 @@ export const AppWelcomeScreen = ({
       connectedSettings={connectedSettings}
       onConnect={onConnect}
       onEnterApp={onEnterApp}
+      onRestoreBackup={onRestoreBackup}
     />
     <SnackbarStack notifications={notifications} onDismiss={onDismissNotification} />
   </div>

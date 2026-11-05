@@ -22,8 +22,9 @@ export interface AppSettingsRouteProps {
   downloadCurrentUpdate: SettingsViewProps["onDownloadUpdate"];
   installDownloadedUpdate: SettingsViewProps["onInstallUpdate"];
   openReleasePage: SettingsViewProps["onOpenReleasePage"];
-  weekRangeLabel: SettingsViewProps["weekRangeLabel"];
-  handleExportWeekCsv: SettingsViewProps["onExportWeekCsv"];
+  handleExportBackup: SettingsViewProps["onExportBackup"];
+  handleRestoreBackup: SettingsViewProps["onRestoreBackup"];
+  dataTransferDisabled: boolean;
   handleImportPersonalNotes: SettingsViewProps["onImportPersonalNotes"];
   isImportingPersonalNotes: SettingsViewProps["isImportingPersonalNotes"];
   recurringEvents: SettingsViewProps["recurringEvents"];
@@ -51,8 +52,9 @@ export const AppSettingsRoute = ({
   downloadCurrentUpdate,
   installDownloadedUpdate,
   openReleasePage,
-  weekRangeLabel,
-  handleExportWeekCsv,
+  handleExportBackup,
+  handleRestoreBackup,
+  dataTransferDisabled,
   handleImportPersonalNotes,
   isImportingPersonalNotes,
   recurringEvents,
@@ -79,8 +81,9 @@ export const AppSettingsRoute = ({
     onDownloadUpdate={downloadCurrentUpdate}
     onInstallUpdate={installDownloadedUpdate}
     onOpenReleasePage={openReleasePage}
-    weekRangeLabel={weekRangeLabel}
-    onExportWeekCsv={handleExportWeekCsv}
+    onExportBackup={handleExportBackup}
+    onRestoreBackup={handleRestoreBackup}
+    dataTransferDisabled={dataTransferDisabled}
     onImportPersonalNotes={handleImportPersonalNotes}
     isImportingPersonalNotes={isImportingPersonalNotes}
     recurringEvents={recurringEvents}

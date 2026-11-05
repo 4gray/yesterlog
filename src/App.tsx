@@ -1,3 +1,5 @@
+import { useAppDataTransfer } from "./app/useAppDataTransfer";
+import { DataTransferDialog } from "./components/DataTransferDialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppMainView } from "./app/AppMainView";
 import type { CommandPaletteCommand } from "./components/CommandPalette";
@@ -551,12 +553,11 @@ export const App = () => {
     runReviewSync
   });
   const { mode: weekViewMode, selectMode: selectWeekViewMode } = useWeekViewMode();
-  const { handleToggleSkipped, handleExportWeekCsv } = useWeekActions({
+  const { handleToggleSkipped } = useWeekActions({
     weekState,
     weekOverride,
     setWeekOverride,
-    isDemo,
-    showSuccess
+    isDemo
   });
   const ticketDetails = useTicketDetails({
     settings,
@@ -599,10 +600,17 @@ export const App = () => {
     setLogError
   });
 
+  const dataTransfer = useAppDataTransfer({
+    isDemo, isDirty: isSettingsDirty,
+    isBusy: isSyncing || isSyncingJiraActivity || isSyncingReviews || isLogging || isLoggingReview || isImportingPersonalNotes || isTesting || isTestingBitbucket,
+    discardSettings: () => setSettingsDraft(settings), showSuccess, showError
+  });
+  const transferDialog = <DataTransferDialog transfer={dataTransfer} isDirty={isSettingsDirty} />;
+
   // A time-entry modal owns the screen and its own Esc handler; letting the
   // palette stack on top would leave one Esc closing both and losing the entry.
   const hasOpenTimeEntryModal = Boolean(addModalDate || editingWorklog || editingPersonalNote);
-  const globalShortcutsEnabled = !welcomeFlow.isWelcomeVisible && !isBooting && !hasOpenTimeEntryModal;
+  const globalShortcutsEnabled = !welcomeFlow.isWelcomeVisible && !isBooting && !hasOpenTimeEntryModal && !dataTransfer.isOpen;
   const commandPalette = useCommandPalette({ enabled: globalShortcutsEnabled });
   useViewShortcuts({
     enabled: globalShortcutsEnabled,
@@ -718,6 +726,8 @@ export const App = () => {
 
   if (welcomeFlow.isWelcomeVisible) {
     return (
+      <>
+      {transferDialog}
       <AppWelcomeScreen
         theme={effectiveTheme}
         initialSettings={settingsDraft}
@@ -725,13 +735,17 @@ export const App = () => {
         connectedSettings={settings}
         onConnect={handleWelcomeConnect}
         onEnterApp={welcomeFlow.enterApp}
+        onRestoreBackup={dataTransfer.openRestore}
         notifications={snackbars}
         onDismissNotification={dismissSnackbar}
       />
+      </>
     );
   }
 
   return (
+    <>
+    {transferDialog}
     <AppShellFrame
       isDemo={Boolean(demoScenario)}
       isBooting={isBooting}
@@ -895,7 +909,9 @@ export const App = () => {
         downloadCurrentUpdate={downloadCurrentUpdate}
         installDownloadedUpdate={installDownloadedUpdate}
         openReleasePage={openReleasePage}
-        handleExportWeekCsv={handleExportWeekCsv}
+        handleExportBackup={dataTransfer.exportBackup}
+        handleRestoreBackup={dataTransfer.openRestore}
+        dataTransferDisabled={isDemo}
         handleImportPersonalNotes={handleImportPersonalNotes}
         handleSaveRecurringEvent={handleSaveRecurringEvent}
         handleDeleteRecurringEvent={handleDeleteRecurringEvent}
@@ -923,5 +939,6 @@ export const App = () => {
         onRecapSaved={(saved) => setSavedRecaps((current) => [saved, ...current.filter((item) => item.id !== saved.id)])}
       />
     </AppShellFrame>
+    </>
   );
 };
