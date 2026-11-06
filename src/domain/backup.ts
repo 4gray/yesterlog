@@ -116,7 +116,7 @@ const settingsFields: Record<string, Validator> = Object.fromEntries(
 settingsFields.workingDays = optional((v) => weekdays(v) && (v as number[]).length > 0);
 settingsFields.aiProvider = optional(oneOf("ollama", "claude-cli", "codex-cli"));
 settingsFields.timelineFocusTime = optional(clock);
-settingsFields.reminderTime = optional(clock);
+settingsFields.reminderTime = optional((value) => value === "" || clock(value));
 settingsFields.weeklyTargetHours = optional((v) => num(v) && (v as number) > 0);
 
 const validators: Record<BackupStoreName, Validator> = {

@@ -22,8 +22,8 @@
 
 ## Verification
 
-- `npm run test`: passed, 149 files / 1073 tests.
-- Latest focused backup suite: passed, 23 tests, including credential exclusion and the parallel-sync-write regression.
+- `npm run test`: passed, 149 files / 1076 tests.
+- Backup suite: 26 tests passed within the full run, including credential exclusion, parallel-sync writes and empty reminder-time round trips.
 - `npm run e2e:renderer`: passed, 15 tests. Focused full-transfer E2E also passed after transfer-coordination cleanup.
 - `npm run build`: passed (existing large-chunk warning remains).
 - `git diff --check`: passed.
@@ -39,3 +39,12 @@
 - Reviewed storage, synchronization, autosave, identity, import validation and startup flows for one local desktop profile.
 - Found and reproduced a parallel-write race: a failed weekly sync write could leave the Jira ledger update running past transfer preparation. Fixed by awaiting all sync writes before propagating errors, with a regression test.
 - Final review: no unresolved blocking findings. Full test suite, renderer E2E, build and diff checks passed after the fix; ready for pull-request review.
+
+
+## PR #50 feedback and merge
+
+- CI passed on the original head. Review identified P2: a saved empty reminder time blocked full backup validation.
+- Decision: accept the existing empty-string settings representation and preserve it on restore; do not change reminder scheduling or normalize the user's saved preference.
+- Fixed the validator in one line. Round-trip tests with reminders enabled and disabled reproduced the failure before the fix and passed afterward; malformed non-empty times remain rejected.
+- Local verification passed: 149 files / 1076 tests, 15 renderer E2E scenarios, production build, brand audit and diff checks.
+- Remote checks, review-thread resolution and merge status are tracked in [PR #50](https://github.com/4gray/yesterlog/pull/50); merge requires green CI on the exact latest head.

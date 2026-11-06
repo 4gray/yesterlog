@@ -141,6 +141,18 @@ describe("portable full backup", () => {
     expect((await createBackupSnapshot("3.4.0", preferences)).stores).toEqual(backup.stores);
   });
 
+  it.each([false, true])("round-trips an empty reminder time with reminders enabled=%s", async (remindersEnabled) => {
+    await seed(fixture().stores);
+    await saveSettings({ ...(await getSettings()), reminderTime: "", remindersEnabled });
+    const backup = await createBackupSnapshot("3.4.0", new MemoryStorage());
+    expect(backup.stores.settings.find((row) => row.id === "default")).toMatchObject({ reminderTime: "", remindersEnabled });
+    expect(backup.stores.personalNotes).toHaveLength(2);
+    await seed();
+    await restoreBackupSnapshot(parseBackup(JSON.stringify(backup)));
+    expect(await getSettings()).toMatchObject({ reminderTime: "", remindersEnabled });
+    expect((await createBackupSnapshot("3.4.0", new MemoryStorage())).stores.personalNotes).toEqual(backup.stores.personalNotes);
+  });
+
   it.each([
     ["unknown format", (b: AppBackup) => { (b as { format: string }).format = "other"; }],
     ["future version", (b: AppBackup) => { (b as { version: number }).version = 2; }],
@@ -150,6 +162,7 @@ describe("portable full backup", () => {
     ["duplicate key", (b: AppBackup) => { b.stores.personalNotes.push(b.stores.personalNotes[0]); }],
     ["malformed nested note", (b: AppBackup) => { b.stores.workspaceNotes[0].notes = [{ id: "broken" }]; }],
     ["bad date", (b: AppBackup) => { b.stores.reconstructDrafts[0].dateKey = "2026-02-30"; }],
+    ["invalid reminder time", (b: AppBackup) => { b.stores.settings[0].reminderTime = "25:00"; }],
     ["bad optional metadata", (b: AppBackup) => { b.stores.syncResults[0].diagnostics = { mode: "full" }; }],
     ["bad workspace scope", (b: AppBackup) => { b.stores.workspaceNotes[1].authorAccountId = "wrong-account"; }],
     ["bad worklog scope", (b: AppBackup) => { b.stores.jiraWorklogs[0].authorAccountId = "wrong-account"; }],
