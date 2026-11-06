@@ -42,7 +42,6 @@ let api: WeekActionsApi | undefined;
 let weekOverride: WeekOverride;
 let currentWeekState: WeekState;
 let saveWeekOverride: ReturnType<typeof vi.fn<WeekActionsStorage["saveWeekOverride"]>>;
-let showSuccess: ReturnType<typeof vi.fn<(message: string) => void>>;
 
 const buildWeek = (override: WeekOverride = weekOverride) =>
   buildWeekState(weekStart, settings, override, undefined, [], today, [], []);
@@ -61,7 +60,6 @@ function Harness({ isDemo = false, initialOverride = { weekKey, skippedDates: []
     weekOverride: override,
     setWeekOverride,
     isDemo,
-    showSuccess,
     storage: { saveWeekOverride }
   });
   return null;
@@ -85,7 +83,6 @@ beforeEach(() => {
   weekOverride = { weekKey, skippedDates: [] };
   currentWeekState = buildWeek(weekOverride);
   saveWeekOverride = vi.fn(async () => undefined);
-  showSuccess = vi.fn();
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -140,29 +137,4 @@ describe("useWeekActions", () => {
     expect(saveWeekOverride).not.toHaveBeenCalled();
   });
 
-  it("exports the visible week CSV and reports success", async () => {
-    const createObjectURL = vi.fn((blob: Blob) => {
-      expect(blob).toBeInstanceOf(Blob);
-      return "blob:week-csv";
-    });
-    const revokeObjectURL = vi.fn();
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL,
-      revokeObjectURL
-    });
-    renderHarness();
-
-    act(() => getApi().handleExportWeekCsv());
-
-    expect(createObjectURL).toHaveBeenCalledTimes(1);
-    const blob = createObjectURL.mock.calls[0][0] as Blob;
-    expect(blob.type).toBe("text/csv;charset=utf-8");
-    await expect(blob.text()).resolves.toContain("Date,Weekday,Issue,Summary,Hours,Title");
-    expect(click).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURL).toHaveBeenCalledWith("blob:week-csv");
-    expect(document.querySelector('a[download="yesterlog-week-2026-06-15.csv"]')).toBeNull();
-    expect(showSuccess).toHaveBeenCalledWith("Exported Jun 15 - 21, 2026 CSV.");
-  });
 });

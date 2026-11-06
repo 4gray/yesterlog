@@ -18,7 +18,6 @@ vi.mock("../components/SettingsView", () => ({
       <section
         data-testid="settings-view"
         data-theme={String(props.effectiveTheme)}
-        data-week={String(props.weekRangeLabel)}
         data-testing={String(props.isTesting)}
         data-testing-bitbucket={String(props.isTestingBitbucket)}
         data-importing={String(props.isImportingPersonalNotes)}
@@ -29,7 +28,7 @@ vi.mock("../components/SettingsView", () => ({
         <button type="button" onClick={() => (props.onSelectTheme as (theme: string) => void)("light")}>
           theme
         </button>
-        <button type="button" onClick={() => (props.onExportWeekCsv as () => void)()}>
+        <button type="button" onClick={() => (props.onExportBackup as () => void)()}>
           export
         </button>
         <button type="button" onClick={() => (props.onImportPersonalNotes as () => void)()}>
@@ -86,8 +85,9 @@ const baseProps = (): AppSettingsRouteProps => ({
   downloadCurrentUpdate: noop,
   installDownloadedUpdate: noop,
   openReleasePage: noop,
-  weekRangeLabel: "Jun 15-21",
-  handleExportWeekCsv: noop,
+  handleExportBackup: noop,
+  handleRestoreBackup: noop,
+  dataTransferDisabled: false,
   handleImportPersonalNotes: noop,
   isImportingPersonalNotes: false,
   recurringEvents: [],
@@ -123,7 +123,7 @@ describe("AppSettingsRoute", () => {
 
     const rendered = container.querySelector("[data-testid='settings-view']");
     expect(rendered?.getAttribute("data-theme")).toBe("dark");
-    expect(rendered?.getAttribute("data-week")).toBe("Jun 15-21");
+    expect(settingsViewProps[0]?.dataTransferDisabled).toBe(false);
     expect(rendered?.getAttribute("data-testing")).toBe("true");
     expect(rendered?.getAttribute("data-testing-bitbucket")).toBe("true");
     expect(rendered?.getAttribute("data-importing")).toBe("true");
@@ -134,12 +134,12 @@ describe("AppSettingsRoute", () => {
   it("passes SettingsView actions through unchanged", () => {
     const handleSaveSettings = vi.fn();
     const selectTheme = vi.fn();
-    const handleExportWeekCsv = vi.fn();
+    const handleExportBackup = vi.fn();
     const handleImportPersonalNotes = vi.fn();
     renderRoute({
       handleSaveSettings,
       selectTheme,
-      handleExportWeekCsv,
+      handleExportBackup,
       handleImportPersonalNotes
     });
 
@@ -152,7 +152,7 @@ describe("AppSettingsRoute", () => {
 
     expect(handleSaveSettings).toHaveBeenCalledTimes(1);
     expect(selectTheme).toHaveBeenCalledWith("light");
-    expect(handleExportWeekCsv).toHaveBeenCalledTimes(1);
+    expect(handleExportBackup).toHaveBeenCalledTimes(1);
     expect(handleImportPersonalNotes).toHaveBeenCalledTimes(1);
   });
 });

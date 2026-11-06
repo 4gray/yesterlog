@@ -5,20 +5,23 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usePrAnalytics, prAnalyticsCacheKey } from "./usePrAnalytics";
 import { nativeApi } from "../api/native";
-import { getPrAnalyticsCache, savePrAnalyticsRepository } from "../storage/db";
+import { getPrAnalyticsCache, savePrAnalyticsRepository, hasAnalyticsCacheForConnection, reuseVerifiedAnalyticsCache } from "../storage/db";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import type { AppSettings } from "../../shared/types";
 import type { PrAnalyticsRepository } from "../../shared/prAnalytics";
 vi.mock("../api/native", () => ({
   nativeApi: {
     syncPrAnalytics: vi.fn(),
+    testBitbucketConnection: vi.fn().mockResolvedValue({ ok: false }),
     cancelPrAnalytics: vi.fn().mockResolvedValue(undefined),
     onPrAnalyticsProgress: vi.fn(() => () => undefined)
   }
 }));
 vi.mock("../storage/db", () => ({
   getPrAnalyticsCache: vi.fn(),
-  savePrAnalyticsRepository: vi.fn()
+  savePrAnalyticsRepository: vi.fn(),
+  reuseVerifiedAnalyticsCache: vi.fn(),
+  hasAnalyticsCacheForConnection: vi.fn().mockResolvedValue(false)
 }));
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const settings = {
@@ -78,6 +81,23 @@ describe("PR analytics orchestration", () => {
     expect(hook.results).toHaveLength(1);
     expect(hook.loadingCache).toBe(false);
     expect(nativeApi.syncPrAnalytics).not.toHaveBeenCalled();
+  });
+  it("verifies the current identity before reusing a cache from an old token", async () => {
+    vi.mocked(hasAnalyticsCacheForConnection).mockResolvedValueOnce(true);
+    vi.mocked(nativeApi.testBitbucketConnection).mockResolvedValueOnce({ ok: true, message: "Connected", accountId: "me" });
+    vi.mocked(reuseVerifiedAnalyticsCache).mockResolvedValueOnce({ cacheKey: "new-key", accountKey: "me", repositories: [result()] });
+    await render();
+    expect(nativeApi.testBitbucketConnection).toHaveBeenCalledWith(settings);
+    expect(reuseVerifiedAnalyticsCache).toHaveBeenCalledWith(expect.any(String), expect.any(String), "me");
+    expect(hook.results).toHaveLength(1);
+    expect(nativeApi.syncPrAnalytics).not.toHaveBeenCalled();
+  });
+  it("keeps imported analytics hidden when the account cannot be verified", async () => {
+    vi.mocked(hasAnalyticsCacheForConnection).mockResolvedValueOnce(true);
+    vi.mocked(nativeApi.testBitbucketConnection).mockResolvedValueOnce({ ok: false, message: "Invalid token" });
+    await render();
+    expect(reuseVerifiedAnalyticsCache).not.toHaveBeenCalled();
+    expect(hook.results).toHaveLength(0);
   });
   it("drops stale results after changing credentials and cancels old work", async () => {
     let resolve!: (value: PrAnalyticsRepository) => void;

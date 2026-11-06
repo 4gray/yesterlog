@@ -707,3 +707,146 @@ test("PR analytics supports custom dates, repository comparison and explicit inl
     assert.equal(await comparison.count(), 0);
   });
 });
+
+test("full backup moves all saved data between isolated profiles and keeps old CSV import", { timeout: 60_000 }, async () => {
+  const source = await browser.newContext({ timezoneId: "Europe/Berlin", viewport: { width: 1280, height: 900 } });
+  const target = await browser.newContext({ timezoneId: "America/New_York", viewport: { width: 1280, height: 900 } });
+  const first = await source.newPage();
+  const second = await target.newPage();
+  const sourceErrors = installErrorCollectors(first), targetErrors = installErrorCollectors(second);
+  try {
+    await first.goto(`${server.baseUrl}/`);
+    await first.locator('.app-shell[data-view="welcome"]').waitFor();
+    await first.evaluate(async () => {
+      const db = await import("/src/storage/db.ts");
+      const { DEFAULT_SETTINGS } = await import("/src/domain/week.ts");
+      const { createDemoScenario } = await import("/src/demo/fixtures.ts");
+      const { buildDeterministicRecap, recapIntervalForDate } = await import("/src/domain/recapWorkspace.ts");
+      const scenario = createDemoScenario({ enabled: true, view: "week", reportTab: "summary", theme: "dark",
+        seed: "portable-backup", today: new Date("2026-06-18T12:00:00Z"), updateAvailable: false });
+      await db.saveSettings({ ...DEFAULT_SETTINGS, ...scenario.settings, jiraApiToken: "source-jira-secret",
+        bitbucketApiToken: "source-bb-secret", aiEnabled: false });
+      await db.saveSyncResult(scenario.syncResult);
+      await db.savePersonalNotes(scenario.syncResult.weekKey, scenario.personalNotes);
+      await db.savePersonalNotes("2026-01-05", [{ id: "old-note", weekKey: "2026-01-05", dateKey: "2026-01-06",
+        title: "Old note", text: "Данные со старой машины", timeSpentSeconds: 3600,
+        startedISO: "2026-01-06T09:00:00+01:00", createdAt: "2026-01-06T09:00:00Z", updatedAt: "2026-01-06T09:00:00Z" }]);
+      await db.saveWorkspaceNoteBucket({ containerId: "GENERAL", notes: [], document: { text: "**Portable rich text**",
+        editorState: '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}',
+        updatedAt: "2026-06-18T12:00:00Z" } });
+      await db.saveNoteNotebooks([{ id: "portable", title: "Portable notebook", createdAt: "2026-06-18", updatedAt: "2026-06-18" }]);
+      const recap = buildDeterministicRecap({ interval: recapIntervalForDate("week", scenario.today),
+        syncResults: [scenario.syncResult], personalNotes: scenario.personalNotes, reviewResults: [],
+        activityResults: [], recurringEntries: [], reconstructDrafts: {} }, 1);
+      await db.saveSavedRecap({ id: "portable-recap", savedAt: "2026-06-18", format: "manager", detail: "balanced", version: recap });
+      localStorage.setItem("yesterlog-theme", "dark");
+      localStorage.setItem("yesterlog-week-view-mode", "timeline");
+      localStorage.setItem("unrelated-setting", "source-only");
+    });
+    await first.goto(`${server.baseUrl}/#/settings`);
+    await first.reload();
+    await waitForView(first, "settings");
+    await first.getByRole("button", { name: /^Data Import/ }).click();
+    const downloadEvent = first.waitForEvent("download");
+    await first.getByRole("button", { name: "Export all data", exact: true }).click();
+    const download = await downloadEvent;
+    assert.match(download.suggestedFilename(), /^yesterlog-backup-.*\.json$/);
+    const stream = await download.createReadStream();
+    const chunks = [];
+    for await (const chunk of stream) chunks.push(chunk);
+    const buffer = Buffer.concat(chunks);
+    const original = JSON.parse(buffer.toString("utf8"));
+    assert.equal(Object.keys(original.stores).length, 18);
+    assert.equal(original.stores.personalNotes.length, 2);
+    assert.doesNotMatch(buffer.toString("utf8"), /source-jira-secret|source-bb-secret|unrelated-setting/);
+
+    await second.goto(`${server.baseUrl}/`);
+    await second.locator('.app-shell[data-view="welcome"]').waitFor();
+    const before = await second.evaluate(async () => {
+      const db = await import("/src/storage/db.ts");
+      const settings = await db.getSettings();
+      await db.saveSettings({ ...settings, jiraEmail: "target@example.com", jiraApiToken: "target-token" });
+      localStorage.setItem("unrelated-setting", "target-only");
+      return db.createBackupSnapshot("test", localStorage);
+    });
+    await second.getByRole("button", { name: "Restore from backup", exact: true }).click();
+    await second.getByLabel("Yesterlog backup file").setInputFiles({ name: "transfer.json", mimeType: "application/json", buffer });
+    const dialog = second.getByRole("dialog", { name: "Restore backup", exact: true });
+    await dialog.waitFor();
+    assert.ok(await dialog.getByText("Jira worklogs", { exact: true }).isVisible());
+    const currentDownloadEvent = second.waitForEvent("download");
+    await dialog.getByRole("button", { name: "Export current data", exact: true }).click();
+    const currentDownload = await currentDownloadEvent;
+    const currentStream = await currentDownload.createReadStream();
+    const currentChunks = [];
+    for await (const chunk of currentStream) currentChunks.push(chunk);
+    assert.deepEqual(JSON.parse(Buffer.concat(currentChunks).toString()).stores, before.stores);
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    const unchanged = await second.evaluate(async () => (await import("/src/storage/db.ts")).createBackupSnapshot("test", localStorage));
+    assert.deepEqual(unchanged.stores, before.stores);
+
+    // A malformed category must be rejected without replacing the target's data.
+    const broken = structuredClone(original);
+    broken.stores.workspaceNotes[0].notes = [{ id: "broken" }];
+    await second.getByLabel("Yesterlog backup file").setInputFiles({ name: "broken.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(broken)) });
+    await second.getByText("The backup contains invalid workspaceNotes data.", { exact: true }).waitFor();
+    const afterInvalid = await second.evaluate(async () => (await import("/src/storage/db.ts")).createBackupSnapshot("test", localStorage));
+    assert.deepEqual(afterInvalid.stores, before.stores);
+
+    await second.getByLabel("Yesterlog backup file").setInputFiles({ name: "transfer.json", mimeType: "application/json", buffer });
+    await dialog.waitFor();
+    await Promise.all([
+      second.waitForEvent("load"),
+      dialog.getByRole("button", { name: "Replace all data and restore", exact: true }).click()
+    ]);
+    await second.locator('.app-shell[data-view="welcome"]').waitFor();
+    const restored = await second.evaluate(async () => {
+      const db = await import("/src/storage/db.ts");
+      return { backup: await db.createBackupSnapshot("test", localStorage), settings: await db.getSettings(),
+        unrelated: localStorage.getItem("unrelated-setting") };
+    });
+    assert.deepEqual(restored.backup.stores, original.stores);
+    assert.deepEqual(restored.backup.preferences, original.preferences);
+    assert.equal(restored.settings.jiraApiToken, "");
+    assert.equal(restored.settings.bitbucketApiToken, "");
+    assert.equal(restored.settings.aiEnabled, false);
+    assert.equal(restored.unrelated, "target-only");
+    assert.equal(await second.locator('input[type="email"]').inputValue(), restored.settings.jiraEmail);
+    assert.equal(await second.locator('input[type="password"]').inputValue(), "");
+
+    // Reconnect is separate from import. Seed a test token to inspect the restored UI and old CSV flow.
+    await second.evaluate(async () => {
+      const db = await import("/src/storage/db.ts");
+      await db.saveSettings({ ...(await db.getSettings()), jiraApiToken: "reconnected-token" });
+    });
+    await second.goto(`${server.baseUrl}/#/settings`);
+    await second.reload();
+    await waitForView(second, "settings");
+    await second.getByRole("button", { name: /^Data Import/ }).click();
+    await second.locator('input[accept=".csv,text/csv"]').setInputFiles({ name: "legacy.csv", mimeType: "text/csv",
+      buffer: Buffer.from("Date,Weekday,Issue,Summary,Hours\n2026-01-07,Wed,LOCAL-NOTE,Legacy note,1\n2026-01-07,Wed,YLOG-1,Ignore Jira row,2") });
+    await second.getByText(/Imported 1 personal note from legacy.csv/).waitFor();
+    const notes = await second.evaluate(async () => (await import("/src/storage/db.ts")).getPersonalNotes("2026-01-05"));
+    assert.equal(notes.length, 2);
+    assert.ok(notes.some((note) => note.text === "Legacy note"));
+    // Settings drafts must be explicitly discarded, and must not block the committed restore's reload.
+    await second.getByRole("button", { name: /^Jira Cloud/ }).click();
+    await second.locator('input[type="email"]').fill("unsaved@example.com");
+    await second.getByRole("button", { name: /^Data Import/ }).click();
+    await second.getByRole("button", { name: "Restore from backup", exact: true }).click();
+    await second.getByLabel("Yesterlog backup file").setInputFiles({ name: "transfer.json", mimeType: "application/json", buffer });
+    await dialog.waitFor();
+    const replace = dialog.getByRole("button", { name: "Replace all data and restore", exact: true });
+    assert.equal(await replace.isDisabled(), true);
+    await dialog.getByRole("checkbox", { name: "Discard my unsaved settings changes when restoring" }).check();
+    await Promise.all([second.waitForEvent("load"), replace.click()]);
+    await second.locator('.app-shell[data-view="welcome"]').waitFor();
+    const replaced = await second.evaluate(async () => (await import("/src/storage/db.ts")).createBackupSnapshot("test", localStorage));
+    assert.deepEqual(replaced.stores, original.stores);
+    await assertHealthyPage(first, sourceErrors);
+    await assertHealthyPage(second, targetErrors);
+  } finally {
+    await source.close();
+    await target.close();
+  }
+});

@@ -23,6 +23,7 @@ interface WelcomeViewProps {
   connectedSettings: AppSettings;
   onConnect: (payload: WelcomeConnectPayload) => Promise<JiraConnectionResult>;
   onEnterApp: () => void;
+  onRestoreBackup?: () => void;
 }
 
 const API_TOKEN_URL = "https://id.atlassian.com/manage-profile/security/api-tokens";
@@ -34,7 +35,8 @@ export const WelcomeView = ({
   isConnected,
   connectedSettings,
   onConnect,
-  onEnterApp
+  onEnterApp,
+  onRestoreBackup
 }: WelcomeViewProps) => {
   const [jiraBaseUrl, setJiraBaseUrl] = useState(initialSettings.jiraBaseUrl);
   const [jiraEmail, setJiraEmail] = useState(initialSettings.jiraEmail);
@@ -129,8 +131,8 @@ export const WelcomeView = ({
               <Upload size={14} />
             </span>
             <span>
-              <strong>Upgrading?</strong>
-              <small>Personal notes can be imported later from Settings.</small>
+              <strong>Moving computers?</strong>
+              <small>Restore a full backup here, or import older CSV notes later in Settings.</small>
             </span>
           </div>
         </div>
@@ -138,6 +140,11 @@ export const WelcomeView = ({
 
       <section className="welcome-connect">
         <div className="welcome-card">
+        {onRestoreBackup && <button type="button" className="secondary-button welcome-restore-button" onClick={onRestoreBackup} disabled={isVerifying}>
+          <Upload size={14} /> Restore from backup
+        </button>}
+
+
           {isConnected ? (
             <div className="welcome-success">
               <div className="welcome-success-icon">

@@ -66,8 +66,9 @@ interface SettingsViewProps {
   onDownloadUpdate: () => void;
   onInstallUpdate: () => void;
   onOpenReleasePage: (url?: string) => void;
-  weekRangeLabel: string;
-  onExportWeekCsv: () => void;
+  onExportBackup: () => void;
+  onRestoreBackup: () => void;
+  dataTransferDisabled: boolean;
   onImportPersonalNotes: (file: File) => Promise<void> | void;
   isImportingPersonalNotes: boolean;
   recurringEvents: RecurringEvent[];
@@ -194,7 +195,7 @@ const SECTIONS: SectionMeta[] = [
     label: "Data",
     hint: "Import & export",
     title: "Data",
-    subtitle: "Move worklogs and personal notes in and out of Yesterlog.",
+    subtitle: "Back up all saved data and restore it on another computer.",
     icon: Database
   },
   {
@@ -329,8 +330,9 @@ export const SettingsView = ({
   onDownloadUpdate,
   onInstallUpdate,
   onOpenReleasePage,
-  weekRangeLabel,
-  onExportWeekCsv,
+  onExportBackup,
+  onRestoreBackup,
+  dataTransferDisabled,
   onImportPersonalNotes,
   isImportingPersonalNotes,
   recurringEvents,
@@ -1124,14 +1126,25 @@ export const SettingsView = ({
 
       <div className="data-transfer-row">
         <div>
-          <strong>Current week CSV</strong>
-          <small>{weekRangeLabel}</small>
+          <strong>All saved data</strong>
+          <small>All weeks, notes, history and settings in unencrypted JSON. API tokens are excluded.</small>
         </div>
-        <Button variant="secondary" onClick={onExportWeekCsv}>
+        <Button variant="secondary" onClick={onExportBackup} disabled={dataTransferDisabled}>
           <Download size={16} />
-          Export CSV
+          Export all data
         </Button>
       </div>
+
+      <div className="data-transfer-row">
+        <div>
+          <strong>Restore backup</strong>
+          <small>Replace local data with a full Yesterlog backup, then reconnect Jira.</small>
+        </div>
+        <Button variant="secondary" onClick={onRestoreBackup} disabled={dataTransferDisabled}>
+          <Upload size={16} /> Restore from backup
+        </Button>
+      </div>
+      {dataTransferDisabled && <p>Full data transfer is unavailable in demo mode.</p>}
 
       <div className="data-transfer-row">
         <div>

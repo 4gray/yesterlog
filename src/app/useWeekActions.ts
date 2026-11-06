@@ -1,6 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { WeekOverride, WeekState } from "../../shared/types";
-import { buildWeekCsv } from "../domain/personalNotesCsv";
 import { saveWeekOverride as saveWeekOverrideToStorage } from "../storage/db";
 
 export interface WeekActionsStorage {
@@ -12,7 +11,6 @@ interface UseWeekActionsOptions {
   weekOverride: WeekOverride;
   setWeekOverride: Dispatch<SetStateAction<WeekOverride>>;
   isDemo: boolean;
-  showSuccess: (message: string) => void;
   storage?: WeekActionsStorage;
 }
 
@@ -25,7 +23,6 @@ export const useWeekActions = ({
   weekOverride,
   setWeekOverride,
   isDemo,
-  showSuccess,
   storage = defaultStorage
 }: UseWeekActionsOptions) => {
   const handleToggleSkipped = useCallback(
@@ -43,21 +40,7 @@ export const useWeekActions = ({
     [isDemo, setWeekOverride, storage, weekOverride.skippedDates, weekState.weekKey]
   );
 
-  const handleExportWeekCsv = useCallback(() => {
-    const blob = new Blob([buildWeekCsv(weekState)], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `yesterlog-week-${weekState.weekKey}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    showSuccess(`Exported ${weekState.weekRangeLabel} CSV.`);
-  }, [showSuccess, weekState]);
-
   return {
-    handleToggleSkipped,
-    handleExportWeekCsv
+    handleToggleSkipped
   };
 };

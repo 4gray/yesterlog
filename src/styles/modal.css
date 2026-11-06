@@ -1839,3 +1839,12 @@
 .modal-copy-action:disabled {
   opacity: 0.55;
 }
+
+.data-transfer-dialog { padding: 24px; width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.data-transfer-dialog h2 { margin-top: 0; }
+.data-transfer-dialog p { line-height: 1.5; }
+.backup-counts { display: grid; gap: 6px; font-size: 13px; }
+.backup-counts > div { display: flex; justify-content: space-between; gap: 16px; }
+.backup-counts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.backup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.backup-discard { display: flex; align-items: flex-start; gap: 8px; }

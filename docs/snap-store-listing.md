@@ -45,7 +45,7 @@ Highlights:
 - Inspect recap sources, compare versions, export drafts, and save a local brag doc.
 - Search Jira tickets and keep frequently used work close at hand.
 - Review reports, daily targets, recurring events, and local personal notes.
-- Import and export weekly CSV data.
+- Move all saved data between computers with portable backups; import older CSV notes.
 - Keep credentials and synced data on your own device.
 - No Yesterlog account, hosted backend, telemetry, or cloud AI requirement.
 

@@ -69,8 +69,8 @@ vi.mock("../components/RecapView", () => ({
 }));
 
 vi.mock("../components/SettingsView", () => ({
-  SettingsView: ({ weekRangeLabel }: { weekRangeLabel: string }) => (
-    <section data-testid="settings-view">{weekRangeLabel}</section>
+  SettingsView: () => (
+    <section data-testid="settings-view">Data</section>
   )
 }));
 
@@ -191,7 +191,9 @@ const baseProps = (): AppMainViewProps => ({
   downloadCurrentUpdate: noop,
   installDownloadedUpdate: noop,
   openReleasePage: noop,
-  handleExportWeekCsv: noop,
+  handleExportBackup: noop,
+  handleRestoreBackup: noop,
+  dataTransferDisabled: false,
   handleImportPersonalNotes: noop,
   handleSaveRecurringEvent: noop,
   handleDeleteRecurringEvent: noop,

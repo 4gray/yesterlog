@@ -112,7 +112,9 @@ export interface AppMainViewProps {
   downloadCurrentUpdate: AppSettingsRouteProps["downloadCurrentUpdate"];
   installDownloadedUpdate: AppSettingsRouteProps["installDownloadedUpdate"];
   openReleasePage: AppSettingsRouteProps["openReleasePage"];
-  handleExportWeekCsv: AppSettingsRouteProps["handleExportWeekCsv"];
+  handleExportBackup: AppSettingsRouteProps["handleExportBackup"];
+  handleRestoreBackup: AppSettingsRouteProps["handleRestoreBackup"];
+  dataTransferDisabled: boolean;
   handleImportPersonalNotes: AppSettingsRouteProps["handleImportPersonalNotes"];
   handleSaveRecurringEvent: AppSettingsRouteProps["handleSaveRecurringEvent"];
   handleDeleteRecurringEvent: AppSettingsRouteProps["handleDeleteRecurringEvent"];
@@ -231,7 +233,9 @@ export const AppMainView = ({
   downloadCurrentUpdate,
   installDownloadedUpdate,
   openReleasePage,
-  handleExportWeekCsv,
+  handleExportBackup,
+  handleRestoreBackup,
+  dataTransferDisabled,
   handleImportPersonalNotes,
   handleSaveRecurringEvent,
   handleDeleteRecurringEvent,
@@ -481,8 +485,9 @@ export const AppMainView = ({
         downloadCurrentUpdate={downloadCurrentUpdate}
         installDownloadedUpdate={installDownloadedUpdate}
         openReleasePage={openReleasePage}
-        weekRangeLabel={weekState.weekRangeLabel}
-        handleExportWeekCsv={handleExportWeekCsv}
+        handleExportBackup={handleExportBackup}
+        handleRestoreBackup={handleRestoreBackup}
+        dataTransferDisabled={dataTransferDisabled}
         handleImportPersonalNotes={handleImportPersonalNotes}
         isImportingPersonalNotes={isImportingPersonalNotes}
         recurringEvents={recurringEvents}

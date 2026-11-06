@@ -1,3 +1,4 @@
+import { registerDataFlusher, trackDataOperation } from "../storage/dataTransfer";
 import {
   useCallback,
   useEffect,
@@ -195,7 +196,7 @@ export const useNotesWorkspace = ({
 
   const enqueueMutation = useCallback(
     (mutation: () => Promise<void>) => {
-      const pending = mutationQueueRef.current.then(mutation);
+      const pending = trackDataOperation(() => mutationQueueRef.current.then(mutation));
       mutationQueueRef.current = pending.catch((error) => {
         onError(error instanceof Error ? error.message : "Could not save local notes.");
       });
@@ -803,6 +804,14 @@ export const useNotesWorkspace = ({
   }, [persistScratchpad]);
 
   flushScratchpadRef.current = flushScratchpad;
+  useEffect(() => registerDataFlusher(async () => {
+    flushScratchpadRef.current();
+    await mutationQueueRef.current;
+    if (scratchpadSavedKeyRef.current !== scratchpadDraftKey(scratchpadDraftRef.current)) {
+      throw new Error("Save your notes before transferring data.");
+    }
+  }), []);
+
 
   const addNoteToContainer = useCallback(
     (
